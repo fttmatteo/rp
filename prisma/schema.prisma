@@ -1,0 +1,295 @@
+// Modelo de datos de RP Software.
+// Reglas: el dinero se guarda en pesos enteros; inventario, cartera y pagos
+// se calculan a partir de registros que no se borran (se anulan).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Usuarios y accesos ----------
+
+enum Acceso {
+  ADMIN
+  VENTAS
+  REPARTIDOR
+  GALPONERO
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  usuario   String   @unique
+  claveHash String
+  accesos   Acceso[]
+  activo    Boolean  @default(true)
+  creadoEn  DateTime @default(now())
+
+  sesiones       Sesion[]
+  auditoria      Auditoria[]
+  movimientos    MovimientoInventario[]
+  clasificaciones RegistroClasificacion[]
+  pedidos        Pedido[]
+  ventas         Venta[]
+  pagos          Pago[]
+}
+
+model Sesion {
+  // SHA-256 del token que va en la cookie
+  id        String   @id
+  usuarioId Int
+  operacion Acceso?
+  expira    DateTime
+  creadaEn  DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+}
+
+model Auditoria {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @default(now())
+  usuarioId Int?
+  entidad   String
+  entidadId String?
+  accion    String
+  detalle   Json?
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([entidad, entidadId])
+}
+
+// ---------- Productos y precios ----------
+
+enum TipoProducto {
+  CUBETA // cubeta de 30 huevos; el inventario se lleva en huevos
+  GALLINA // se vende por unidad
+}
+
+model Producto {
+  id            Int          @id @default(autoincrement())
+  codigo        String       @unique
+  nombre        String
+  tipo          TipoProducto
+  orden         Int          @default(0)
+  precioGeneral Int
+  // Precio especial sugerido al configurar un cliente especial
+  precioClienteSugerido Int?
+  activo        Boolean      @default(true)
+
+  preciosCliente    PrecioCliente[]
+  historialPrecios  HistorialPrecio[]
+  movimientos       MovimientoInventario[]
+  detallesClasif    DetalleClasificacion[]
+  detallesPedido    DetallePedido[]
+}
+
+model PrecioCliente {
+  clienteId  Int
+  productoId Int
+  precio     Int
+
+  cliente  Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@id([clienteId, productoId])
+}
+
+model HistorialPrecio {
+  id             Int      @id @default(autoincrement())
+  fecha          DateTime @default(now())
+  productoId     Int
+  clienteId      Int? // null = precio general
+  precioAnterior Int?
+  precioNuevo    Int? // null = se quitó el precio especial
+  usuarioId      Int?
+
+  producto Producto @relation(fields: [productoId], references: [id])
+  cliente  Cliente? @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Clientes ----------
+
+model Cliente {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  telefono    String?
+  direccion   String?
+  zona        String?
+  notas       String?
+  cupoCredito Int? // null = sin límite
+  diasCredito Int      @default(15)
+  activo      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+
+  precios   PrecioCliente[]
+  historial HistorialPrecio[]
+  pedidos   Pedido[]
+  ventas    Venta[]
+  pagos     Pago[]
+}
+
+// ---------- Inventario ----------
+
+enum TipoMovimiento {
+  PRODUCCION
+  VENTA
+  AJUSTE
+  ROTURA
+  ANULACION
+}
+
+model MovimientoInventario {
+  id         Int            @id @default(autoincrement())
+  fecha      DateTime       @default(now())
+  productoId Int
+  // Huevos para productos CUBETA, unidades para GALLINA. Negativo = salida.
+  cantidad   Int
+  tipo       TipoMovimiento
+  nota       String?
+  usuarioId  Int?
+  ventaId    Int?
+  clasificacionId Int?
+
+  producto      Producto               @relation(fields: [productoId], references: [id])
+  usuario       Usuario?               @relation(fields: [usuarioId], references: [id])
+  venta         Venta?                 @relation(fields: [ventaId], references: [id])
+  clasificacion RegistroClasificacion? @relation(fields: [clasificacionId], references: [id])
+
+  @@index([productoId])
+}
+
+model RegistroClasificacion {
+  id        Int      @id @default(autoincrement())
+  fecha     DateTime @db.Date
+  creadoEn  DateTime @default(now())
+  usuarioId Int
+  rotos     Int      @default(0)
+  nota      String?
+
+  usuario     Usuario                @relation(fields: [usuarioId], references: [id])
+  detalles    DetalleClasificacion[]
+  movimientos MovimientoInventario[]
+}
+
+model DetalleClasificacion {
+  registroId Int
+  productoId Int
+  cantidad   Int // huevos, o gallinas pasadas a venta
+
+  registro RegistroClasificacion @relation(fields: [registroId], references: [id], onDelete: Cascade)
+  producto Producto              @relation(fields: [productoId], references: [id])
+
+  @@id([registroId, productoId])
+}
+
+// ---------- Pedidos, ventas y cartera ----------
+
+enum EstadoPedido {
+  PENDIENTE
+  ENTREGADO
+  CANCELADO
+}
+
+model Pedido {
+  id           Int          @id @default(autoincrement())
+  clienteId    Int
+  fechaEntrega DateTime     @db.Date
+  estado       EstadoPedido @default(PENDIENTE)
+  nota         String?
+  creadoEn     DateTime     @default(now())
+  creadoPorId  Int
+
+  cliente   Cliente         @relation(fields: [clienteId], references: [id])
+  creadoPor Usuario         @relation(fields: [creadoPorId], references: [id])
+  detalles  DetallePedido[]
+  venta     Venta?
+
+  @@index([estado, fechaEntrega])
+}
+
+model DetallePedido {
+  id             Int @id @default(autoincrement())
+  pedidoId       Int
+  productoId     Int
+  cantidad       Int // cubetas o gallinas
+  precioUnitario Int // precio congelado al crear el pedido
+
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+}
+
+enum TipoVenta {
+  VENTA
+  SALDO_INICIAL // deuda que el cliente traía antes de usar la app
+}
+
+model Venta {
+  id          Int       @id @default(autoincrement())
+  consecutivo Int       @unique
+  tipo        TipoVenta @default(VENTA)
+  pedidoId    Int?      @unique
+  clienteId   Int
+  fecha       DateTime  @default(now())
+  total       Int
+  saldo       Int // lo que falta por pagar
+  vence       DateTime  @db.Date
+  usuarioId   Int
+  anulada     Boolean   @default(false)
+  nota        String?
+
+  pedido       Pedido?                @relation(fields: [pedidoId], references: [id])
+  cliente      Cliente                @relation(fields: [clienteId], references: [id])
+  usuario      Usuario                @relation(fields: [usuarioId], references: [id])
+  aplicaciones AplicacionPago[]
+  movimientos  MovimientoInventario[]
+
+  @@index([clienteId, saldo])
+}
+
+enum MedioPago {
+  EFECTIVO
+  TRANSFERENCIA
+}
+
+model Pago {
+  id          Int       @id @default(autoincrement())
+  consecutivo Int       @unique
+  clienteId   Int
+  fecha       DateTime  @default(now())
+  valor       Int
+  medio       MedioPago
+  referencia  String?
+  usuarioId   Int
+  anulado     Boolean   @default(false)
+  nota        String?
+
+  cliente      Cliente          @relation(fields: [clienteId], references: [id])
+  usuario      Usuario          @relation(fields: [usuarioId], references: [id])
+  aplicaciones AplicacionPago[]
+
+  @@index([clienteId])
+}
+
+model AplicacionPago {
+  pagoId  Int
+  ventaId Int
+  valor   Int
+
+  pago  Pago  @relation(fields: [pagoId], references: [id])
+  venta Venta @relation(fields: [ventaId], references: [id])
+
+  @@id([pagoId, ventaId])
+}
+
+// Contadores de consecutivos para recibos (VENTA, PAGO)
+model Consecutivo {
+  nombre String @id
+  valor  Int    @default(0)
+}
