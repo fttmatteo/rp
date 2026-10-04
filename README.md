@@ -2,13 +2,14 @@
 
 Aplicación web para la empresa de huevos: clasificación diaria, inventario de cubetas y gallinas, clientes con precios especiales, pedidos, ventas con recibo en PDF y cartera (fiado). Funciona en el computador y en el celular desde el navegador.
 
-El plan completo está en el documento del proyecto (`plan-rp-software.md`). Este código cubre las fases 0, 1 y 2.
+El plan completo está en el documento del proyecto (`plan-rp-software.md`). Este código cubre las fases 0 a 3.
 
 ## Qué incluye
 
 - **Fase 0 · Base:** login con usuario y clave, accesos por operación (Administrador, Ventas, Repartidor, Galponero). Después de ingresar, el usuario elige la operación; si el administrador no se la asignó, ve "Acceso denegado". Los permisos se verifican en el servidor en cada página y acción. Administración de usuarios y bitácora de auditoría.
 - **Fase 1 · Clientes, precios e inventario:** clientes con cupo y días de crédito; precio general por producto y precio especial por cliente (el pedido congela el precio); clasificación diaria en cubetas y huevos sueltos; inventario calculado a partir de movimientos, con ajustes y anulaciones.
 - **Fase 2 · Pedidos, ventas y cartera:** pedidos por cliente, entrega con pago total, parcial o fiado; recibos en PDF con consecutivo (`RP-000001` para ventas y `AB-000001` para pagos); abonos aplicados a la deuda más antigua; estado de cuenta, antigüedad de cartera, aviso de cupo, carga de saldos iniciales y anulaciones (solo administrador).
+- **Fase 3 · Caja diaria:** cada día tiene su caja con base, cobros (salen solos de los pagos), otros ingresos, gastos y retiros. Al cerrar se cuenta el efectivo y, si no cuadra, se exige una observación. Un día cerrado no recibe más dinero; solo el administrador lo reabre y el cierre anterior queda en la auditoría. Las transferencias se muestran aparte. El reporte quincenal suma los cierres diarios. La pueden manejar Ventas y el administrador.
 
 ## Stack
 

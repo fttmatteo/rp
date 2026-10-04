@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { auditar } from "@/lib/auditoria";
+import { exigirCajaAbierta } from "@/lib/caja-db";
 import { deudasPendientes } from "@/lib/cartera-db";
 import { siguienteConsecutivo } from "@/lib/consecutivo";
 import { db } from "@/lib/db";
@@ -39,6 +40,7 @@ export async function anularPago(pagoId: number, _: EstadoForm, _form: FormData)
       const pago = await tx.pago.findUnique({ where: { id: pagoId }, include: { aplicaciones: true } });
       if (!pago) throw new ErrorUsuario("Pago no encontrado.");
       await bloquearCliente(tx, pago.clienteId);
+      await exigirCajaAbierta(tx, pago.dia);
       const marcado = await tx.pago.updateMany({ where: { id: pagoId, anulado: false }, data: { anulado: true } });
       if (marcado.count === 0) throw new ErrorUsuario("Este pago ya estaba anulado.");
       for (const a of pago.aplicaciones) {

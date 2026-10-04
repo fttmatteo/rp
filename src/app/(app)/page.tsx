@@ -11,13 +11,14 @@ export default async function InicioPage() {
   const op = sesion.operacion;
   const hoy = diaUTC(hoyISO());
 
-  const [pendientesHoy, atrasados, cartera, productos, stock, clasificadoHoy] = await Promise.all([
+  const [pendientesHoy, atrasados, cartera, productos, stock, clasificadoHoy, cajasAbiertas] = await Promise.all([
     puede(op, "pedidos.ver") ? db.pedido.count({ where: { estado: "PENDIENTE", fechaEntrega: hoy } }) : null,
     puede(op, "pedidos.ver") ? db.pedido.count({ where: { estado: "PENDIENTE", fechaEntrega: { lt: hoy } } }) : null,
     puede(op, "cartera.ver") ? db.venta.aggregate({ where: { anulada: false, saldo: { gt: 0 } }, _sum: { saldo: true } }) : null,
     puede(op, "inventario.ver") ? db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }) : null,
     puede(op, "inventario.ver") ? existencias() : null,
     puede(op, "clasificacion") ? db.registroClasificacion.count({ where: { fecha: hoy } }) : null,
+    puede(op, "caja") ? db.caja.findMany({ where: { estado: "ABIERTA", dia: { lt: hoy } } }) : null,
   ]);
 
   return (
@@ -38,6 +39,16 @@ export default async function InicioPage() {
             <p className="text-2xl font-semibold">{formatoPesos(cartera._sum.saldo ?? 0)}</p>
             <Link href="/cartera" className="text-sm underline">
               Ver cartera
+            </Link>
+          </Tarjeta>
+        )}
+        {cajasAbiertas && (
+          <Tarjeta titulo="Caja">
+            <p className={`text-2xl font-semibold ${cajasAbiertas.length > 0 ? "text-red-700" : ""}`}>
+              {cajasAbiertas.length > 0 ? `${cajasAbiertas.length} días sin cerrar` : "Al día"}
+            </p>
+            <Link href="/caja" className="text-sm underline">
+              Ir a la caja
             </Link>
           </Tarjeta>
         )}

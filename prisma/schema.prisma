@@ -29,13 +29,15 @@ model Usuario {
   activo    Boolean  @default(true)
   creadoEn  DateTime @default(now())
 
-  sesiones       Sesion[]
-  auditoria      Auditoria[]
-  movimientos    MovimientoInventario[]
+  sesiones        Sesion[]
+  movimientosCaja MovimientoCaja[]
+  cierres         Caja[]
+  auditoria       Auditoria[]
+  movimientos     MovimientoInventario[]
   clasificaciones RegistroClasificacion[]
-  pedidos        Pedido[]
-  ventas         Venta[]
-  pagos          Pago[]
+  pedidos         Pedido[]
+  ventas          Venta[]
+  pagos           Pago[]
 }
 
 model Sesion {
@@ -73,21 +75,21 @@ enum TipoProducto {
 }
 
 model Producto {
-  id            Int          @id @default(autoincrement())
-  codigo        String       @unique
-  nombre        String
-  tipo          TipoProducto
-  orden         Int          @default(0)
-  precioGeneral Int
+  id                    Int          @id @default(autoincrement())
+  codigo                String       @unique
+  nombre                String
+  tipo                  TipoProducto
+  orden                 Int          @default(0)
+  precioGeneral         Int
   // Precio especial sugerido al configurar un cliente especial
   precioClienteSugerido Int?
-  activo        Boolean      @default(true)
+  activo                Boolean      @default(true)
 
-  preciosCliente    PrecioCliente[]
-  historialPrecios  HistorialPrecio[]
-  movimientos       MovimientoInventario[]
-  detallesClasif    DetalleClasificacion[]
-  detallesPedido    DetallePedido[]
+  preciosCliente   PrecioCliente[]
+  historialPrecios HistorialPrecio[]
+  movimientos      MovimientoInventario[]
+  detallesClasif   DetalleClasificacion[]
+  detallesPedido   DetallePedido[]
 }
 
 model PrecioCliente {
@@ -146,15 +148,15 @@ enum TipoMovimiento {
 }
 
 model MovimientoInventario {
-  id         Int            @id @default(autoincrement())
-  fecha      DateTime       @default(now())
-  productoId Int
+  id              Int            @id @default(autoincrement())
+  fecha           DateTime       @default(now())
+  productoId      Int
   // Huevos para productos CUBETA, unidades para GALLINA. Negativo = salida.
-  cantidad   Int
-  tipo       TipoMovimiento
-  nota       String?
-  usuarioId  Int?
-  ventaId    Int?
+  cantidad        Int
+  tipo            TipoMovimiento
+  nota            String?
+  usuarioId       Int?
+  ventaId         Int?
   clasificacionId Int?
 
   producto      Producto               @relation(fields: [productoId], references: [id])
@@ -263,6 +265,7 @@ model Pago {
   consecutivo Int       @unique
   clienteId   Int
   fecha       DateTime  @default(now())
+  dia         DateTime  @db.Date // día de caja (hora de Bogotá) en que entró el dinero
   valor       Int
   medio       MedioPago
   referencia  String?
@@ -275,6 +278,7 @@ model Pago {
   aplicaciones AplicacionPago[]
 
   @@index([clienteId])
+  @@index([dia])
 }
 
 model AplicacionPago {
@@ -292,4 +296,49 @@ model AplicacionPago {
 model Consecutivo {
   nombre String @id
   valor  Int    @default(0)
+}
+
+// ---------- Caja diaria ----------
+
+enum EstadoCaja {
+  ABIERTA
+  CERRADA
+}
+
+model Caja {
+  dia          DateTime   @id @db.Date
+  estado       EstadoCaja @default(ABIERTA)
+  base         Int        @default(0) // efectivo con el que empieza el día
+  // Se llenan al cerrar
+  esperado     Int?
+  contado      Int?
+  diferencia   Int?
+  observacion  String?
+  cerradaEn    DateTime?
+  cerradaPorId Int?
+
+  cerradaPor  Usuario?         @relation(fields: [cerradaPorId], references: [id])
+  movimientos MovimientoCaja[]
+}
+
+enum TipoMovimientoCaja {
+  INGRESO
+  EGRESO
+}
+
+model MovimientoCaja {
+  id        Int                @id @default(autoincrement())
+  dia       DateTime           @db.Date
+  fecha     DateTime           @default(now())
+  tipo      TipoMovimientoCaja
+  concepto  String
+  valor     Int
+  medio     MedioPago
+  usuarioId Int
+  anulado   Boolean            @default(false)
+
+  caja    Caja    @relation(fields: [dia], references: [dia])
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([dia])
 }
