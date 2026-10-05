@@ -27,6 +27,7 @@ export type Permiso =
   | "caja"
   | "rutas" // armar rutas, ordenarlas y liquidarlas
   | "ruta.propia" // la ruta del día del repartidor
+  | "aves" // galpones, lotes y novedades
   | "compras" // proveedores, compras de huevo a terceros y cuentas por pagar
   | "anular";
 
@@ -45,7 +46,7 @@ const PERMISOS: Record<Exclude<Operacion, "ADMIN">, readonly Permiso[]> = {
     "compras",
   ],
   REPARTIDOR: ["clientes.ver", "pedidos.ver", "pedidos.entregar", "pagos.registrar", "ruta.propia"],
-  GALPONERO: ["clasificacion", "inventario.ver"],
+  GALPONERO: ["clasificacion", "inventario.ver", "aves"],
 };
 
 export function puede(operacion: Operacion, permiso: Permiso): boolean {

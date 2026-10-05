@@ -40,6 +40,7 @@ model Usuario {
   clasificaciones RegistroClasificacion[]
   compras         Compra[]
   pagosProveedor  PagoProveedor[]
+  novedades       NovedadLote[]
   pedidos         Pedido[]
   ventas          Venta[]
   pagos           Pago[]
@@ -177,9 +178,11 @@ model MovimientoInventario {
   ventaId         Int?
   clasificacionId Int?
   compraId        Int?
+  novedadId       Int? // gallinas que pasan de un lote a la venta
 
   producto      Producto               @relation(fields: [productoId], references: [id])
   compra        Compra?                @relation(fields: [compraId], references: [id])
+  novedad       NovedadLote?           @relation(fields: [novedadId], references: [id])
   usuario       Usuario?               @relation(fields: [usuarioId], references: [id])
   venta         Venta?                 @relation(fields: [ventaId], references: [id])
   clasificacion RegistroClasificacion? @relation(fields: [clasificacionId], references: [id])
@@ -196,9 +199,12 @@ model RegistroClasificacion {
   nota      String?
   // Si viene de una compra sin clasificar; null = producción propia.
   compraId  Int?
+  // Lote que puso esos huevos (producción propia), para el % de postura.
+  loteId    Int?
 
   usuario     Usuario                @relation(fields: [usuarioId], references: [id])
   compra      Compra?                @relation(fields: [compraId], references: [id])
+  lote        Lote?                  @relation(fields: [loteId], references: [id])
   detalles    DetalleClasificacion[]
   movimientos MovimientoInventario[]
 }
@@ -506,4 +512,71 @@ model AplicacionPagoProveedor {
   compra Compra        @relation(fields: [compraId], references: [id])
 
   @@id([pagoId, compraId])
+}
+
+// ---------- Galpones, lotes y novedades de aves ----------
+
+model Galpon {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @unique
+  capacidad Int?
+  activo    Boolean  @default(true)
+  creadoEn  DateTime @default(now())
+
+  lotes Lote[]
+}
+
+enum EstadoLote {
+  CRIA
+  LEVANTE
+  POSTURA
+  DESCARTE
+}
+
+model Lote {
+  id                 Int        @id @default(autoincrement())
+  galponId           Int
+  nombre             String
+  raza               String?
+  fechaIngreso       DateTime   @db.Date
+  edadIngresoSemanas Int        @default(0)
+  cantidadInicial    Int
+  estado             EstadoLote @default(POSTURA)
+  // false = lote cerrado (ya no tiene aves)
+  activo             Boolean    @default(true)
+  nota               String?
+  creadoEn           DateTime   @default(now())
+
+  galpon           Galpon                  @relation(fields: [galponId], references: [id])
+  novedades        NovedadLote[]           @relation("NovedadOrigen")
+  trasladosEntrada NovedadLote[]           @relation("NovedadDestino")
+  clasificaciones  RegistroClasificacion[]
+}
+
+enum TipoNovedad {
+  MUERTE
+  DESCARTE
+  VENTA // pasan al inventario de gallinas para vender
+  TRASLADO // pasan a otro lote
+}
+
+model NovedadLote {
+  id            Int         @id @default(autoincrement())
+  loteId        Int
+  fecha         DateTime    @db.Date
+  tipo          TipoNovedad
+  cantidad      Int
+  loteDestinoId Int?
+  nota          String?
+  usuarioId     Int
+  creadoEn      DateTime    @default(now())
+  anulada       Boolean     @default(false)
+
+  lote        Lote                   @relation("NovedadOrigen", fields: [loteId], references: [id])
+  loteDestino Lote?                  @relation("NovedadDestino", fields: [loteDestinoId], references: [id])
+  usuario     Usuario                @relation(fields: [usuarioId], references: [id])
+  movimientos MovimientoInventario[]
+
+  @@index([loteId])
+  @@index([loteDestinoId])
 }

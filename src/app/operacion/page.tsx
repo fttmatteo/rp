@@ -9,7 +9,7 @@ const DESCRIPCION = {
   ADMIN: "Todo: usuarios, precios, inventario, ventas y cartera.",
   VENTAS: "Clientes, pedidos, rutas, ventas, cobros, caja e inventario.",
   REPARTIDOR: "Tu ruta del día: entregas, cobros y saldo de los clientes.",
-  GALPONERO: "Clasificación diaria e inventario.",
+  GALPONERO: "Aves, novedades de los lotes, clasificación diaria e inventario.",
 } as const;
 
 export default async function OperacionPage() {

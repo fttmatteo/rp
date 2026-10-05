@@ -8,22 +8,23 @@ import { anularClasificacion, registrarClasificacion } from "./acciones";
 
 export default async function ClasificacionPage() {
   const sesion = await requerir("clasificacion");
-  const [productos, registros, compras] = await Promise.all([
+  const [productos, registros, compras, lotes] = await Promise.all([
     db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
     db.registroClasificacion.findMany({
       orderBy: { id: "desc" },
       take: 20,
       include: {
         usuario: true,
+        lote: true,
         compra: { include: { proveedor: true } },
         detalles: { include: { producto: true } },
         movimientos: { where: { tipo: "ANULACION" }, take: 1 },
       },
     }),
     db.compra.findMany({ where: { anulada: false, porClasificar: { gt: 0 } }, orderBy: { fecha: "asc" }, include: { proveedor: true } }),
+    db.lote.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, include: { galpon: true } }),
   ]);
   const huevos = productos.filter((p) => p.tipo === "CUBETA");
-  const gallinas = productos.filter((p) => p.tipo === "GALLINA");
   const gallinaza = productos.filter((p) => p.tipo === "GALLINAZA");
 
   return (
@@ -35,6 +36,18 @@ export default async function ClasificacionPage() {
             <Campo etiqueta="Fecha">
               <input name="fecha" type="date" defaultValue={hoyISO()} max={hoyISO()} required />
             </Campo>
+            {lotes.length > 0 && (
+              <Campo etiqueta="Lote" ayuda="El lote que puso estos huevos; con él se calcula el % de postura. No aplica a huevo comprado.">
+                <select name="lote" defaultValue={lotes.length === 1 ? lotes[0].id : ""}>
+                  <option value="">Sin lote</option>
+                  {lotes.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.nombre} ({l.galpon.nombre})
+                    </option>
+                  ))}
+                </select>
+              </Campo>
+            )}
             {compras.length > 0 && (
               <Campo etiqueta="Origen del huevo" ayuda="Elige la compra si estás clasificando huevo comprado que llegó sin clasificar.">
                 <select name="origen" defaultValue="">
@@ -70,11 +83,6 @@ export default async function ClasificacionPage() {
               </tbody>
             </Tabla>
             <div className="grid grid-cols-2 gap-3">
-              {gallinas.map((p) => (
-                <Campo key={p.id} etiqueta="Gallinas pasadas a venta" ayuda="Salen del galpón y suman al inventario para vender.">
-                  <input name={`unidades_${p.id}`} inputMode="numeric" placeholder="0" />
-                </Campo>
-              ))}
               {gallinaza.map((p) => (
                 <Campo key={p.id} etiqueta={`Gallinaza recogida (${p.unidad ?? "bulto"}s)`} ayuda="Suma al inventario de gallinaza para vender.">
                   <input name={`unidades_${p.id}`} inputMode="numeric" placeholder="0" />
@@ -87,6 +95,7 @@ export default async function ClasificacionPage() {
             <Campo etiqueta="Nota">
               <input name="nota" />
             </Campo>
+            <p className="text-xs text-stone-500">Las gallinas para vender se registran en Aves, en el lote del que salen (novedad «Paso a venta»).</p>
             <Boton type="submit">Guardar</Boton>
           </Formulario>
         </Tarjeta>
@@ -109,6 +118,7 @@ export default async function ClasificacionPage() {
                   {r.detalles.map((d) => `${d.producto.nombre}: ${formatoCantidad(d.producto.tipo, d.cantidad, d.producto.unidad)}`).join(" · ")}
                 </p>
                 {r.rotos > 0 && <p className="text-stone-500">Rotos: {r.rotos}</p>}
+                {r.lote && <p className="text-stone-500">Lote: {r.lote.nombre}</p>}
                 {r.nota && <p className="text-stone-500">{r.nota}</p>}
                 {puede(sesion.operacion, "anular") && r.movimientos.length === 0 && (
                   <Formulario accion={anularClasificacion.bind(null, r.id)} confirmar="¿Anular este registro? Sus cantidades salen del inventario." className="mt-1">
