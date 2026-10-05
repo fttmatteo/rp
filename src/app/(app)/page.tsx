@@ -13,6 +13,9 @@ import { existenciasBajas } from "@/modules/alertas";
 import { porcentajePostura } from "@/modules/aves";
 import { efectivoEsperado } from "@/modules/caja";
 
+/** "1 cliente", "2 clientes". */
+const cuenta = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
+
 const SIN_VERIFICAR = { medio: "TRANSFERENCIA", anulado: false, verificadoEn: null } as const;
 
 function Dato({ titulo, valor, detalle, href, enlace, alerta }: { titulo: string; valor: ReactNode; detalle?: ReactNode; href: string; enlace: string; alerta?: boolean }) {
@@ -101,13 +104,13 @@ export default async function InicioPage() {
   for (const p of bajas)
     alertas.push({ texto: `${p.nombre}: quedan ${formatoCantidad(p.tipo, p.existencias, productos?.find((x) => x.id === p.id)?.unidad)} (mínimo ${p.minimo}).`, href: "/inventario" });
   if (clientesVencidos?.length)
-    alertas.push({ texto: `${clientesVencidos.length} clientes con deudas vencidas por ${formatoPesos(vencida?._sum.saldo ?? 0)}.`, href: "/cartera" });
-  if (cajasAbiertas?.length) alertas.push({ texto: `${cajasAbiertas.length} días de caja sin cerrar.`, href: "/caja" });
-  if (transferencias) alertas.push({ texto: `${transferencias} transferencias sin verificar en el banco.`, href: "/caja" });
-  if (rutasSinLiquidar) alertas.push({ texto: `${rutasSinLiquidar} rutas de días anteriores sin liquidar.`, href: "/rutas" });
-  if (comprasVencidas) alertas.push({ texto: `${comprasVencidas} compras a proveedores vencidas.`, href: "/proveedores" });
+    alertas.push({ texto: `${cuenta(clientesVencidos.length, "cliente", "clientes")} con deudas vencidas por ${formatoPesos(vencida?._sum.saldo ?? 0)}.`, href: "/cartera" });
+  if (cajasAbiertas?.length) alertas.push({ texto: `${cuenta(cajasAbiertas.length, "día", "días")} de caja sin cerrar.`, href: "/caja" });
+  if (transferencias) alertas.push({ texto: `${cuenta(transferencias, "transferencia", "transferencias")} sin verificar en el banco.`, href: "/caja" });
+  if (rutasSinLiquidar) alertas.push({ texto: `${cuenta(rutasSinLiquidar, "ruta", "rutas")} de días anteriores sin liquidar.`, href: "/rutas" });
+  if (comprasVencidas) alertas.push({ texto: `${cuenta(comprasVencidas, "compra a proveedor vencida", "compras a proveedores vencidas")}.`, href: "/proveedores" });
   if (sinClasificar > 0) alertas.push({ texto: `${formatoHuevos(sinClasificar)} de huevo comprado por clasificar.`, href: "/clasificacion" });
-  if (atrasados) alertas.push({ texto: `${atrasados} pedidos atrasados de días anteriores.`, href: "/pedidos" });
+  if (atrasados) alertas.push({ texto: `${cuenta(atrasados, "pedido atrasado", "pedidos atrasados")} de días anteriores.`, href: "/pedidos" });
 
   return (
     <>
@@ -134,7 +137,7 @@ export default async function InicioPage() {
           <Dato
             titulo="Ventas de hoy"
             valor={formatoPesos(ventasHoy._sum.total ?? 0)}
-            detalle={`${ventasHoy._count} entregas`}
+            detalle={cuenta(ventasHoy._count, "entrega", "entregas")}
             href="/reportes"
             enlace="Ver reportes"
           />
@@ -143,7 +146,7 @@ export default async function InicioPage() {
           <Dato titulo="Pedidos para hoy" valor={pendientesHoy} detalle={sinRuta ? `${sinRuta} sin ruta` : undefined} href="/pedidos" enlace="Ver pedidos" />
         )}
         {sinRuta !== null && (
-          <Dato titulo="Rutas de hoy" valor={sinRuta > 0 ? `${sinRuta} pedidos sin ruta` : "Todo asignado"} alerta={sinRuta > 0} href="/rutas" enlace="Armar rutas" />
+          <Dato titulo="Rutas de hoy" valor={sinRuta > 0 ? `${cuenta(sinRuta, "pedido", "pedidos")} sin ruta` : "Todo asignado"} alerta={sinRuta > 0} href="/rutas" enlace="Armar rutas" />
         )}
         {cartera && (
           <Dato
@@ -161,7 +164,7 @@ export default async function InicioPage() {
           <Dato
             titulo="Efectivo en caja hoy"
             valor={formatoPesos(cajaHoy)}
-            detalle={cajasAbiertas?.length ? `${cajasAbiertas.length} días sin cerrar` : undefined}
+            detalle={cajasAbiertas?.length ? `${cuenta(cajasAbiertas.length, "día", "días")} sin cerrar` : undefined}
             alerta={!!cajasAbiertas?.length}
             href="/caja"
             enlace="Ir a la caja"
