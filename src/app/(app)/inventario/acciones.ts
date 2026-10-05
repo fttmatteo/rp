@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auditar } from "@/lib/auditoria";
 import { db } from "@/lib/db";
-import { bloquearInventario, existencias } from "@/lib/existencias";
+import { bloquearExistencias, registrarMovimientos } from "@/lib/existencias";
 import { entero, ErrorUsuario, mensajeError, texto, type EstadoForm } from "@/lib/form";
 import { requerir } from "@/lib/sesion";
 import { huevosDe } from "@/modules/inventario";
@@ -24,14 +24,13 @@ export async function registrarAjuste(_: EstadoForm, form: FormData): Promise<Es
     if (unidades <= 0) throw new ErrorUsuario("La cantidad debe ser mayor que cero.");
 
     await db.$transaction(async (tx) => {
-      await bloquearInventario(tx);
       if (sentido < 0) {
-        const disponible = (await existencias(tx)).get(producto.id) ?? 0;
+        const disponible = (await bloquearExistencias(tx, [producto.id])).get(producto.id) ?? 0;
         if (disponible < unidades) throw new ErrorUsuario("No hay suficientes existencias para esa salida.");
       }
-      const mov = await tx.movimientoInventario.create({
-        data: { productoId: producto.id, cantidad: sentido * unidades, tipo, nota, usuarioId: sesion.usuario.id },
-      });
+      const [mov] = await registrarMovimientos(tx, [
+        { productoId: producto.id, cantidad: sentido * unidades, tipo, nota, usuarioId: sesion.usuario.id },
+      ]);
       await auditar(tx, sesion.usuario.id, "MovimientoInventario", mov.id, "ajuste", { tipo, cantidad: mov.cantidad, nota });
     });
   } catch (e) {

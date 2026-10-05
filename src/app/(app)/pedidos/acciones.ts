@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { auditar } from "@/lib/auditoria";
 import { siguienteConsecutivo } from "@/lib/consecutivo";
 import { db } from "@/lib/db";
-import { bloquearCliente, bloquearInventario, existencias } from "@/lib/existencias";
+import { bloquearCliente, bloquearExistencias, registrarMovimientos } from "@/lib/existencias";
 import { diaUTC, formatoCantidad, hoyISO, sumarDias } from "@/lib/formato";
 import { entero, ErrorUsuario, mensajeError, texto, textoOpcional, type EstadoForm } from "@/lib/form";
 import { crearPago, leerMedio } from "@/lib/pagos";
@@ -84,7 +84,6 @@ export async function entregarPedido(id: number, _: EstadoForm, form: FormData):
         include: { detalles: { include: { producto: true } }, cliente: true },
       });
       if (!pedido) throw new ErrorUsuario("Pedido no encontrado.");
-      await bloquearInventario(tx);
       await bloquearCliente(tx, pedido.clienteId);
       const marcado = await tx.pedido.updateMany({ where: { id, estado: "PENDIENTE" }, data: { estado: "ENTREGADO" } });
       if (marcado.count === 0) throw new ErrorUsuario("Este pedido ya no está pendiente.");
@@ -96,7 +95,7 @@ export async function entregarPedido(id: number, _: EstadoForm, form: FormData):
         productoId: d.productoId,
         unidades: unidadesInventario(d.producto.tipo, d.cantidad),
       }));
-      const falta = faltantes(salidas, await existencias(tx));
+      const falta = faltantes(salidas, await bloquearExistencias(tx, salidas.map((s) => s.productoId)));
       if (falta.length > 0) {
         const nombres = new Map(pedido.detalles.map((d) => [d.productoId, d.producto]));
         const detalle = falta
@@ -119,15 +118,16 @@ export async function entregarPedido(id: number, _: EstadoForm, form: FormData):
           usuarioId: sesion.usuario.id,
         },
       });
-      await tx.movimientoInventario.createMany({
-        data: salidas.map((s) => ({
+      await registrarMovimientos(
+        tx,
+        salidas.map((s) => ({
           productoId: s.productoId,
           cantidad: -s.unidades,
           tipo: "VENTA" as const,
           ventaId: venta.id,
           usuarioId: sesion.usuario.id,
         })),
-      });
+      );
       if (pagado > 0 && medio) {
         await crearPago(tx, {
           clienteId: pedido.clienteId,
@@ -160,7 +160,6 @@ export async function anularVenta(ventaId: number, _: EstadoForm, _form: FormDat
       if (!venta) throw new ErrorUsuario("Venta no encontrada.");
       pedidoId = venta.pedidoId;
       clienteId = venta.clienteId;
-      await bloquearInventario(tx);
       await bloquearCliente(tx, venta.clienteId);
       if (venta.aplicaciones.some((a) => !a.pago.anulado))
         throw new ErrorUsuario("La venta tiene pagos. Anula primero esos pagos en la ficha del cliente.");
@@ -168,8 +167,9 @@ export async function anularVenta(ventaId: number, _: EstadoForm, _form: FormDat
       if (marcada.count === 0) throw new ErrorUsuario("Esta venta ya estaba anulada.");
       const salidas = venta.movimientos.filter((m) => m.tipo === "VENTA");
       if (salidas.length > 0) {
-        await tx.movimientoInventario.createMany({
-          data: salidas.map((m) => ({
+        await registrarMovimientos(
+          tx,
+          salidas.map((m) => ({
             productoId: m.productoId,
             cantidad: -m.cantidad,
             tipo: "ANULACION" as const,
@@ -177,7 +177,7 @@ export async function anularVenta(ventaId: number, _: EstadoForm, _form: FormDat
             nota: "Anulación de venta",
             usuarioId: sesion.usuario.id,
           })),
-        });
+        );
       }
       if (venta.pedidoId) await tx.pedido.update({ where: { id: venta.pedidoId }, data: { estado: "CANCELADO" } });
       await auditar(tx, sesion.usuario.id, "Venta", ventaId, "anular", { total: venta.total });

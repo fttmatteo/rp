@@ -7,14 +7,37 @@ import { texto, type EstadoForm } from "@/lib/form";
 import { crearSesion, cerrarSesion } from "@/lib/sesion";
 import { esOperacion } from "@/lib/permisos";
 
+const MAX_INTENTOS = 5;
+const BLOQUEO_MS = 15 * 60 * 1000;
+// Hash de relleno: si el usuario no existe se compara igual, para no revelar por el tiempo de respuesta qué usuarios existen.
+const HASH_RELLENO = bcrypt.hashSync("rp-relleno", 10);
+
 export async function iniciarSesion(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const usuario = texto(form, "usuario").toLowerCase();
   const clave = texto(form, "clave");
   if (!usuario || !clave) return { error: "Escribe tu usuario y tu clave." };
 
   const encontrado = await db.usuario.findUnique({ where: { usuario } });
-  const valido = encontrado?.activo && (await bcrypt.compare(clave, encontrado.claveHash));
-  if (!encontrado || !valido) return { error: "Usuario o clave incorrectos." };
+  if (encontrado?.bloqueadoHasta && encontrado.bloqueadoHasta > new Date())
+    return { error: "Demasiados intentos fallidos. Espera unos minutos o pide al administrador que cambie tu clave." };
+
+  const coincide = await bcrypt.compare(clave, encontrado?.claveHash ?? HASH_RELLENO);
+  if (!encontrado || !encontrado.activo || !coincide) {
+    if (encontrado) {
+      const { intentosFallidos } = await db.usuario.update({
+        where: { id: encontrado.id },
+        data: { intentosFallidos: { increment: 1 } },
+      });
+      if (intentosFallidos >= MAX_INTENTOS)
+        await db.usuario.update({
+          where: { id: encontrado.id },
+          data: { intentosFallidos: 0, bloqueadoHasta: new Date(Date.now() + BLOQUEO_MS) },
+        });
+    }
+    return { error: "Usuario o clave incorrectos." };
+  }
+  if (encontrado.intentosFallidos > 0 || encontrado.bloqueadoHasta)
+    await db.usuario.update({ where: { id: encontrado.id }, data: { intentosFallidos: 0, bloqueadoHasta: null } });
 
   // Con un solo acceso no hace falta elegir operación.
   const accesos = encontrado.accesos.filter(esOperacion);

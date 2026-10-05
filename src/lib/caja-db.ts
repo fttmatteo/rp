@@ -37,10 +37,14 @@ export async function exigirCajaAbierta(tx: Tx, dia: Date): Promise<void> {
 }
 
 export async function totalesCaja(dia: Date, base: number, c: Tx | typeof db = db): Promise<TotalesCaja> {
-  const [pagos, movs] = await Promise.all([
-    c.pago.groupBy({ by: ["medio"], where: { dia, anulado: false }, _sum: { valor: true } }),
-    c.movimientoCaja.groupBy({ by: ["tipo", "medio"], where: { dia, anulado: false }, _sum: { valor: true } }),
-  ]);
+  const porDia = await totalesCajaRango(dia, dia, c);
+  return porDia.get(dia.getTime())?.(base) ?? armarTotales(base, [], []);
+}
+
+type FilaPago = { medio: string; _sum: { valor: number | null } };
+type FilaMovimiento = { tipo: string; medio: string; _sum: { valor: number | null } };
+
+function armarTotales(base: number, pagos: FilaPago[], movs: FilaMovimiento[]): TotalesCaja {
   const pago = (medio: string) => pagos.find((p) => p.medio === medio)?._sum.valor ?? 0;
   const mov = (tipo: string, medio: string) => movs.find((m) => m.tipo === tipo && m.medio === medio)?._sum.valor ?? 0;
   return {
@@ -52,4 +56,32 @@ export async function totalesCaja(dia: Date, base: number, c: Tx | typeof db = d
     egresosEfectivo: mov("EGRESO", "EFECTIVO"),
     egresosTransferencia: mov("EGRESO", "TRANSFERENCIA"),
   };
+}
+
+/**
+ * Totales de varios días con dos consultas en lugar de dos por día.
+ * Devuelve, por día con movimiento (clave: getTime()), una función que recibe la base de ese día.
+ */
+export async function totalesCajaRango(
+  desde: Date,
+  hasta: Date,
+  c: Tx | typeof db = db,
+): Promise<Map<number, (base: number) => TotalesCaja>> {
+  const dia = { gte: desde, lte: hasta };
+  const [pagos, movs] = await Promise.all([
+    c.pago.groupBy({ by: ["dia", "medio"], where: { dia, anulado: false }, _sum: { valor: true } }),
+    c.movimientoCaja.groupBy({ by: ["dia", "tipo", "medio"], where: { dia, anulado: false }, _sum: { valor: true } }),
+  ]);
+  const dias = new Set([...pagos, ...movs].map((f) => f.dia.getTime()));
+  return new Map(
+    [...dias].map((t) => [
+      t,
+      (base: number) =>
+        armarTotales(
+          base,
+          pagos.filter((p) => p.dia.getTime() === t),
+          movs.filter((m) => m.dia.getTime() === t),
+        ),
+    ]),
+  );
 }

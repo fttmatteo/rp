@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { BotonLink, Etiqueta, Tabla, Titulo } from "@/components/ui";
-import { totalesCaja } from "@/lib/caja-db";
+import { Alerta, BotonLink, Etiqueta, Tabla, Titulo } from "@/components/ui";
+import { totalesCajaRango } from "@/lib/caja-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoPesos, hoyISO, sumarDias } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
@@ -8,7 +8,12 @@ import { efectivoEsperado, quincena, totalTransferencias, type TotalesCaja } fro
 import type { Caja } from "@prisma/client";
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_DIAS = 62;
+// Un año como máximo por consulta; el reporte se arma con 3 consultas sin importar el rango.
+const MAX_DIAS = 366;
+
+function totalesVacios(base: number): TotalesCaja {
+  return { base, cobrosEfectivo: 0, cobrosTransferencia: 0, ingresosEfectivo: 0, ingresosTransferencia: 0, egresosEfectivo: 0, egresosTransferencia: 0 };
+}
 
 export default async function ReporteCajaPage({ searchParams }: { searchParams: Promise<{ desde?: string; hasta?: string }> }) {
   await requerir("caja");
@@ -21,17 +26,22 @@ export default async function ReporteCajaPage({ searchParams }: { searchParams: 
 
   const desde = diaUTC(desdeISO);
   const hasta = diaUTC(hastaISO);
-  const cajas = await db.caja.findMany({ where: { dia: { gte: desde, lte: hasta } } });
+  const tope = sumarDias(desde, MAX_DIAS - 1);
+  const fin = hasta < tope ? hasta : tope;
+  const recortado = fin < hasta;
+  const [cajas, totalesPorDia] = await Promise.all([
+    db.caja.findMany({ where: { dia: { gte: desde, lte: fin } } }),
+    totalesCajaRango(desde, fin),
+  ]);
   const porDia = new Map(cajas.map((c) => [c.dia.getTime(), c]));
 
   const filas: { dia: Date; caja: Caja | undefined; t: TotalesCaja }[] = [];
-  for (let d = desde, n = 0; d <= hasta && n < MAX_DIAS; d = sumarDias(d, 1), n++) {
+  for (let d = desde; d <= fin; d = sumarDias(d, 1)) {
     const caja = porDia.get(d.getTime());
-    const t = await totalesCaja(d, caja?.base ?? 0);
-    const movimiento =
-      t.cobrosEfectivo + t.cobrosTransferencia + t.ingresosEfectivo + t.ingresosTransferencia + t.egresosEfectivo + t.egresosTransferencia;
-    if (!caja && movimiento === 0) continue;
-    filas.push({ dia: d, caja, t });
+    const totales = totalesPorDia.get(d.getTime());
+    if (!caja && !totales) continue;
+    const base = caja?.base ?? 0;
+    filas.push({ dia: d, caja, t: totales ? totales(base) : totalesVacios(base) });
   }
 
   const suma = (f: (x: (typeof filas)[number]) => number) => filas.reduce((s, x) => s + f(x), 0);
@@ -61,9 +71,16 @@ export default async function ReporteCajaPage({ searchParams }: { searchParams: 
         </button>
       </form>
       <p className="mb-4 text-sm text-stone-600">
-        Suma de los cierres diarios del {formatoDia(desde)} al {formatoDia(hasta)}
+        Suma de los cierres diarios del {formatoDia(desde)} al {formatoDia(fin)}
         {abiertas > 0 && <strong className="text-amber-800"> · {abiertas} días sin cerrar</strong>}.
       </p>
+      {recortado && (
+        <div className="mb-4">
+          <Alerta tipo="aviso">
+            El reporte muestra como máximo un año. Para ver hasta el {formatoDia(hasta)}, consulta el resto en otro rango.
+          </Alerta>
+        </div>
+      )}
       <Tabla>
         <thead>
           <tr>

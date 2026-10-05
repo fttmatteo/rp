@@ -58,7 +58,9 @@ export async function actualizarUsuario(id: number, _: EstadoForm, form: FormDat
 
     const claveHash = clave ? await bcrypt.hash(clave, 10) : undefined;
     await db.$transaction(async (tx) => {
-      await tx.usuario.update({ where: { id }, data: { nombre, accesos, activo, claveHash } });
+      // Cambiar la clave también levanta un bloqueo por intentos fallidos.
+      const desbloqueo = claveHash ? { intentosFallidos: 0, bloqueadoHasta: null } : {};
+      await tx.usuario.update({ where: { id }, data: { nombre, accesos, activo, claveHash, ...desbloqueo } });
       // Al desactivar o cambiar la clave, se cierran sus sesiones abiertas.
       if (!activo || claveHash) await tx.sesion.deleteMany({ where: { usuarioId: id } });
       await auditar(tx, sesion.usuario.id, "Usuario", id, "actualizar", { accesos, activo, cambioClave: Boolean(claveHash) });

@@ -28,6 +28,9 @@ model Usuario {
   accesos   Acceso[]
   activo    Boolean  @default(true)
   creadoEn  DateTime @default(now())
+  // Freno contra adivinar claves: tras varios intentos fallidos se bloquea un rato.
+  intentosFallidos Int       @default(0)
+  bloqueadoHasta   DateTime?
 
   sesiones        Sesion[]
   movimientosCaja MovimientoCaja[]
@@ -84,6 +87,9 @@ model Producto {
   // Precio especial sugerido al configurar un cliente especial
   precioClienteSugerido Int?
   activo                Boolean      @default(true)
+  // Suma de sus movimientos de inventario, actualizada en la misma transacción
+  // que cada movimiento para no tener que sumar todo el historial.
+  existencias           Int          @default(0)
 
   preciosCliente   PrecioCliente[]
   historialPrecios HistorialPrecio[]

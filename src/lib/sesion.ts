@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
@@ -15,7 +16,11 @@ function hash(token: string): string {
 export async function crearSesion(usuarioId: number, operacion: Operacion | null = null): Promise<void> {
   const token = randomBytes(32).toString("base64url");
   const expira = new Date(Date.now() + DURACION_MS);
-  await db.sesion.create({ data: { id: hash(token), usuarioId, expira, operacion } });
+  // De paso se limpian las sesiones vencidas para que la tabla no crezca sin fin.
+  await db.$transaction([
+    db.sesion.deleteMany({ where: { expira: { lt: new Date() } } }),
+    db.sesion.create({ data: { id: hash(token), usuarioId, expira, operacion } }),
+  ]);
   (await cookies()).set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -38,7 +43,8 @@ export interface SesionActual {
   operacion: Operacion | null;
 }
 
-export async function obtenerSesion(): Promise<SesionActual | null> {
+/** Se memoriza por petición: layout, página y acciones comparten una sola consulta. */
+export const obtenerSesion = cache(async function obtenerSesion(): Promise<SesionActual | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   const sesion = await db.sesion.findUnique({ where: { id: hash(token) }, include: { usuario: true } });
@@ -51,7 +57,7 @@ export async function obtenerSesion(): Promise<SesionActual | null> {
     usuario: { id: sesion.usuario.id, nombre: sesion.usuario.nombre, usuario: sesion.usuario.usuario, accesos },
     operacion,
   };
-}
+});
 
 export async function elegirOperacion(sesionId: string, operacion: Operacion): Promise<void> {
   await db.sesion.update({ where: { id: sesionId }, data: { operacion } });
