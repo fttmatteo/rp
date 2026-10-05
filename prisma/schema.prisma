@@ -87,6 +87,9 @@ model Producto {
   // Precio especial sugerido al configurar un cliente especial
   precioClienteSugerido Int?
   activo                Boolean      @default(true)
+  // Suma de sus movimientos de inventario, actualizada en la misma transacción
+  // que cada movimiento para no tener que sumar todo el historial.
+  existencias           Int          @default(0)
 
   preciosCliente   PrecioCliente[]
   historialPrecios HistorialPrecio[]
