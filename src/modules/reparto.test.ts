@@ -37,8 +37,8 @@ describe("reparto", () => {
       { entregado: false, detalles: [{ productoId: AA, cantidad: 5, precioUnitario: 18000 }], pagos: [] },
     ]);
     expect(c.porProducto).toEqual([
-      { productoId: AA, entregado: 6, porEntregar: 5, valorEntregado: 104000 },
-      { productoId: GALLINA, entregado: 1, porEntregar: 0, valorEntregado: 22000 },
+      { productoId: AA, llevado: 11, entregado: 6, porEntregar: 5, devuelto: 0, valorEntregado: 104000 },
+      { productoId: GALLINA, llevado: 1, entregado: 1, porEntregar: 0, devuelto: 0, valorEntregado: 22000 },
     ]);
     expect(c.valorEntregado).toBe(126000);
     expect(c.valorPorEntregar).toBe(90000);
@@ -46,5 +46,19 @@ describe("reparto", () => {
     expect(c.pagadoTransferencia).toBe(10000);
     expect(c.pagado).toBe(100000);
     expect(c.pendiente).toBe(26000);
+  });
+
+  it("entrega parcial cobra solo lo entregado y el resto vuelve", () => {
+    const p = {
+      entregado: true,
+      detalles: [{ productoId: AA, cantidad: 5, cantidadEntregada: 3, precioUnitario: 18000 }],
+      pagos: [{ valor: 54000, medio: "EFECTIVO" as const }],
+    };
+    expect(valoresPedido(p)).toEqual({ valor: 54000, pagado: 54000, pendiente: 0 });
+    const c = cierreReparto([p, { entregado: false, noEntregado: true, detalles: [{ productoId: AA, cantidad: 2, precioUnitario: 18000 }], pagos: [] }]);
+    expect(c.porProducto).toEqual([{ productoId: AA, llevado: 7, entregado: 3, porEntregar: 0, devuelto: 4, valorEntregado: 54000 }]);
+    expect(c.valorPorEntregar).toBe(0);
+    expect(c.entregados).toBe(1);
+    expect(c.noEntregados).toBe(1);
   });
 });

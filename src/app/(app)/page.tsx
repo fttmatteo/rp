@@ -11,7 +11,14 @@ export default async function InicioPage() {
   const op = sesion.operacion;
   const hoy = diaUTC(hoyISO());
 
-  const [pendientesHoy, atrasados, cartera, productos, stock, clasificadoHoy, cajasAbiertas] = await Promise.all([
+  const [miRuta, sinRuta, pendientesHoy, atrasados, cartera, productos, stock, clasificadoHoy, cajasAbiertas] = await Promise.all([
+    puede(op, "ruta.propia")
+      ? db.ruta.findUnique({
+          where: { fecha_repartidorId: { fecha: hoy, repartidorId: sesion.usuario.id } },
+          include: { _count: { select: { pedidos: { where: { estado: "PENDIENTE" } } } } },
+        })
+      : undefined,
+    puede(op, "rutas") ? db.pedido.count({ where: { estado: "PENDIENTE", fechaEntrega: hoy, rutaId: null } }) : null,
     puede(op, "pedidos.ver") ? db.pedido.count({ where: { estado: "PENDIENTE", fechaEntrega: hoy } }) : null,
     puede(op, "pedidos.ver") ? db.pedido.count({ where: { estado: "PENDIENTE", fechaEntrega: { lt: hoy } } }) : null,
     puede(op, "cartera.ver") ? db.venta.aggregate({ where: { anulada: false, saldo: { gt: 0 } }, _sum: { saldo: true } }) : null,
@@ -25,6 +32,22 @@ export default async function InicioPage() {
     <>
       <Titulo>Inicio</Titulo>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {miRuta !== undefined && (
+          <Tarjeta titulo="Mi ruta de hoy">
+            <p className="text-2xl font-semibold">{miRuta ? `${miRuta._count.pedidos} por entregar` : "Sin ruta"}</p>
+            <Link href="/mi-ruta" className="text-sm underline">
+              Ver mi ruta
+            </Link>
+          </Tarjeta>
+        )}
+        {sinRuta !== null && (
+          <Tarjeta titulo="Rutas de hoy">
+            <p className={`text-2xl font-semibold ${sinRuta > 0 ? "text-amber-700" : ""}`}>{sinRuta > 0 ? `${sinRuta} pedidos sin ruta` : "Todo asignado"}</p>
+            <Link href="/rutas" className="text-sm underline">
+              Armar rutas
+            </Link>
+          </Tarjeta>
+        )}
         {pendientesHoy !== null && (
           <Tarjeta titulo="Pedidos para hoy">
             <p className="text-2xl font-semibold">{pendientesHoy}</p>

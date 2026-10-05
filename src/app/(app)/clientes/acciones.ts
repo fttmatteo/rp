@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auditar } from "@/lib/auditoria";
 import { db } from "@/lib/db";
-import { entero, ErrorUsuario, mensajeError, texto, textoOpcional, type EstadoForm } from "@/lib/form";
+import { decimal, entero, ErrorUsuario, mensajeError, texto, textoOpcional, type EstadoForm } from "@/lib/form";
 import { requerir } from "@/lib/sesion";
 
 function leerCliente(form: FormData) {
@@ -17,6 +17,8 @@ function leerCliente(form: FormData) {
     telefono: textoOpcional(form, "telefono"),
     direccion: textoOpcional(form, "direccion"),
     zona: textoOpcional(form, "zona"),
+    latitud: decimal(form, "latitud", "Latitud", -90, 90),
+    longitud: decimal(form, "longitud", "Longitud", -180, 180),
     notas: textoOpcional(form, "notas"),
     cupoCredito: entero(form, "cupoCredito", "Cupo de crédito"),
     diasCredito,

@@ -226,7 +226,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
                         {m.tipo === "EGRESO" ? "−" : "+"}
                         {formatoPesos(m.valor)}
                       </span>
-                      {abierta && !m.anulado && (
+                      {abierta && !m.anulado && !m.rutaId && (
                         <Formulario accion={anularMovimientoCaja.bind(null, m.id)} className="inline" confirmar="¿Anular este movimiento?">
                           <button type="submit" className="text-xs text-red-700 underline">
                             Anular

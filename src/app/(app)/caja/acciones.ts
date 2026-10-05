@@ -73,6 +73,7 @@ export async function anularMovimientoCaja(id: number, _: EstadoForm, _form: For
     await db.$transaction(async (tx) => {
       const mov = await tx.movimientoCaja.findUnique({ where: { id } });
       if (!mov) throw new ErrorUsuario("Movimiento no encontrado.");
+      if (mov.rutaId) throw new ErrorUsuario("Esta diferencia viene de la liquidación de una ruta. Se corrige reabriendo esa liquidación.");
       await exigirCajaAbierta(tx, mov.dia);
       const r = await tx.movimientoCaja.updateMany({ where: { id, anulado: false }, data: { anulado: true } });
       if (r.count === 0) throw new ErrorUsuario("Este movimiento ya estaba anulado.");

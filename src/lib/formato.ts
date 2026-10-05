@@ -75,6 +75,11 @@ export function formatoCantidad(tipo: "CUBETA" | "GALLINA", cantidad: number): s
   return `${cantidad} ${Math.abs(cantidad) === 1 ? "gallina" : "gallinas"}`;
 }
 
+/** Nombre para pedidos y recibos: "Cubeta AA", "Gallina". */
+export function nombreProducto(p: { tipo: string; nombre: string }): string {
+  return p.tipo === "CUBETA" ? `Cubeta ${p.nombre}` : p.nombre;
+}
+
 export function formatoConsecutivo(prefijo: string, numero: number): string {
   return `${prefijo}-${String(numero).padStart(6, "0")}`;
 }

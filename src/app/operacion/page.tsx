@@ -7,8 +7,8 @@ import { seleccionarOperacion } from "./acciones";
 
 const DESCRIPCION = {
   ADMIN: "Todo: usuarios, precios, inventario, ventas y cartera.",
-  VENTAS: "Clientes, pedidos, ventas, cobros e inventario.",
-  REPARTIDOR: "Entregas, cobros y saldo de los clientes.",
+  VENTAS: "Clientes, pedidos, rutas, ventas, cobros, caja e inventario.",
+  REPARTIDOR: "Tu ruta del día: entregas, cobros y saldo de los clientes.",
   GALPONERO: "Clasificación diaria e inventario.",
 } as const;
 

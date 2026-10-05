@@ -2,16 +2,13 @@ import Link from "next/link";
 import type { EstadoPedido, Prisma } from "@prisma/client";
 import { BotonLink, Etiqueta, Tabla, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
+import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
 import { diaUTC, formatoDia, formatoPesos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 import { totalPedido } from "@/modules/precios";
 
-const ESTADOS: Record<EstadoPedido, { texto: string; color: "ambar" | "verde" | "gris" }> = {
-  PENDIENTE: { texto: "Pendiente", color: "ambar" },
-  ENTREGADO: { texto: "Entregado", color: "verde" },
-  CANCELADO: { texto: "Cancelado", color: "gris" },
-};
+const ESTADOS = ESTADO_PEDIDO;
 
 export default async function PedidosPage({ searchParams }: { searchParams: Promise<{ estado?: string; fecha?: string }> }) {
   const sesion = await requerir("pedidos.ver");
@@ -50,6 +47,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
           <select name="estado" defaultValue={estado} className="mt-1">
             <option value="PENDIENTE">Pendientes</option>
             <option value="ENTREGADO">Entregados</option>
+            <option value="NO_ENTREGADO">No entregados</option>
             <option value="CANCELADO">Cancelados</option>
             <option value="todos">Todos</option>
           </select>
@@ -90,6 +88,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
                 <td className="text-right">{formatoPesos(totalPedido(p.detalles))}</td>
                 <td>
                   <Etiqueta color={ESTADOS[p.estado].color}>{ESTADOS[p.estado].texto}</Etiqueta>
+                  {p.estado === "ENTREGADO" && esParcial(p.detalles) && <span className="text-xs text-stone-500"> parcial</span>}
                 </td>
               </tr>
             ))}

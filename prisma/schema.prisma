@@ -41,6 +41,8 @@ model Usuario {
   pedidos         Pedido[]
   ventas          Venta[]
   pagos           Pago[]
+  rutas           Ruta[]                  @relation("RepartidorRuta")
+  rutasLiquidadas Ruta[]                  @relation("LiquidadorRuta")
 }
 
 model Sesion {
@@ -130,6 +132,9 @@ model Cliente {
   telefono    String?
   direccion   String?
   zona        String?
+  // Ubicación GPS opcional para abrir la parada en Google Maps.
+  latitud     Float?
+  longitud    Float?
   notas       String?
   cupoCredito Int? // null = sin límite
   diasCredito Int      @default(15)
@@ -202,32 +207,40 @@ model DetalleClasificacion {
 enum EstadoPedido {
   PENDIENTE
   ENTREGADO
+  NO_ENTREGADO // el repartidor no lo pudo entregar; se puede reprogramar como pedido nuevo
   CANCELADO
 }
 
 model Pedido {
-  id           Int          @id @default(autoincrement())
-  clienteId    Int
-  fechaEntrega DateTime     @db.Date
-  estado       EstadoPedido @default(PENDIENTE)
-  nota         String?
-  creadoEn     DateTime     @default(now())
-  creadoPorId  Int
+  id              Int          @id @default(autoincrement())
+  clienteId       Int
+  fechaEntrega    DateTime     @db.Date
+  estado          EstadoPedido @default(PENDIENTE)
+  nota            String?
+  creadoEn        DateTime     @default(now())
+  creadoPorId     Int
+  rutaId          Int?
+  ordenEnRuta     Int?
+  motivoNoEntrega String?
 
   cliente   Cliente         @relation(fields: [clienteId], references: [id])
   creadoPor Usuario         @relation(fields: [creadoPorId], references: [id])
+  ruta      Ruta?           @relation(fields: [rutaId], references: [id])
   detalles  DetallePedido[]
   venta     Venta?
 
   @@index([estado, fechaEntrega])
+  @@index([rutaId])
 }
 
 model DetallePedido {
-  id             Int @id @default(autoincrement())
-  pedidoId       Int
-  productoId     Int
-  cantidad       Int // cubetas o gallinas
-  precioUnitario Int // precio congelado al crear el pedido
+  id                Int  @id @default(autoincrement())
+  pedidoId          Int
+  productoId        Int
+  cantidad          Int // cubetas o gallinas
+  precioUnitario    Int // precio congelado al crear el pedido
+  // Lo que realmente se entregó; null mientras no se entrega. Menos que cantidad = entrega parcial.
+  cantidadEntregada Int?
 
   pedido   Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   producto Producto @relation(fields: [productoId], references: [id])
@@ -280,13 +293,47 @@ model Pago {
   nota         String?
   // Solo transferencias: cuándo se confirmó en el banco que el dinero llegó.
   verificadoEn DateTime?
+  // Cobrado por el repartidor en esa ruta; entra en su liquidación.
+  rutaId       Int?
 
   cliente      Cliente          @relation(fields: [clienteId], references: [id])
   usuario      Usuario          @relation(fields: [usuarioId], references: [id])
+  ruta         Ruta?            @relation(fields: [rutaId], references: [id])
   aplicaciones AplicacionPago[]
 
   @@index([clienteId])
   @@index([dia])
+  @@index([rutaId])
+}
+
+// ---------- Rutas de entrega ----------
+
+enum EstadoRuta {
+  ABIERTA
+  LIQUIDADA
+}
+
+model Ruta {
+  id                Int        @id @default(autoincrement())
+  fecha             DateTime   @db.Date
+  repartidorId      Int
+  estado            EstadoRuta @default(ABIERTA)
+  creadaEn          DateTime   @default(now())
+  // Se llenan al liquidar: efectivo cobrado según el sistema y el que el repartidor entregó.
+  efectivoEsperado  Int?
+  efectivoEntregado Int?
+  diferencia        Int?
+  observacion       String?
+  liquidadaEn       DateTime?
+  liquidadaPorId    Int?
+
+  repartidor      Usuario          @relation("RepartidorRuta", fields: [repartidorId], references: [id])
+  liquidadaPor    Usuario?         @relation("LiquidadorRuta", fields: [liquidadaPorId], references: [id])
+  pedidos         Pedido[]
+  pagos           Pago[]
+  movimientosCaja MovimientoCaja[]
+
+  @@unique([fecha, repartidorId])
 }
 
 model AplicacionPago {
@@ -346,9 +393,12 @@ model MovimientoCaja {
   anulado      Boolean            @default(false)
   // Solo transferencias: cuándo se confirmó en el banco.
   verificadoEn DateTime?
+  // Diferencia de la liquidación de una ruta (faltante o sobrante del repartidor).
+  rutaId       Int?
 
   caja    Caja    @relation(fields: [dia], references: [dia])
   usuario Usuario @relation(fields: [usuarioId], references: [id])
+  ruta    Ruta?   @relation(fields: [rutaId], references: [id])
 
   @@index([dia])
 }

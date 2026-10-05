@@ -5,7 +5,9 @@ import { salir } from "../login/acciones";
 
 const MENU: { href: string; texto: string; permiso?: Permiso }[] = [
   { href: "/", texto: "Inicio" },
+  { href: "/mi-ruta", texto: "Mi ruta", permiso: "ruta.propia" },
   { href: "/pedidos", texto: "Pedidos", permiso: "pedidos.ver" },
+  { href: "/rutas", texto: "Rutas", permiso: "rutas" },
   { href: "/reparto", texto: "Reparto", permiso: "pedidos.ver" },
   { href: "/clientes", texto: "Clientes", permiso: "clientes.ver" },
   { href: "/cartera", texto: "Cartera", permiso: "cartera.ver" },

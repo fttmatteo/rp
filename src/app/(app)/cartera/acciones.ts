@@ -3,15 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { auditar } from "@/lib/auditoria";
 import { exigirCajaAbierta } from "@/lib/caja-db";
-import { deudasPendientes } from "@/lib/cartera-db";
 import { siguienteConsecutivo } from "@/lib/consecutivo";
 import { db } from "@/lib/db";
 import { bloquearCliente } from "@/lib/existencias";
 import { diaUTC, hoyISO, sumarDias } from "@/lib/formato";
 import { entero, ErrorUsuario, mensajeError, texto, textoOpcional, type EstadoForm } from "@/lib/form";
-import { crearPago, leerMedio } from "@/lib/pagos";
+import { abonar, leerMedio } from "@/lib/pagos";
+import { bloquearRuta } from "@/lib/rutas-db";
 import { requerir } from "@/lib/sesion";
-import { aplicarPagoARecibo, aplicarPagoFIFO } from "@/modules/cartera";
 
 export async function registrarAbono(clienteId: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("pagos.registrar");
@@ -23,10 +22,7 @@ export async function registrarAbono(clienteId: number, _: EstadoForm, form: For
     const ventaId = recibo ? Number(recibo) : null;
     if (ventaId !== null && !Number.isInteger(ventaId)) throw new ErrorUsuario("El recibo elegido no es válido.");
     await db.$transaction(async (tx) => {
-      await bloquearCliente(tx, clienteId);
-      const deudas = await deudasPendientes(clienteId, tx);
-      const aplicaciones = ventaId === null ? aplicarPagoFIFO(deudas, valor) : aplicarPagoARecibo(deudas, valor, ventaId);
-      const pago = await crearPago(tx, { clienteId, usuarioId: sesion.usuario.id, valor, medio, referencia, aplicaciones });
+      const { pago, aplicaciones } = await abonar(tx, { clienteId, usuarioId: sesion.usuario.id, valor, medio, referencia, ventaId });
       await auditar(tx, sesion.usuario.id, "Pago", pago.id, "abono", { valor, medio, aplicaciones });
     });
   } catch (e) {
@@ -44,7 +40,14 @@ export async function anularPago(pagoId: number, _: EstadoForm, _form: FormData)
     clienteId = await db.$transaction(async (tx) => {
       const pago = await tx.pago.findUnique({ where: { id: pagoId }, include: { aplicaciones: true } });
       if (!pago) throw new ErrorUsuario("Pago no encontrado.");
+      // Orden de bloqueo en todo el sistema: cliente, ruta y caja.
       await bloquearCliente(tx, pago.clienteId);
+      // Lo cobrado en una ruta ya liquidada no se puede cambiar sin reabrir la liquidación.
+      if (pago.rutaId) {
+        const ruta = await bloquearRuta(tx, pago.rutaId);
+        if (ruta.estado === "LIQUIDADA")
+          throw new ErrorUsuario("Este pago se cobró en una ruta ya liquidada. El administrador debe reabrir la liquidación primero.");
+      }
       await exigirCajaAbierta(tx, pago.dia);
       const marcado = await tx.pago.updateMany({ where: { id: pagoId, anulado: false }, data: { anulado: true } });
       if (marcado.count === 0) throw new ErrorUsuario("Este pago ya estaba anulado.");
