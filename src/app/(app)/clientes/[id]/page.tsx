@@ -147,7 +147,20 @@ export default async function ClientePage({
                   <input name="referencia" placeholder="Si es transferencia" />
                 </Campo>
               </div>
-              <p className="text-xs text-stone-500">El abono se aplica primero a la deuda más antigua.</p>
+              <Campo
+                etiqueta="Aplicar a"
+                ayuda="Si el cliente paga un recibo en particular, elígelo. Si el abono es mayor que ese recibo, lo que sobra va a la deuda más antigua."
+              >
+                <select name="recibo" defaultValue="">
+                  <option value="">La deuda más antigua primero</option>
+                  {deudas.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.tipo === "SALDO_INICIAL" ? "Saldo inicial" : "Recibo"} {formatoConsecutivo("RP", d.consecutivo)} · {formatoFecha(d.fecha)} · debe{" "}
+                      {formatoPesos(d.saldo)}
+                    </option>
+                  ))}
+                </select>
+              </Campo>
               <Boton type="submit">Registrar abono</Boton>
             </Formulario>
           )}

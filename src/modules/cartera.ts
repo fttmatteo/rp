@@ -35,6 +35,20 @@ export function aplicarPagoFIFO(deudas: DeudaPendiente[], valor: number): Aplica
   return aplicaciones;
 }
 
+/**
+ * Aplica un pago primero al recibo que el cliente eligió y, si sobra, al resto
+ * de deudas empezando por la más antigua.
+ */
+export function aplicarPagoARecibo(deudas: DeudaPendiente[], valor: number, ventaId: number): Aplicacion[] {
+  aplicarPagoFIFO(deudas, valor); // mismas validaciones: valor positivo y no mayor que la deuda total
+  const elegida = deudas.find((d) => d.id === ventaId && d.saldo > 0);
+  if (!elegida) throw new ErrorUsuario("Ese recibo ya no tiene saldo pendiente.");
+  const aplicaciones = aplicarPagoFIFO([elegida], Math.min(valor, elegida.saldo));
+  const resto = valor - aplicaciones[0].valor;
+  if (resto === 0) return aplicaciones;
+  return [...aplicaciones, ...aplicarPagoFIFO(deudas.filter((d) => d.id !== ventaId), resto)];
+}
+
 export const RANGOS_ANTIGUEDAD = ["0-15", "16-30", "31-60", "+60"] as const;
 export type RangoAntiguedad = (typeof RANGOS_ANTIGUEDAD)[number];
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aplicarPagoFIFO, rangoAntiguedad, resumenAntiguedad, superaCupo } from "./cartera";
+import { aplicarPagoARecibo, aplicarPagoFIFO, rangoAntiguedad, resumenAntiguedad, superaCupo } from "./cartera";
 
 const d = (id: number, saldo: number, fecha: string) => ({ id, saldo, fecha: new Date(fecha) });
 
@@ -41,5 +41,27 @@ describe("superaCupo", () => {
   it("compara saldo + nueva deuda", () => {
     expect(superaCupo(100000, 80000, 20000)).toBe(false);
     expect(superaCupo(100000, 80000, 20001)).toBe(true);
+  });
+});
+
+describe("aplicarPagoARecibo", () => {
+  const deudas = [
+    { id: 1, saldo: 30000, fecha: new Date("2026-09-01") },
+    { id: 2, saldo: 50000, fecha: new Date("2026-09-10") },
+    { id: 3, saldo: 20000, fecha: new Date("2026-09-20") },
+  ];
+  it("aplica al recibo elegido aunque no sea el más antiguo", () => {
+    expect(aplicarPagoARecibo(deudas, 20000, 2)).toEqual([{ ventaId: 2, valor: 20000 }]);
+  });
+  it("lo que sobra va a la deuda más antigua", () => {
+    expect(aplicarPagoARecibo(deudas, 60000, 3)).toEqual([
+      { ventaId: 3, valor: 20000 },
+      { ventaId: 1, valor: 30000 },
+      { ventaId: 2, valor: 10000 },
+    ]);
+  });
+  it("no acepta más que la deuda total ni un recibo sin saldo", () => {
+    expect(() => aplicarPagoARecibo(deudas, 100001, 1)).toThrow(/mayor/);
+    expect(() => aplicarPagoARecibo(deudas, 1000, 9)).toThrow(/saldo/);
   });
 });
