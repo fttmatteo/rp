@@ -70,14 +70,27 @@ export function formatoHuevos(huevos: number): string {
   return signo + partes.join(" + ");
 }
 
-export function formatoCantidad(tipo: "CUBETA" | "GALLINA", cantidad: number): string {
-  if (tipo === "CUBETA") return formatoHuevos(cantidad);
-  return `${cantidad} ${Math.abs(cantidad) === 1 ? "gallina" : "gallinas"}`;
+export type Tipo = "CUBETA" | "GALLINA" | "GALLINAZA";
+
+export const UNIDADES_GALLINAZA = ["bulto", "kilo", "viaje"] as const;
+
+/** "bulto" → "bultos" (las tres unidades forman el plural con -s). */
+function plural(palabra: string, n: number): string {
+  return Math.abs(n) === 1 ? palabra : `${palabra}s`;
 }
 
-/** Nombre para pedidos y recibos: "Cubeta AA", "Gallina". */
-export function nombreProducto(p: { tipo: string; nombre: string }): string {
-  return p.tipo === "CUBETA" ? `Cubeta ${p.nombre}` : p.nombre;
+/** Cantidad legible: cubetas y huevos, gallinas o la unidad de la gallinaza. */
+export function formatoCantidad(tipo: Tipo, cantidad: number, unidad?: string | null): string {
+  if (tipo === "CUBETA") return formatoHuevos(cantidad);
+  if (tipo === "GALLINAZA") return `${cantidad} ${plural(unidad ?? "bulto", cantidad)}`;
+  return `${cantidad} ${plural("gallina", cantidad)}`;
+}
+
+/** Nombre para pedidos y recibos: "Cubeta AA", "Gallina", "Gallinaza (bulto)". */
+export function nombreProducto(p: { tipo: string; nombre: string; unidad?: string | null }): string {
+  if (p.tipo === "CUBETA") return `Cubeta ${p.nombre}`;
+  if (p.tipo === "GALLINAZA") return `${p.nombre} (${p.unidad ?? "bulto"})`;
+  return p.nombre;
 }
 
 export function formatoConsecutivo(prefijo: string, numero: number): string {

@@ -78,7 +78,7 @@ export async function registrarEntrega(tx: Tx, d: DatosEntrega) {
     const detalle = falta
       .map((f) => {
         const p = productos.get(f.productoId)!;
-        return `${p.nombre} (hay ${formatoCantidad(p.tipo, f.disponible)})`;
+        return `${p.nombre} (hay ${formatoCantidad(p.tipo, f.disponible, p.unidad)})`;
       })
       .join(", ");
     throw new ErrorUsuario(`No hay inventario suficiente: ${detalle}.`);

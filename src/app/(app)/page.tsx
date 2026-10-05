@@ -90,7 +90,7 @@ export default async function InicioPage() {
                 <li key={p.id}>
                   <span className="text-stone-600">{p.nombre}</span>
                   <br />
-                  <strong>{formatoCantidad(p.tipo, stock.get(p.id) ?? 0)}</strong>
+                  <strong>{formatoCantidad(p.tipo, stock.get(p.id) ?? 0, p.unidad)}</strong>
                 </li>
               ))}
             </ul>

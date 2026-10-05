@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { formatoConsecutivo, formatoFechaHora, formatoPesos } from "@/lib/formato";
+import { formatoConsecutivo, formatoFechaHora, formatoPesos, nombreProducto } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { generarRecibo } from "@/lib/recibo-pdf";
 import { respuestaPdf } from "@/lib/respuesta-pdf";
@@ -26,7 +26,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   const numero = formatoConsecutivo("RP", venta.consecutivo);
   const lineas =
     venta.pedido?.detalles.map((d) => ({
-      descripcion: d.producto.tipo === "CUBETA" ? `Cubeta x30 ${d.producto.nombre}` : d.producto.nombre,
+      descripcion: d.producto.tipo === "CUBETA" ? `Cubeta x30 ${d.producto.nombre}` : nombreProducto(d.producto),
       cantidad: d.cantidad,
       precio: d.precioUnitario,
       valor: d.cantidad * d.precioUnitario,

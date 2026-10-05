@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { auditar } from "@/lib/auditoria";
-import { bloquearCaja, exigirCajaAbierta, obtenerCaja, totalesCaja } from "@/lib/caja-db";
+import { bloquearCaja, exigirCajaAbierta, exigirEfectivo, obtenerCaja, totalesCaja } from "@/lib/caja-db";
 import { db } from "@/lib/db";
 import { diaUTC, hoyISO } from "@/lib/formato";
 import { entero, ErrorUsuario, mensajeError, texto, textoOpcional, type EstadoForm } from "@/lib/form";
@@ -50,11 +50,7 @@ export async function registrarMovimientoCaja(diaISO: string, _: EstadoForm, for
     const { medio } = leerMedio(form);
     await db.$transaction(async (tx) => {
       await exigirCajaAbierta(tx, dia);
-      if (tipo === "EGRESO" && medio === "EFECTIVO") {
-        const caja = await obtenerCaja(dia, tx);
-        const disponible = efectivoEsperado(await totalesCaja(dia, caja.base, tx));
-        if (valor > disponible) throw new ErrorUsuario("No hay tanto efectivo en caja para ese gasto.");
-      }
+      if (tipo === "EGRESO" && medio === "EFECTIVO") await exigirEfectivo(tx, dia, valor);
       const mov = await tx.movimientoCaja.create({
         data: { dia, tipo, concepto, valor, medio, usuarioId: sesion.usuario.id },
       });
@@ -74,6 +70,7 @@ export async function anularMovimientoCaja(id: number, _: EstadoForm, _form: For
       const mov = await tx.movimientoCaja.findUnique({ where: { id } });
       if (!mov) throw new ErrorUsuario("Movimiento no encontrado.");
       if (mov.rutaId) throw new ErrorUsuario("Esta diferencia viene de la liquidación de una ruta. Se corrige reabriendo esa liquidación.");
+      if (mov.compraId || mov.pagoProveedorId) throw new ErrorUsuario("Este pago a un proveedor se anula desde la compra o el proveedor.");
       await exigirCajaAbierta(tx, mov.dia);
       const r = await tx.movimientoCaja.updateMany({ where: { id, anulado: false }, data: { anulado: true } });
       if (r.count === 0) throw new ErrorUsuario("Este movimiento ya estaba anulado.");

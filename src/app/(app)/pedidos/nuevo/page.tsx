@@ -3,7 +3,7 @@ import { Formulario } from "@/components/formulario";
 import { Alerta, Boton, BotonLink, Campo, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { saldoCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
-import { formatoPesos, hoyISO } from "@/lib/formato";
+import { formatoPesos, hoyISO, nombreProducto } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { precioParaCliente } from "@/modules/precios";
 import { crearPedido } from "../acciones";
@@ -81,7 +81,7 @@ export default async function NuevoPedidoPage({ searchParams }: { searchParams: 
                   const precio = precioParaCliente({ productoId: p.id, precioGeneral: p.precioGeneral }, especiales);
                   return (
                     <tr key={p.id}>
-                      <td className="font-medium">{p.tipo === "CUBETA" ? `Cubeta ${p.nombre}` : p.nombre}</td>
+                      <td className="font-medium">{nombreProducto(p)}</td>
                       <td>
                         {formatoPesos(precio)}
                         {especiales.has(p.id) && <span className="text-xs text-amber-700"> especial</span>}

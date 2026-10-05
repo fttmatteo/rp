@@ -2,24 +2,26 @@ import { Formulario } from "@/components/formulario";
 import { Boton, Campo, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { existencias } from "@/lib/existencias";
-import { formatoCantidad, formatoFechaHora } from "@/lib/formato";
+import { formatoCantidad, formatoFechaHora, formatoHuevos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 import { registrarAjuste } from "./acciones";
 
-const TIPO = { PRODUCCION: "Clasificación", VENTA: "Venta", AJUSTE: "Ajuste", ROTURA: "Rotura", ANULACION: "Anulación" } as const;
+const TIPO = { PRODUCCION: "Clasificación", VENTA: "Venta", AJUSTE: "Ajuste", ROTURA: "Rotura", ANULACION: "Anulación", COMPRA: "Compra" } as const;
 
 export default async function InventarioPage() {
   const sesion = await requerir("inventario.ver");
-  const [productos, stock, movimientos] = await Promise.all([
+  const [productos, stock, movimientos, porClasificar] = await Promise.all([
     db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
     existencias(),
     db.movimientoInventario.findMany({
       orderBy: { id: "desc" },
       take: 50,
-      include: { producto: true, usuario: true, venta: { include: { cliente: true } } },
+      include: { producto: true, usuario: true, venta: { include: { cliente: true } }, compra: { include: { proveedor: true } } },
     }),
+    db.compra.aggregate({ where: { anulada: false }, _sum: { porClasificar: true } }),
   ]);
+  const sinClasificar = porClasificar._sum.porClasificar ?? 0;
 
   return (
     <>
@@ -30,10 +32,16 @@ export default async function InventarioPage() {
           return (
             <div key={p.id} className="rounded border border-stone-200 bg-white p-3">
               <p className="text-sm text-stone-600">{p.nombre}</p>
-              <p className={`font-semibold ${cantidad < 0 ? "text-red-700" : ""}`}>{formatoCantidad(p.tipo, cantidad)}</p>
+              <p className={`font-semibold ${cantidad < 0 ? "text-red-700" : ""}`}>{formatoCantidad(p.tipo, cantidad, p.unidad)}</p>
             </div>
           );
         })}
+        {sinClasificar > 0 && (
+          <div className="rounded border border-amber-300 bg-amber-50 p-3">
+            <p className="text-sm text-stone-600">Comprado por clasificar</p>
+            <p className="font-semibold">{formatoHuevos(sinClasificar)}</p>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -57,10 +65,10 @@ export default async function InventarioPage() {
                   <td>{TIPO[m.tipo]}</td>
                   <td className={`whitespace-nowrap text-right ${m.cantidad < 0 ? "text-red-700" : "text-green-700"}`}>
                     {m.cantidad > 0 ? "+" : ""}
-                    {formatoCantidad(m.producto.tipo, m.cantidad)}
+                    {formatoCantidad(m.producto.tipo, m.cantidad, m.producto.unidad)}
                   </td>
                   <td className="text-stone-600">
-                    {m.venta ? m.venta.cliente.nombre : m.nota}
+                    {m.venta ? m.venta.cliente.nombre : m.compra && !m.nota ? `Compra #${m.compra.id} a ${m.compra.proveedor.nombre}` : m.nota}
                     {m.usuario && <span className="text-stone-400"> · {m.usuario.nombre}</span>}
                   </td>
                 </tr>
@@ -94,7 +102,7 @@ export default async function InventarioPage() {
                     <option value="salida">Salida</option>
                   </select>
                 </Campo>
-                <Campo etiqueta="Cubetas o gallinas">
+                <Campo etiqueta="Cubetas, gallinas o gallinaza">
                   <input name="cantidad" inputMode="numeric" defaultValue="0" />
                 </Campo>
                 <Campo etiqueta="Huevos sueltos" ayuda="Los que no completan una cubeta de 30. No aplica a gallinas.">

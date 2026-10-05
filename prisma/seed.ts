@@ -11,6 +11,8 @@ const PRODUCTOS = [
   { codigo: "A", nombre: "A", tipo: "CUBETA", orden: 4, precioGeneral: 15000, precioClienteSugerido: 13000 },
   { codigo: "B", nombre: "B", tipo: "CUBETA", orden: 5, precioGeneral: 12000, precioClienteSugerido: null },
   { codigo: "GALLINA", nombre: "Gallina", tipo: "GALLINA", orden: 6, precioGeneral: 22000, precioClienteSugerido: 20000 },
+  // Sin precio todavía: el administrador elige la unidad y el precio, y la pone en venta.
+  { codigo: "GALLINAZA", nombre: "Gallinaza", tipo: "GALLINAZA", orden: 7, precioGeneral: 0, precioClienteSugerido: null, unidad: "bulto", activo: false },
 ] as const;
 
 async function main() {

@@ -38,6 +38,8 @@ model Usuario {
   auditoria       Auditoria[]
   movimientos     MovimientoInventario[]
   clasificaciones RegistroClasificacion[]
+  compras         Compra[]
+  pagosProveedor  PagoProveedor[]
   pedidos         Pedido[]
   ventas          Venta[]
   pagos           Pago[]
@@ -77,6 +79,7 @@ model Auditoria {
 enum TipoProducto {
   CUBETA // cubeta de 30 huevos; el inventario se lleva en huevos
   GALLINA // se vende por unidad
+  GALLINAZA // abono; se vende por la unidad que elija el administrador (bulto, kilo o viaje)
 }
 
 model Producto {
@@ -88,6 +91,8 @@ model Producto {
   precioGeneral         Int
   // Precio especial sugerido al configurar un cliente especial
   precioClienteSugerido Int?
+  // Solo gallinaza: "bulto", "kilo" o "viaje". El precio y el inventario van en esa unidad.
+  unidad                String?
   activo                Boolean      @default(true)
   // Suma de sus movimientos de inventario, actualizada en la misma transacción
   // que cada movimiento para no tener que sumar todo el historial.
@@ -98,6 +103,7 @@ model Producto {
   movimientos      MovimientoInventario[]
   detallesClasif   DetalleClasificacion[]
   detallesPedido   DetallePedido[]
+  detallesCompra   DetalleCompra[]
 }
 
 model PrecioCliente {
@@ -156,6 +162,7 @@ enum TipoMovimiento {
   AJUSTE
   ROTURA
   ANULACION
+  COMPRA // huevo comprado a terceros (al recibirlo clasificado o al clasificarlo después)
 }
 
 model MovimientoInventario {
@@ -169,8 +176,10 @@ model MovimientoInventario {
   usuarioId       Int?
   ventaId         Int?
   clasificacionId Int?
+  compraId        Int?
 
   producto      Producto               @relation(fields: [productoId], references: [id])
+  compra        Compra?                @relation(fields: [compraId], references: [id])
   usuario       Usuario?               @relation(fields: [usuarioId], references: [id])
   venta         Venta?                 @relation(fields: [ventaId], references: [id])
   clasificacion RegistroClasificacion? @relation(fields: [clasificacionId], references: [id])
@@ -185,8 +194,11 @@ model RegistroClasificacion {
   usuarioId Int
   rotos     Int      @default(0)
   nota      String?
+  // Si viene de una compra sin clasificar; null = producción propia.
+  compraId  Int?
 
   usuario     Usuario                @relation(fields: [usuarioId], references: [id])
+  compra      Compra?                @relation(fields: [compraId], references: [id])
   detalles    DetalleClasificacion[]
   movimientos MovimientoInventario[]
 }
@@ -382,23 +394,116 @@ enum TipoMovimientoCaja {
 }
 
 model MovimientoCaja {
-  id           Int                @id @default(autoincrement())
-  dia          DateTime           @db.Date
-  fecha        DateTime           @default(now())
-  tipo         TipoMovimientoCaja
-  concepto     String
-  valor        Int
-  medio        MedioPago
-  usuarioId    Int
-  anulado      Boolean            @default(false)
+  id              Int                @id @default(autoincrement())
+  dia             DateTime           @db.Date
+  fecha           DateTime           @default(now())
+  tipo            TipoMovimientoCaja
+  concepto        String
+  valor           Int
+  medio           MedioPago
+  usuarioId       Int
+  anulado         Boolean            @default(false)
   // Solo transferencias: cuándo se confirmó en el banco.
-  verificadoEn DateTime?
+  verificadoEn    DateTime?
   // Diferencia de la liquidación de una ruta (faltante o sobrante del repartidor).
-  rutaId       Int?
+  rutaId          Int?
+  // Pago a un proveedor (compra de contado o abono a una compra a crédito).
+  compraId        Int?
+  pagoProveedorId Int?
 
-  caja    Caja    @relation(fields: [dia], references: [dia])
-  usuario Usuario @relation(fields: [usuarioId], references: [id])
-  ruta    Ruta?   @relation(fields: [rutaId], references: [id])
+  caja          Caja           @relation(fields: [dia], references: [dia])
+  usuario       Usuario        @relation(fields: [usuarioId], references: [id])
+  ruta          Ruta?          @relation(fields: [rutaId], references: [id])
+  compra        Compra?        @relation(fields: [compraId], references: [id])
+  pagoProveedor PagoProveedor? @relation(fields: [pagoProveedorId], references: [id])
 
   @@index([dia])
+}
+
+// ---------- Proveedores y compras de huevo a terceros ----------
+
+model Proveedor {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  telefono    String?
+  notas       String?
+  diasCredito Int      @default(15)
+  activo      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+
+  compras Compra[]
+  pagos   PagoProveedor[]
+}
+
+enum FormaPagoCompra {
+  CONTADO // sale de la caja del día
+  CREDITO // queda como cuenta por pagar
+}
+
+model Compra {
+  id            Int             @id @default(autoincrement())
+  proveedorId   Int
+  fecha         DateTime        @default(now())
+  dia           DateTime        @db.Date
+  usuarioId     Int
+  // true = llegó clasificada por tipo y entró directo al inventario.
+  clasificada   Boolean
+  huevos        Int // total de huevos recibidos
+  // Huevos que faltan por clasificar (solo compras sin clasificar).
+  porClasificar Int             @default(0)
+  total         Int // costo de la compra
+  saldo         Int // lo que falta pagarle al proveedor
+  formaPago     FormaPagoCompra
+  vence         DateTime?       @db.Date
+  anulada       Boolean         @default(false)
+  nota          String?
+
+  proveedor       Proveedor                 @relation(fields: [proveedorId], references: [id])
+  usuario         Usuario                   @relation(fields: [usuarioId], references: [id])
+  detalles        DetalleCompra[]
+  movimientos     MovimientoInventario[]
+  clasificaciones RegistroClasificacion[]
+  aplicaciones    AplicacionPagoProveedor[]
+  movimientosCaja MovimientoCaja[]
+
+  @@index([proveedorId, saldo])
+}
+
+model DetalleCompra {
+  compraId   Int
+  productoId Int
+  cantidad   Int // huevos
+
+  compra   Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@id([compraId, productoId])
+}
+
+model PagoProveedor {
+  id          Int       @id @default(autoincrement())
+  proveedorId Int
+  fecha       DateTime  @default(now())
+  dia         DateTime  @db.Date
+  valor       Int
+  medio       MedioPago
+  referencia  String?
+  usuarioId   Int
+  anulado     Boolean   @default(false)
+
+  proveedor       Proveedor                 @relation(fields: [proveedorId], references: [id])
+  usuario         Usuario                   @relation(fields: [usuarioId], references: [id])
+  aplicaciones    AplicacionPagoProveedor[]
+  movimientosCaja MovimientoCaja[]
+}
+
+model AplicacionPagoProveedor {
+  pagoId   Int
+  compraId Int
+  valor    Int
+
+  pago   PagoProveedor @relation(fields: [pagoId], references: [id])
+  compra Compra        @relation(fields: [compraId], references: [id])
+
+  @@id([pagoId, compraId])
 }

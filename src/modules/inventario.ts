@@ -2,7 +2,7 @@ import { HUEVOS_POR_CUBETA } from "@/lib/formato";
 
 // El inventario de huevos se guarda en huevos; los pedidos se hacen en cubetas.
 
-export function unidadesInventario(tipo: "CUBETA" | "GALLINA", cantidadVendida: number): number {
+export function unidadesInventario(tipo: "CUBETA" | "GALLINA" | "GALLINAZA", cantidadVendida: number): number {
   return tipo === "CUBETA" ? cantidadVendida * HUEVOS_POR_CUBETA : cantidadVendida;
 }
 
