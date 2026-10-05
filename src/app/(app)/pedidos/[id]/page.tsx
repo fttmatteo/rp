@@ -9,6 +9,8 @@ import { formatoConsecutivo, formatoDia, formatoFechaHora, formatoPesos, hoyISO,
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 import { superaCupo } from "@/modules/cartera";
+import { enlaceWhatsApp } from "@/modules/contacto";
+import { mensajePedido, mensajeRecibo } from "@/modules/mensajes";
 import { totalPedido } from "@/modules/precios";
 import { anularVenta, cancelarPedido, entregarPedido, marcarNoEntregado, reprogramarPedido } from "../acciones";
 
@@ -43,6 +45,24 @@ export default async function PedidoPage({
   const pagado = venta ? venta.aplicaciones.filter((a) => !a.pago.anulado).reduce((s, a) => s + a.valor, 0) : 0;
   const entregado = pedido.estado === "ENTREGADO";
   const parcial = entregado && esParcial(pedido.detalles);
+  // Mensaje listo para WhatsApp: confirmación si está pendiente, recibo si ya se entregó.
+  const whatsapp =
+    pedido.estado === "PENDIENTE"
+      ? enlaceWhatsApp(
+          pedido.cliente.telefono,
+          mensajePedido({
+            cliente: pedido.cliente.nombre,
+            fecha: formatoDia(pedido.fechaEntrega),
+            lineas: pedido.detalles.map((d) => ({ cantidad: d.cantidad, producto: nombreProducto(d.producto) })),
+            total,
+          }),
+        )
+      : venta && !venta.anulada
+        ? enlaceWhatsApp(
+            pedido.cliente.telefono,
+            mensajeRecibo({ cliente: pedido.cliente.nombre, numero: formatoConsecutivo("RP", venta.consecutivo), total: venta.total, pagado, saldoTotal: saldo }),
+          )
+        : null;
 
   return (
     <>
@@ -88,6 +108,11 @@ export default async function PedidoPage({
             </p>
           )}
           {pedido.motivoNoEntrega && <p className="mt-1 text-sm text-red-700">No se entregó: {pedido.motivoNoEntrega}</p>}
+          {whatsapp && (
+            <a href={whatsapp} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm underline">
+              {pedido.estado === "PENDIENTE" ? "Confirmar el pedido por WhatsApp" : "Enviar el recibo por WhatsApp"}
+            </a>
+          )}
           <div className="mt-4">
             <Tabla>
               <thead>

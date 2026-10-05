@@ -17,6 +17,7 @@ const MENU: { href: string; texto: string; permiso?: Permiso }[] = [
   { href: "/proveedores", texto: "Proveedores", permiso: "compras" },
   { href: "/clasificacion", texto: "Clasificación", permiso: "clasificacion" },
   { href: "/aves", texto: "Aves", permiso: "aves" },
+  { href: "/reportes", texto: "Reportes", permiso: "reportes" },
   { href: "/precios", texto: "Precios", permiso: "precios" },
   { href: "/usuarios", texto: "Usuarios", permiso: "usuarios" },
 ];

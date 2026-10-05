@@ -29,6 +29,7 @@ export type Permiso =
   | "ruta.propia" // la ruta del día del repartidor
   | "aves" // galpones, lotes y novedades
   | "compras" // proveedores, compras de huevo a terceros y cuentas por pagar
+  | "reportes" // reportes y exportaciones
   | "anular";
 
 const PERMISOS: Record<Exclude<Operacion, "ADMIN">, readonly Permiso[]> = {
@@ -44,6 +45,7 @@ const PERMISOS: Record<Exclude<Operacion, "ADMIN">, readonly Permiso[]> = {
     "caja",
     "rutas",
     "compras",
+    "reportes",
   ],
   REPARTIDOR: ["clientes.ver", "pedidos.ver", "pedidos.entregar", "pagos.registrar", "ruta.propia"],
   GALPONERO: ["clasificacion", "inventario.ver", "aves"],

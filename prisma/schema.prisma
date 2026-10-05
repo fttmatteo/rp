@@ -94,6 +94,8 @@ model Producto {
   precioClienteSugerido Int?
   // Solo gallinaza: "bulto", "kilo" o "viaje". El precio y el inventario van en esa unidad.
   unidad                String?
+  // Alerta de existencias bajas: cubetas, gallinas o unidades de gallinaza. Null = sin alerta.
+  minimo                Int?
   activo                Boolean      @default(true)
   // Suma de sus movimientos de inventario, actualizada en la misma transacción
   // que cada movimiento para no tener que sumar todo el historial.

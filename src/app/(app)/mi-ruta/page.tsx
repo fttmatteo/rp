@@ -10,6 +10,7 @@ import { datosRuta } from "@/lib/rutas-datos";
 import { requerir } from "@/lib/sesion";
 import { normalizar } from "@/lib/texto";
 import { enlaceLlamar, enlaceMaps, enlaceWhatsApp } from "@/modules/contacto";
+import { mensajeEnCamino } from "@/modules/mensajes";
 import { totalPedido } from "@/modules/precios";
 import { entregarPedido, marcarNoEntregado } from "../pedidos/acciones";
 import { abonoEnRuta } from "../rutas/acciones";
@@ -66,7 +67,7 @@ function Parada({
   const c = p.cliente;
   const total = totalPedido(p.detalles);
   const llamar = enlaceLlamar(c.telefono);
-  const whatsapp = enlaceWhatsApp(c.telefono);
+  const whatsapp = enlaceWhatsApp(c.telefono, mensajeEnCamino(c.nombre));
   const maps = enlaceMaps(c);
   return (
     <li
@@ -93,7 +94,7 @@ function Parada({
         )}
         {whatsapp && (
           <a href={whatsapp} target="_blank" rel="noreferrer" className="rounded border border-stone-300 px-3 py-2">
-            WhatsApp
+            Avisar que va en camino
           </a>
         )}
         {maps && (

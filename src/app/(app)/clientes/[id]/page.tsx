@@ -4,6 +4,7 @@ import { Formulario } from "@/components/formulario";
 import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { rangoAntiguedad, superaCupo } from "@/modules/cartera";
 import { enlaceMaps, enlaceWhatsApp } from "@/modules/contacto";
+import { mensajeEstadoCuenta } from "@/modules/mensajes";
 import { deudasPendientes } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoConsecutivo, formatoDia, formatoFecha, formatoPesos, hoyISO } from "@/lib/formato";
@@ -40,6 +41,18 @@ export default async function ClientePage({
   const especiales = new Map(cliente.precios.map((p) => [p.productoId, p.precio]));
   const op = sesion.operacion;
   const whatsapp = enlaceWhatsApp(cliente.telefono);
+  const estadoCuenta = enlaceWhatsApp(
+    cliente.telefono,
+    mensajeEstadoCuenta({
+      cliente: cliente.nombre,
+      deudas: deudas.map((d) => ({
+        numero: formatoConsecutivo("RP", d.consecutivo),
+        fecha: formatoFecha(d.fecha),
+        saldo: d.saldo,
+        vencida: d.vence < hoy,
+      })),
+    }),
+  );
   const maps = enlaceMaps(cliente);
 
   const historial = [
@@ -81,6 +94,11 @@ export default async function ClientePage({
         {whatsapp && (
           <a className="text-sm underline" href={whatsapp} target="_blank" rel="noreferrer">
             WhatsApp {cliente.telefono}
+          </a>
+        )}
+        {estadoCuenta && (
+          <a className="text-sm underline" href={estadoCuenta} target="_blank" rel="noreferrer">
+            Enviar estado de cuenta
           </a>
         )}
         {maps && (
