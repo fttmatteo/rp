@@ -28,6 +28,9 @@ model Usuario {
   accesos   Acceso[]
   activo    Boolean  @default(true)
   creadoEn  DateTime @default(now())
+  // Freno contra adivinar claves: tras varios intentos fallidos se bloquea un rato.
+  intentosFallidos Int       @default(0)
+  bloqueadoHasta   DateTime?
 
   sesiones        Sesion[]
   movimientosCaja MovimientoCaja[]

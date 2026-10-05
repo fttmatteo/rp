@@ -11,12 +11,17 @@ export function textoOpcional(form: FormData, campo: string): string | null {
   return texto(form, campo) || null;
 }
 
+// Tope para que un número enorme no desborde las columnas Int de PostgreSQL.
+const MAXIMO = 1_000_000_000;
+
 /** Entero no negativo; acepta "15.000" o "15000". Devuelve null si está vacío. */
 export function entero(form: FormData, campo: string): number | null {
   const v = texto(form, campo).replace(/[.\s$]/g, "");
   if (v === "") return null;
   if (!/^\d+$/.test(v)) throw new ErrorUsuario(`"${campo}" debe ser un número entero.`);
-  return Number(v);
+  const n = Number(v);
+  if (n > MAXIMO) throw new ErrorUsuario(`"${campo}" es demasiado grande.`);
+  return n;
 }
 
 /** Error con mensaje para mostrar al usuario. */
