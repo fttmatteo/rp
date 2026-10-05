@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { Alerta, Boton, BotonLink, Campo, Tabla, Tarjeta, Titulo } from "@/components/ui";
-import { saldoCliente } from "@/lib/cartera-db";
+import { deudasDeClientes } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
-import { formatoPesos, hoyISO } from "@/lib/formato";
+import { diaUTC, formatoDia, formatoPesos, hoyISO, nombreProducto } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { precioParaCliente } from "@/modules/precios";
 import { crearPedido } from "../acciones";
@@ -45,10 +45,14 @@ export default async function NuevoPedidoPage({ searchParams }: { searchParams: 
     );
   }
 
-  const [productos, saldo] = await Promise.all([
+  const hoy = diaUTC(hoyISO());
+  const [productos, deudas] = await Promise.all([
     db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
-    saldoCliente(cliente.id),
+    deudasDeClientes([cliente.id], hoy),
   ]);
+  const deuda = deudas.get(cliente.id);
+  const saldo = deuda?.saldo ?? 0;
+  const vencidaDesde = deuda?.deudas.filter((d) => d.vence < hoy).reduce<Date | null>((m, d) => (!m || d.vence < m ? d.vence : m), null);
   const especiales = new Map(cliente.precios.map((p) => [p.productoId, p.precio]));
 
   return (
@@ -60,6 +64,9 @@ export default async function NuevoPedidoPage({ searchParams }: { searchParams: 
         {saldo > 0 && (
           <Alerta tipo="aviso">
             Este cliente debe {formatoPesos(saldo)}.
+            {deuda && deuda.vencido > 0 && vencidaDesde && (
+              <strong> {formatoPesos(deuda.vencido)} están vencidos desde el {formatoDia(vencidaDesde)}.</strong>
+            )}
             {cliente.cupoCredito !== null && saldo >= cliente.cupoCredito && " Ya llegó a su cupo de crédito."}
           </Alerta>
         )}
@@ -81,7 +88,7 @@ export default async function NuevoPedidoPage({ searchParams }: { searchParams: 
                   const precio = precioParaCliente({ productoId: p.id, precioGeneral: p.precioGeneral }, especiales);
                   return (
                     <tr key={p.id}>
-                      <td className="font-medium">{p.tipo === "CUBETA" ? `Cubeta ${p.nombre}` : p.nombre}</td>
+                      <td className="font-medium">{nombreProducto(p)}</td>
                       <td>
                         {formatoPesos(precio)}
                         {especiales.has(p.id) && <span className="text-xs text-amber-700"> especial</span>}

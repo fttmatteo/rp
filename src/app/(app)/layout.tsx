@@ -5,13 +5,19 @@ import { salir } from "../login/acciones";
 
 const MENU: { href: string; texto: string; permiso?: Permiso }[] = [
   { href: "/", texto: "Inicio" },
+  { href: "/mi-ruta", texto: "Mi ruta", permiso: "ruta.propia" },
   { href: "/pedidos", texto: "Pedidos", permiso: "pedidos.ver" },
+  { href: "/rutas", texto: "Rutas", permiso: "rutas" },
   { href: "/reparto", texto: "Reparto", permiso: "pedidos.ver" },
   { href: "/clientes", texto: "Clientes", permiso: "clientes.ver" },
   { href: "/cartera", texto: "Cartera", permiso: "cartera.ver" },
   { href: "/caja", texto: "Caja", permiso: "caja" },
   { href: "/inventario", texto: "Inventario", permiso: "inventario.ver" },
+  { href: "/compras", texto: "Compras", permiso: "compras" },
+  { href: "/proveedores", texto: "Proveedores", permiso: "compras" },
   { href: "/clasificacion", texto: "Clasificación", permiso: "clasificacion" },
+  { href: "/aves", texto: "Aves", permiso: "aves" },
+  { href: "/reportes", texto: "Reportes", permiso: "reportes" },
   { href: "/precios", texto: "Precios", permiso: "precios" },
   { href: "/usuarios", texto: "Usuarios", permiso: "usuarios" },
 ];

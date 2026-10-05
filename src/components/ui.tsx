@@ -44,7 +44,7 @@ export function Titulo({ children, accion }: { children: ReactNode; accion?: Rea
 
 export function Tarjeta({ titulo, children, className = "" }: { titulo?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded border border-stone-200 bg-white p-4 ${className}`}>
+    <section className={`min-w-0 rounded border border-stone-200 bg-white p-4 ${className}`}>
       {titulo && <h2 className="mb-3 font-semibold">{titulo}</h2>}
       {children}
     </section>

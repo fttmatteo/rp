@@ -27,6 +27,16 @@ export function entero(form: FormData, campo: string, etiqueta: string): number 
   return n;
 }
 
+/** Número con decimales (acepta coma o punto), dentro de un rango. Devuelve null si está vacío. */
+export function decimal(form: FormData, campo: string, etiqueta: string, min: number, max: number): number | null {
+  const v = texto(form, campo).replace(",", ".");
+  if (v === "") return null;
+  if (!/^-?\d+(\.\d+)?$/.test(v)) throw new ErrorUsuario(`${etiqueta}: escribe un número, por ejemplo 4.6097.`);
+  const n = Number(v);
+  if (n < min || n > max) throw new ErrorUsuario(`${etiqueta}: debe estar entre ${min} y ${max}.`);
+  return n;
+}
+
 /** Error con mensaje para mostrar al usuario. */
 export class ErrorUsuario extends Error {}
 

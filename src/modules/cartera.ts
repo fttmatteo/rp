@@ -19,7 +19,7 @@ export interface Aplicacion {
 export function aplicarPagoFIFO(deudas: DeudaPendiente[], valor: number): Aplicacion[] {
   if (!Number.isInteger(valor) || valor <= 0) throw new ErrorUsuario("El valor del pago debe ser mayor que cero.");
   const total = deudas.reduce((s, d) => s + d.saldo, 0);
-  if (valor > total) throw new ErrorUsuario("El pago es mayor que lo que debe el cliente.");
+  if (valor > total) throw new ErrorUsuario("El pago es mayor que la deuda pendiente.");
 
   const ordenadas = [...deudas]
     .filter((d) => d.saldo > 0)

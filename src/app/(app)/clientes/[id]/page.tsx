@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
 import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { rangoAntiguedad, superaCupo } from "@/modules/cartera";
+import { enlaceMaps, enlaceWhatsApp } from "@/modules/contacto";
+import { mensajeEstadoCuenta } from "@/modules/mensajes";
 import { deudasPendientes } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoConsecutivo, formatoDia, formatoFecha, formatoPesos, hoyISO } from "@/lib/formato";
@@ -38,6 +40,20 @@ export default async function ClientePage({
   const hoy = diaUTC(hoyISO());
   const especiales = new Map(cliente.precios.map((p) => [p.productoId, p.precio]));
   const op = sesion.operacion;
+  const whatsapp = enlaceWhatsApp(cliente.telefono);
+  const estadoCuenta = enlaceWhatsApp(
+    cliente.telefono,
+    mensajeEstadoCuenta({
+      cliente: cliente.nombre,
+      deudas: deudas.map((d) => ({
+        numero: formatoConsecutivo("RP", d.consecutivo),
+        fecha: formatoFecha(d.fecha),
+        saldo: d.saldo,
+        vencida: d.vence < hoy,
+      })),
+    }),
+  );
+  const maps = enlaceMaps(cliente);
 
   const historial = [
     ...ventas.map((v) => ({ tipo: "venta" as const, fecha: v.fecha, v })),
@@ -75,9 +91,19 @@ export default async function ClientePage({
             {superaCupo(cliente.cupoCredito, saldo, 0) && <Etiqueta color="rojo">Supera el cupo</Etiqueta>}
           </p>
         )}
-        {cliente.telefono && (
-          <a className="text-sm underline" href={`https://wa.me/${cliente.telefono.replace(/\D/g, "")}`} target="_blank" rel="noreferrer">
+        {whatsapp && (
+          <a className="text-sm underline" href={whatsapp} target="_blank" rel="noreferrer">
             WhatsApp {cliente.telefono}
+          </a>
+        )}
+        {estadoCuenta && (
+          <a className="text-sm underline" href={estadoCuenta} target="_blank" rel="noreferrer">
+            Enviar estado de cuenta
+          </a>
+        )}
+        {maps && (
+          <a className="text-sm underline" href={maps} target="_blank" rel="noreferrer">
+            Ver en Maps
           </a>
         )}
       </div>

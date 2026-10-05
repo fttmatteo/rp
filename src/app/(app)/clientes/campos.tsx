@@ -5,6 +5,8 @@ interface Datos {
   telefono?: string | null;
   direccion?: string | null;
   zona?: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
   cupoCredito?: number | null;
   diasCredito?: number;
   notas?: string | null;
@@ -24,6 +26,12 @@ export function CamposCliente({ c = {} }: { c?: Datos }) {
       </Campo>
       <Campo etiqueta="Barrio o zona">
         <input name="zona" defaultValue={c.zona ?? ""} />
+      </Campo>
+      <Campo etiqueta="Latitud (opcional)" ayuda="Ubicación GPS para que el repartidor abra la parada en Google Maps. Sin ella se usa la dirección.">
+        <input name="latitud" inputMode="decimal" defaultValue={c.latitud ?? ""} placeholder="4.6097" />
+      </Campo>
+      <Campo etiqueta="Longitud (opcional)" ayuda="En Google Maps, mantén presionado el punto y copia los dos números.">
+        <input name="longitud" inputMode="decimal" defaultValue={c.longitud ?? ""} placeholder="-74.0817" />
       </Campo>
       <Campo etiqueta="Cupo de crédito" ayuda="Lo máximo que puede deber. Vacío = sin límite. Si lo supera, sale un aviso, pero se le puede seguir vendiendo.">
         <input name="cupoCredito" inputMode="numeric" defaultValue={c.cupoCredito ?? ""} />

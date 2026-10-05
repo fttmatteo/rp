@@ -1,14 +1,14 @@
 import { Formulario } from "@/components/formulario";
 import { Boton, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
-import { formatoFechaHora, formatoPesos } from "@/lib/formato";
+import { formatoFechaHora, formatoPesos, nombreProducto, UNIDADES_GALLINAZA } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { guardarPreciosGenerales } from "./acciones";
 
 export default async function PreciosPage() {
   await requerir("precios");
   const [productos, historial] = await Promise.all([
-    db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
+    db.producto.findMany({ orderBy: { orden: "asc" } }),
     db.historialPrecio.findMany({ take: 20, orderBy: { fecha: "desc" }, include: { producto: true, cliente: true } }),
   ]);
   return (
@@ -22,24 +22,55 @@ export default async function PreciosPage() {
                 <th>Producto</th>
                 <th>Precio general</th>
                 <th>Precio cliente sugerido</th>
+                <th>Mínimo en bodega</th>
+                <th>En venta</th>
               </tr>
             </thead>
             <tbody>
               {productos.map((p) => (
                 <tr key={p.id}>
-                  <td className="font-medium">{p.tipo === "CUBETA" ? `Cubeta ${p.nombre}` : p.nombre}</td>
+                  <td className="font-medium">
+                    {p.tipo === "GALLINAZA" ? (
+                      <label className="font-medium">
+                        Gallinaza por
+                        <select name={`unidad_${p.id}`} defaultValue={p.unidad ?? "bulto"} className="mt-1">
+                          {UNIDADES_GALLINAZA.map((u) => (
+                            <option key={u} value={u}>
+                              {u}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : (
+                      nombreProducto(p)
+                    )}
+                  </td>
                   <td>
-                    <input name={`general_${p.id}`} inputMode="numeric" defaultValue={p.precioGeneral} required />
+                    <input name={`general_${p.id}`} inputMode="numeric" defaultValue={p.precioGeneral || ""} />
                   </td>
                   <td>
                     <input name={`sugerido_${p.id}`} inputMode="numeric" defaultValue={p.precioClienteSugerido ?? ""} />
+                  </td>
+                  <td>
+                    <input
+                      name={`minimo_${p.id}`}
+                      inputMode="numeric"
+                      defaultValue={p.minimo ?? ""}
+                      placeholder={p.tipo === "CUBETA" ? "cubetas" : p.tipo === "GALLINA" ? "gallinas" : (p.unidad ?? "bulto") + "s"}
+                    />
+                  </td>
+                  <td>
+                    <input type="checkbox" name={`activo_${p.id}`} defaultChecked={p.activo} aria-label={`${p.nombre} en venta`} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </Tabla>
           <p className="text-sm text-stone-600">
-            El precio sugerido se propone al configurar los precios especiales de un cliente. Cada cliente puede tener el suyo.
+            El precio sugerido se propone al configurar los precios especiales de un cliente. Cada cliente puede tener el suyo. Un producto
+            que no está en venta no aparece en pedidos ni en la clasificación. La gallinaza se vende, se clasifica y se cuenta en la unidad
+            elegida; si cambias la unidad, ajusta su inventario. Si las existencias bajan del mínimo, Inicio muestra una alerta (déjalo vacío
+            para no avisar).
           </p>
           <Boton type="submit">Guardar precios</Boton>
         </Formulario>

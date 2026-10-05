@@ -2,8 +2,8 @@ import "server-only";
 import type { Caja } from "@prisma/client";
 import { db, type Tx } from "@/lib/db";
 import { ErrorUsuario } from "@/lib/form";
-import { formatoDia } from "@/lib/formato";
-import type { TotalesCaja } from "@/modules/caja";
+import { formatoDia, formatoPesos } from "@/lib/formato";
+import { efectivoEsperado, type TotalesCaja } from "@/modules/caja";
 
 const BLOQUEO_CAJA = 3;
 
@@ -34,6 +34,13 @@ export async function exigirCajaAbierta(tx: Tx, dia: Date): Promise<void> {
   const caja = await obtenerCaja(dia, tx);
   if (caja.estado === "CERRADA")
     throw new ErrorUsuario(`La caja del ${formatoDia(dia)} ya está cerrada. El administrador debe reabrirla para registrar dinero.`);
+}
+
+/** Para gastos en efectivo: exige que en la caja de ese día haya suficiente efectivo. */
+export async function exigirEfectivo(tx: Tx, dia: Date, valor: number): Promise<void> {
+  const caja = await obtenerCaja(dia, tx);
+  const disponible = efectivoEsperado(await totalesCaja(dia, caja.base, tx));
+  if (valor > disponible) throw new ErrorUsuario(`No hay tanto efectivo en caja (hay ${formatoPesos(disponible)}). Regístralo por transferencia o revisa la caja.`);
 }
 
 export async function totalesCaja(dia: Date, base: number, c: Tx | typeof db = db): Promise<TotalesCaja> {

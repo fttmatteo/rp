@@ -15,12 +15,15 @@ export function Formulario({
   children,
   className = "space-y-4",
   confirmar,
+  id,
 }: {
   accion: Accion;
   children: ReactNode;
   className?: string;
   /** Pregunta antes de enviar (para anulaciones y cancelaciones). */
   confirmar?: string;
+  /** Para asociar campos que están fuera del formulario (atributo form="..."). */
+  id?: string;
 }) {
   const [estado, enviar, enviando] = useActionState(accion, undefined);
   const ref = useRef<HTMLFormElement>(null);
@@ -39,7 +42,7 @@ export function Formulario({
   }
 
   return (
-    <form ref={ref} action={enviar} onSubmit={alEnviar} className={className}>
+    <form ref={ref} id={id} action={enviar} onSubmit={alEnviar} className={className}>
       {estado?.error && <Alerta>{estado.error}</Alerta>}
       {estado?.ok && <Alerta tipo="ok">{estado.ok}</Alerta>}
       <fieldset disabled={enviando} className="contents">

@@ -1,0 +1,13 @@
+import type { EstadoPedido } from "@prisma/client";
+
+export const ESTADO_PEDIDO: Record<EstadoPedido, { texto: string; color: "ambar" | "verde" | "gris" | "rojo" }> = {
+  PENDIENTE: { texto: "Pendiente", color: "ambar" },
+  ENTREGADO: { texto: "Entregado", color: "verde" },
+  NO_ENTREGADO: { texto: "No entregado", color: "rojo" },
+  CANCELADO: { texto: "Cancelado", color: "gris" },
+};
+
+/** Entregado con menos de lo pedido en alguna línea. */
+export function esParcial(detalles: { cantidad: number; cantidadEntregada: number | null }[]): boolean {
+  return detalles.some((d) => d.cantidadEntregada !== null && d.cantidadEntregada < d.cantidad);
+}

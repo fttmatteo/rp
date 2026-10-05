@@ -13,6 +13,8 @@ describe("permisos", () => {
     expect(puede("REPARTIDOR", "pedidos.crear")).toBe(false);
     expect(puede("GALPONERO", "clasificacion")).toBe(true);
     expect(puede("GALPONERO", "clientes.ver")).toBe(false);
+    expect(puede("VENTAS", "reportes")).toBe(true);
+    expect(puede("REPARTIDOR", "reportes")).toBe(false);
   });
   it("solo se entra a operaciones asignadas", () => {
     expect(tieneAcceso(["VENTAS", "REPARTIDOR"], "REPARTIDOR")).toBe(true);

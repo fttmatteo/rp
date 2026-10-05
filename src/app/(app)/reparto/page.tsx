@@ -1,18 +1,24 @@
 import Link from "next/link";
+import { leerFecha, SelectorDia } from "@/components/selector-dia";
 import { Etiqueta, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
-import { diaUTC, formatoDia, formatoPesos, hoyISO, sumarDias } from "@/lib/formato";
+import { esParcial } from "@/lib/estados";
+import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { cierreReparto, valoresPedido, type PedidoReparto } from "@/modules/reparto";
 
-export default async function RepartoPage({ searchParams }: { searchParams: Promise<{ fecha?: string }> }) {
+export default async function RepartoPage({ searchParams }: { searchParams: Promise<{ fecha?: string; ruta?: string }> }) {
   await requerir("pedidos.ver");
-  const { fecha: f } = await searchParams;
-  const fecha = f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? f : hoyISO();
+  const { fecha: f, ruta: rutaParam = "" } = await searchParams;
+  const fecha = leerFecha(f);
+  const rutas = await db.ruta.findMany({ where: { fecha: diaUTC(fecha) }, include: { repartidor: true }, orderBy: { repartidor: { nombre: "asc" } } });
+  // Filtro por ruta (requerimiento 4): todas, una ruta o los pedidos sin ruta.
+  const rutaElegida = rutas.find((r) => String(r.id) === rutaParam);
+  const filtroRuta = rutaParam === "sin" ? { rutaId: null } : rutaElegida ? { rutaId: rutaElegida.id } : {};
 
   const [pedidos, productos] = await Promise.all([
     db.pedido.findMany({
-      where: { fechaEntrega: diaUTC(fecha), estado: { not: "CANCELADO" } },
+      where: { fechaEntrega: diaUTC(fecha), estado: { not: "CANCELADO" }, ...filtroRuta },
       orderBy: [{ cliente: { zona: "asc" } }, { cliente: { nombre: "asc" } }, { id: "asc" }],
       include: {
         cliente: true,
@@ -22,10 +28,7 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
     }),
     db.producto.findMany({ orderBy: { orden: "asc" } }),
   ]);
-  // Para moverse entre días, incluidos los futuros (pedidos programados).
-  const otroDia = (dias: number) => sumarDias(diaUTC(fecha), dias).toISOString().slice(0, 10);
   const hoy = hoyISO();
-  const manana = sumarDias(diaUTC(hoy), 1).toISOString().slice(0, 10);
   const nombres = new Map(productos.map((p) => [p.id, p.nombre]));
   const orden = new Map(productos.map((p) => [p.id, p.orden]));
 
@@ -36,6 +39,7 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
     const diaVenta = venta ? hoyISO(venta.fecha) : null;
     const reparto: PedidoReparto = {
       entregado: p.estado === "ENTREGADO" && venta !== null,
+      noEntregado: p.estado === "NO_ENTREGADO",
       detalles: p.detalles,
       pagos: venta
         ? venta.aplicaciones
@@ -50,30 +54,36 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <Titulo>Reparto del {formatoDia(diaUTC(fecha))}</Titulo>
-      <form className="mb-4 flex flex-wrap items-end gap-2">
-        <label>
-          Fecha de entrega
-          <input type="date" name="fecha" defaultValue={fecha} className="mt-1" />
-        </label>
-        <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
-          Ver
-        </button>
-        <span className="flex gap-3 py-2 text-sm">
-          <Link href={`/reparto?fecha=${otroDia(-1)}`} className="underline">
-            Día anterior
+      <Titulo>
+        Reparto del {formatoDia(diaUTC(fecha))}
+        {rutaElegida && ` · ruta de ${rutaElegida.repartidor.nombre}`}
+        {rutaParam === "sin" && " · sin ruta"}
+      </Titulo>
+      <SelectorDia ruta="/reparto" fecha={fecha} etiqueta="Fecha de entrega">
+        {rutas.length > 0 && (
+          <label>
+            Ruta
+            <select name="ruta" defaultValue={rutaElegida ? String(rutaElegida.id) : rutaParam === "sin" ? "sin" : ""} className="mt-1">
+              <option value="">Todas</option>
+              {rutas.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.repartidor.nombre}
+                </option>
+              ))}
+              <option value="sin">Sin ruta</option>
+            </select>
+          </label>
+        )}
+      </SelectorDia>
+      {rutaElegida && (
+        <p className="mb-4 text-sm">
+          La liquidación de esta ruta (efectivo entregado y devoluciones) está en{" "}
+          <Link href={`/rutas/${rutaElegida.id}`} className="underline">
+            la ruta de {rutaElegida.repartidor.nombre}
           </Link>
-          <Link href={`/reparto?fecha=${hoy}`} className="underline">
-            Hoy
-          </Link>
-          <Link href={`/reparto?fecha=${manana}`} className="underline">
-            Mañana
-          </Link>
-          <Link href={`/reparto?fecha=${otroDia(1)}`} className="underline">
-            Día siguiente
-          </Link>
-        </span>
-      </form>
+          .
+        </p>
+      )}
       {fecha > hoy && (
         <p className="mb-4 text-sm text-stone-600">Reparto programado: son los pedidos creados para esa fecha. Se entregan y cobran ese día.</p>
       )}
@@ -102,14 +112,22 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
                     </Link>
                     {p.cliente.zona && <span className="block text-xs text-stone-500">{p.cliente.zona}</span>}
                   </td>
-                  <td className="text-stone-600">{p.detalles.map((d) => `${d.cantidad} ${nombres.get(d.productoId)}`).join(", ")}</td>
+                  <td className="text-stone-600">
+                    {p.detalles.map((d) => `${reparto.entregado ? (d.cantidadEntregada ?? d.cantidad) : d.cantidad} ${nombres.get(d.productoId)}`).join(", ")}
+                  </td>
                   <td className="text-right">{formatoPesos(valores.valor)}</td>
                   <td className="text-right">{reparto.entregado ? formatoPesos(valores.pagado) : "–"}</td>
                   <td className={`text-right ${valores.pendiente > 0 ? "text-red-700" : ""}`}>
                     {reparto.entregado ? formatoPesos(valores.pendiente) : "–"}
                   </td>
                   <td>
-                    {reparto.entregado ? <Etiqueta color="verde">Entregado</Etiqueta> : <Etiqueta color="ambar">Por entregar</Etiqueta>}
+                    {reparto.entregado ? (
+                      <Etiqueta color="verde">Entregado{esParcial(p.detalles) && " parcial"}</Etiqueta>
+                    ) : reparto.noEntregado ? (
+                      <Etiqueta color="rojo">No entregado</Etiqueta>
+                    ) : (
+                      <Etiqueta color="ambar">Por entregar</Etiqueta>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -127,6 +145,7 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
                   <tr>
                     <th>Clasificación</th>
                     <th className="text-right">Entregado</th>
+                    <th className="text-right">Devuelto</th>
                     <th className="text-right">Por entregar</th>
                     <th className="text-right">Valor entregado</th>
                   </tr>
@@ -136,13 +155,14 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
                     <tr key={c.productoId}>
                       <td>{nombres.get(c.productoId)}</td>
                       <td className="text-right">{c.entregado}</td>
+                      <td className="text-right">{c.devuelto}</td>
                       <td className="text-right">{c.porEntregar}</td>
                       <td className="text-right">{formatoPesos(c.valorEntregado)}</td>
                     </tr>
                   ))}
                 </tbody>
               </Tabla>
-              <p className="mt-2 text-xs text-stone-500">Cubetas de 30 huevos; gallinas por unidad.</p>
+              <p className="mt-2 text-xs text-stone-500">Cubetas de 30 huevos; gallinas por unidad. Devuelto: entregas parciales y pedidos no entregados.</p>
             </Tarjeta>
             <Tarjeta titulo="Valores">
               <dl className="grid grid-cols-2 gap-y-1 text-sm">
