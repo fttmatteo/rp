@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import type { EstadoForm } from "@/lib/form";
+import { mensajeError, type EstadoForm } from "@/lib/form";
 import { ETIQUETA_OPERACION, esOperacion, tieneAcceso } from "@/lib/permisos";
 import { elegirOperacion, requerirSesion } from "@/lib/sesion";
 
@@ -14,6 +14,10 @@ export async function seleccionarOperacion(_: EstadoForm, form: FormData): Promi
       error: `Acceso denegado: el administrador no te ha asignado el acceso de ${ETIQUETA_OPERACION[operacion]}.`,
     };
   }
-  await elegirOperacion(sesion.sesionId, operacion);
+  try {
+    await elegirOperacion(sesion.sesionId, operacion);
+  } catch (e) {
+    return { error: mensajeError(e) };
+  }
   redirect("/");
 }

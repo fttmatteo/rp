@@ -11,7 +11,7 @@ import { huevosDe } from "@/modules/inventario";
 export async function registrarAjuste(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("inventario.ajustar");
   try {
-    const productoId = entero(form, "productoId");
+    const productoId = entero(form, "productoId", "Producto");
     const producto = productoId ? await db.producto.findUnique({ where: { id: productoId } }) : null;
     if (!producto) throw new ErrorUsuario("Elige el producto.");
     const tipo = texto(form, "tipo");
@@ -19,8 +19,8 @@ export async function registrarAjuste(_: EstadoForm, form: FormData): Promise<Es
     const sentido = tipo === "ROTURA" ? -1 : texto(form, "sentido") === "salida" ? -1 : 1;
     const nota = texto(form, "nota");
     if (!nota) throw new ErrorUsuario("Explica el motivo del ajuste.");
-    const cantidadBase = entero(form, "cantidad") ?? 0;
-    const unidades = producto.tipo === "CUBETA" ? huevosDe(cantidadBase, entero(form, "sueltos") ?? 0) : cantidadBase;
+    const cantidadBase = entero(form, "cantidad", "Cantidad") ?? 0;
+    const unidades = producto.tipo === "CUBETA" ? huevosDe(cantidadBase, entero(form, "sueltos", "Huevos sueltos") ?? 0) : cantidadBase;
     if (unidades <= 0) throw new ErrorUsuario("La cantidad debe ser mayor que cero.");
 
     await db.$transaction(async (tx) => {

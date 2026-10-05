@@ -33,8 +33,12 @@ export async function crearSesion(usuarioId: number, operacion: Operacion | null
 export async function cerrarSesion(): Promise<void> {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
-  if (token) await db.sesion.deleteMany({ where: { id: hash(token) } });
-  jar.delete(COOKIE);
+  // La cookie se borra aunque falle la base de datos: salir siempre debe funcionar.
+  try {
+    if (token) await db.sesion.deleteMany({ where: { id: hash(token) } });
+  } finally {
+    jar.delete(COOKIE);
+  }
 }
 
 export interface SesionActual {

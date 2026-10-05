@@ -28,7 +28,7 @@ export async function crearPedido(clienteId: number, _: EstadoForm, form: FormDa
     const detalles = productos
       .map((p) => ({
         productoId: p.id,
-        cantidad: entero(form, `cantidad_${p.id}`) ?? 0,
+        cantidad: entero(form, `cantidad_${p.id}`, `Cantidad de ${p.nombre}`) ?? 0,
         precioUnitario: precioParaCliente({ productoId: p.id, precioGeneral: p.precioGeneral }, especiales),
       }))
       .filter((d) => d.cantidad > 0);
@@ -50,7 +50,8 @@ export async function crearPedido(clienteId: number, _: EstadoForm, form: FormDa
   } catch (e) {
     return { error: mensajeError(e) };
   }
-  redirect(`/pedidos/${id}`);
+  // Se avisa en la página de destino que quedó creado.
+  redirect(`/pedidos/${id}?creado=1`);
 }
 
 export async function cancelarPedido(id: number, _: EstadoForm, _form: FormData): Promise<EstadoForm> {
@@ -75,7 +76,7 @@ export async function cancelarPedido(id: number, _: EstadoForm, _form: FormData)
 export async function entregarPedido(id: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("pedidos.entregar");
   try {
-    const pagado = entero(form, "pagado") ?? 0;
+    const pagado = entero(form, "pagado", "Valor pagado") ?? 0;
     const medio = pagado > 0 ? leerMedio(form) : null;
 
     await db.$transaction(async (tx) => {

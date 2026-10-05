@@ -13,9 +13,16 @@ import { anularVenta } from "../../pedidos/acciones";
 import { actualizarCliente, guardarPreciosCliente } from "../acciones";
 import { CamposCliente } from "../campos";
 
-export default async function ClientePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ClientePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ creado?: string }>;
+}) {
   const sesion = await requerir("clientes.ver");
   const id = Number((await params).id);
+  const { creado } = await searchParams;
   const cliente = Number.isInteger(id)
     ? await db.cliente.findUnique({ where: { id }, include: { precios: true } })
     : null;
@@ -51,6 +58,11 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
       >
         {cliente.nombre} {!cliente.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
       </Titulo>
+      {creado && (
+        <div className="mb-4">
+          <Alerta tipo="ok">Cliente creado. Ya puedes tomarle pedidos o cargar su saldo inicial.</Alerta>
+        </div>
+      )}
 
       <div className="mb-6 flex flex-wrap items-baseline gap-x-6 gap-y-2">
         <p>
