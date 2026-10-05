@@ -3,7 +3,8 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import { formatoCelda, type Reporte } from "@/lib/reportes";
 
 /** Las fuentes estándar del PDF solo tienen caracteres latinos; el resto se reemplaza. */
-const limpiar = (t: string) => t.replace(/[  ]/g, " ").replace(/[^\x20-\x7e\xa0-\xff]/g, "?");
+const limpiar = (t: string) =>
+  t.replace(/[\u202f\u2009]/g, " ").replace(/[\u2013\u2014]/g, "-").replace(/[^\x20-\x7e\xa0-\xff]/g, "?");
 
 function recortar(t: string, ancho: number, font: PDFFont, size: number): string {
   let s = limpiar(t);
