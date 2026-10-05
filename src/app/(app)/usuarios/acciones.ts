@@ -2,7 +2,6 @@
 
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { auditar } from "@/lib/auditoria";
 import { db } from "@/lib/db";
 import { ErrorUsuario, mensajeError, texto, type EstadoForm } from "@/lib/form";
@@ -20,7 +19,6 @@ function leerAccesos(form: FormData): Operacion[] {
 
 export async function crearUsuario(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("usuarios");
-  let id: number;
   try {
     const nombre = texto(form, "nombre");
     const usuario = texto(form, "usuario").toLowerCase();
@@ -33,15 +31,16 @@ export async function crearUsuario(_: EstadoForm, form: FormData): Promise<Estad
     if (await db.usuario.findUnique({ where: { usuario } })) throw new ErrorUsuario("Ese usuario ya existe.");
 
     const claveHash = await bcrypt.hash(clave, 10);
-    id = await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx) => {
       const nuevo = await tx.usuario.create({ data: { nombre, usuario, claveHash, accesos } });
       await auditar(tx, sesion.usuario.id, "Usuario", nuevo.id, "crear", { usuario, accesos });
-      return nuevo.id;
     });
   } catch (e) {
     return { error: mensajeError(e) };
   }
-  redirect(`/usuarios/${id}`);
+  // El formulario está en la misma lista: se queda ahí, se limpia y el nuevo usuario aparece en la tabla.
+  revalidatePath("/usuarios");
+  return { ok: `Usuario ${texto(form, "usuario").toLowerCase()} creado.` };
 }
 
 export async function actualizarUsuario(id: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
