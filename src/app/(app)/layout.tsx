@@ -6,6 +6,7 @@ import { salir } from "../login/acciones";
 const MENU: { href: string; texto: string; permiso?: Permiso }[] = [
   { href: "/", texto: "Inicio" },
   { href: "/pedidos", texto: "Pedidos", permiso: "pedidos.ver" },
+  { href: "/reparto", texto: "Reparto", permiso: "pedidos.ver" },
   { href: "/clientes", texto: "Clientes", permiso: "clientes.ver" },
   { href: "/cartera", texto: "Cartera", permiso: "cartera.ver" },
   { href: "/caja", texto: "Caja", permiso: "caja" },

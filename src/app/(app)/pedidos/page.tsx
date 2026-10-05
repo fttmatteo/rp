@@ -16,9 +16,10 @@ const ESTADOS: Record<EstadoPedido, { texto: string; color: "ambar" | "verde" | 
 export default async function PedidosPage({ searchParams }: { searchParams: Promise<{ estado?: string; fecha?: string }> }) {
   const sesion = await requerir("pedidos.ver");
   const { estado = "PENDIENTE", fecha = "" } = await searchParams;
+  const conFecha = /^\d{4}-\d{2}-\d{2}$/.test(fecha);
   const where: Prisma.PedidoWhereInput = {
     ...(estado in ESTADOS ? { estado: estado as EstadoPedido } : {}),
-    ...(/^\d{4}-\d{2}-\d{2}$/.test(fecha) ? { fechaEntrega: diaUTC(fecha) } : {}),
+    ...(conFecha ? { fechaEntrega: diaUTC(fecha) } : {}),
   };
   const pedidos = await db.pedido.findMany({
     where,
@@ -26,6 +27,17 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
     take: 200,
     include: { cliente: true, detalles: { include: { producto: true } } },
   });
+
+  // Con fecha elegida se suman las cantidades por clasificación y el valor del día.
+  const totales = new Map<string, { orden: number; cantidad: number }>();
+  for (const p of pedidos)
+    for (const d of p.detalles) {
+      const t = totales.get(d.producto.nombre) ?? { orden: d.producto.orden, cantidad: 0 };
+      t.cantidad += d.cantidad;
+      totales.set(d.producto.nombre, t);
+    }
+  const resumen = [...totales].sort((a, b) => a[1].orden - b[1].orden).map(([nombre, t]) => `${t.cantidad} ${nombre}`);
+  const valorTotal = pedidos.reduce((s, p) => s + totalPedido(p.detalles), 0);
 
   return (
     <>
@@ -60,7 +72,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
               <th>Entrega</th>
               <th>Cliente</th>
               <th>Productos</th>
-              <th className="text-right">Total</th>
+              <th className="text-right">Valor</th>
               <th>Estado</th>
             </tr>
           </thead>
@@ -82,6 +94,20 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
               </tr>
             ))}
           </tbody>
+          {conFecha && (
+            <tfoot>
+              <tr className="font-semibold">
+                <td colSpan={3}>Total del día</td>
+                <td>{resumen.join(", ")}</td>
+                <td className="text-right">{formatoPesos(valorTotal)}</td>
+                <td>
+                  <Link href={`/reparto?fecha=${fecha}`} className="font-normal underline">
+                    Ver reparto
+                  </Link>
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </Tabla>
       )}
     </>

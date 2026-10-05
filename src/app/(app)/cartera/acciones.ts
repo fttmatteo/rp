@@ -11,16 +11,21 @@ import { diaUTC, hoyISO, sumarDias } from "@/lib/formato";
 import { entero, ErrorUsuario, mensajeError, texto, textoOpcional, type EstadoForm } from "@/lib/form";
 import { crearPago, leerMedio } from "@/lib/pagos";
 import { requerir } from "@/lib/sesion";
-import { aplicarPagoFIFO } from "@/modules/cartera";
+import { aplicarPagoARecibo, aplicarPagoFIFO } from "@/modules/cartera";
 
 export async function registrarAbono(clienteId: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("pagos.registrar");
   try {
     const valor = entero(form, "valor", "Valor") ?? 0;
     const { medio, referencia } = leerMedio(form);
+    // Vacío = a la deuda más antigua; si no, al recibo que el cliente eligió.
+    const recibo = textoOpcional(form, "recibo");
+    const ventaId = recibo ? Number(recibo) : null;
+    if (ventaId !== null && !Number.isInteger(ventaId)) throw new ErrorUsuario("El recibo elegido no es válido.");
     await db.$transaction(async (tx) => {
       await bloquearCliente(tx, clienteId);
-      const aplicaciones = aplicarPagoFIFO(await deudasPendientes(clienteId, tx), valor);
+      const deudas = await deudasPendientes(clienteId, tx);
+      const aplicaciones = ventaId === null ? aplicarPagoFIFO(deudas, valor) : aplicarPagoARecibo(deudas, valor, ventaId);
       const pago = await crearPago(tx, { clienteId, usuarioId: sesion.usuario.id, valor, medio, referencia, aplicaciones });
       await auditar(tx, sesion.usuario.id, "Pago", pago.id, "abono", { valor, medio, aplicaciones });
     });
