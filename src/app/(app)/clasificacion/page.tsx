@@ -33,7 +33,7 @@ export default async function ClasificacionPage() {
                 <tr>
                   <th>Tipo</th>
                   <th>Cubetas</th>
-                  <th>Huevos sueltos</th>
+                  <th>Huevos sueltos (sin completar cubeta)</th>
                 </tr>
               </thead>
               <tbody>
@@ -52,7 +52,7 @@ export default async function ClasificacionPage() {
             </Tabla>
             <div className="grid grid-cols-2 gap-3">
               {gallinas.map((p) => (
-                <Campo key={p.id} etiqueta="Gallinas pasadas a venta">
+                <Campo key={p.id} etiqueta="Gallinas pasadas a venta" ayuda="Salen del galpón y suman al inventario para vender.">
                   <input name={`unidades_${p.id}`} inputMode="numeric" placeholder="0" />
                 </Campo>
               ))}
