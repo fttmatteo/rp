@@ -10,7 +10,7 @@ import { requerir } from "@/lib/sesion";
 function leerCliente(form: FormData) {
   const nombre = texto(form, "nombre");
   if (!nombre) throw new ErrorUsuario("Escribe el nombre del cliente.");
-  const diasCredito = entero(form, "diasCredito");
+  const diasCredito = entero(form, "diasCredito", "Días de crédito");
   if (diasCredito === null) throw new ErrorUsuario("Escribe los días de crédito.");
   return {
     nombre,
@@ -18,7 +18,7 @@ function leerCliente(form: FormData) {
     direccion: textoOpcional(form, "direccion"),
     zona: textoOpcional(form, "zona"),
     notas: textoOpcional(form, "notas"),
-    cupoCredito: entero(form, "cupoCredito"),
+    cupoCredito: entero(form, "cupoCredito", "Cupo de crédito"),
     diasCredito,
   };
 }
@@ -36,7 +36,8 @@ export async function crearCliente(_: EstadoForm, form: FormData): Promise<Estad
   } catch (e) {
     return { error: mensajeError(e) };
   }
-  redirect(`/clientes/${id}`);
+  // Se avisa en la página de destino que quedó creado.
+  redirect(`/clientes/${id}?creado=1`);
 }
 
 export async function actualizarCliente(id: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
@@ -65,7 +66,7 @@ export async function guardarPreciosCliente(clienteId: number, _: EstadoForm, fo
     const previo = new Map(actuales.map((p) => [p.productoId, p.precio]));
     await db.$transaction(async (tx) => {
       for (const p of productos) {
-        const nuevo = entero(form, `precio_${p.id}`) || null;
+        const nuevo = entero(form, `precio_${p.id}`, `Precio de ${p.nombre}`) || null;
         const anterior = previo.get(p.id) ?? null;
         if (nuevo === anterior) continue;
         if (nuevo === null) {

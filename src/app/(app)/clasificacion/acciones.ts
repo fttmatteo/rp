@@ -20,8 +20,8 @@ export async function registrarClasificacion(_: EstadoForm, form: FormData): Pro
         productoId: p.id,
         cantidad:
           p.tipo === "CUBETA"
-            ? huevosDe(entero(form, `cubetas_${p.id}`) ?? 0, entero(form, `sueltos_${p.id}`) ?? 0)
-            : (entero(form, `unidades_${p.id}`) ?? 0),
+            ? huevosDe(entero(form, `cubetas_${p.id}`, `Cubetas de ${p.nombre}`) ?? 0, entero(form, `sueltos_${p.id}`, `Huevos sueltos de ${p.nombre}`) ?? 0)
+            : (entero(form, `unidades_${p.id}`, p.nombre) ?? 0),
       }))
       .filter((d) => d.cantidad > 0);
     if (detalles.length === 0) throw new ErrorUsuario("Escribe al menos una cantidad.");
@@ -31,7 +31,7 @@ export async function registrarClasificacion(_: EstadoForm, form: FormData): Pro
         data: {
           fecha: diaUTC(fechaISO),
           usuarioId: sesion.usuario.id,
-          rotos: entero(form, "rotos") ?? 0,
+          rotos: entero(form, "rotos", "Huevos rotos") ?? 0,
           nota: textoOpcional(form, "nota"),
           detalles: { create: detalles },
         },

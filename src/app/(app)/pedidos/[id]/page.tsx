@@ -11,9 +11,16 @@ import { superaCupo } from "@/modules/cartera";
 import { totalPedido } from "@/modules/precios";
 import { anularVenta, cancelarPedido, entregarPedido } from "../acciones";
 
-export default async function PedidoPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PedidoPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ creado?: string }>;
+}) {
   const sesion = await requerir("pedidos.ver");
   const id = Number((await params).id);
+  const { creado } = await searchParams;
   const pedido = Number.isInteger(id)
     ? await db.pedido.findUnique({
         where: { id },
@@ -41,6 +48,11 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
           {pedido.estado === "PENDIENTE" ? "Pendiente" : pedido.estado === "ENTREGADO" ? "Entregado" : "Cancelado"}
         </Etiqueta>
       </Titulo>
+      {creado && (
+        <div className="mb-4">
+          <Alerta tipo="ok">Pedido creado. Queda pendiente hasta que se entregue.</Alerta>
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Tarjeta>

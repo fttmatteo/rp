@@ -12,9 +12,9 @@ export async function guardarPreciosGenerales(_: EstadoForm, form: FormData): Pr
     const productos = await db.producto.findMany();
     await db.$transaction(async (tx) => {
       for (const p of productos) {
-        const general = entero(form, `general_${p.id}`);
+        const general = entero(form, `general_${p.id}`, `Precio general de ${p.nombre}`);
         if (general === null || general <= 0) throw new ErrorUsuario(`Escribe el precio general de ${p.nombre}.`);
-        const sugerido = entero(form, `sugerido_${p.id}`) || null;
+        const sugerido = entero(form, `sugerido_${p.id}`, `Precio sugerido de ${p.nombre}`) || null;
         if (general === p.precioGeneral && sugerido === p.precioClienteSugerido) continue;
         await tx.producto.update({ where: { id: p.id }, data: { precioGeneral: general, precioClienteSugerido: sugerido } });
         if (general !== p.precioGeneral) {

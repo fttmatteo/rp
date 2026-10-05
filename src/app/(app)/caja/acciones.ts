@@ -23,7 +23,7 @@ export async function actualizarBase(diaISO: string, _: EstadoForm, form: FormDa
   const sesion = await requerir("caja");
   try {
     const dia = leerDia(diaISO);
-    const base = entero(form, "base");
+    const base = entero(form, "base", "Base");
     if (base === null) throw new ErrorUsuario("Escribe la base.");
     await db.$transaction(async (tx) => {
       await exigirCajaAbierta(tx, dia);
@@ -45,7 +45,7 @@ export async function registrarMovimientoCaja(diaISO: string, _: EstadoForm, for
     if (tipo !== "INGRESO" && tipo !== "EGRESO") throw new ErrorUsuario("Elige si es ingreso o gasto.");
     const concepto = texto(form, "concepto");
     if (!concepto) throw new ErrorUsuario("Escribe el concepto.");
-    const valor = entero(form, "valor") ?? 0;
+    const valor = entero(form, "valor", "Valor") ?? 0;
     if (valor <= 0) throw new ErrorUsuario("El valor debe ser mayor que cero.");
     const { medio } = leerMedio(form);
     await db.$transaction(async (tx) => {
@@ -89,7 +89,7 @@ export async function cerrarCaja(diaISO: string, _: EstadoForm, form: FormData):
   const sesion = await requerir("caja");
   try {
     const dia = leerDia(diaISO);
-    const contado = entero(form, "contado");
+    const contado = entero(form, "contado", "Efectivo contado");
     if (contado === null) throw new ErrorUsuario("Escribe el efectivo contado.");
     const observacion = textoOpcional(form, "observacion");
     await db.$transaction(async (tx) => {

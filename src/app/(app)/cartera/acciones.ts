@@ -16,7 +16,7 @@ import { aplicarPagoFIFO } from "@/modules/cartera";
 export async function registrarAbono(clienteId: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("pagos.registrar");
   try {
-    const valor = entero(form, "valor") ?? 0;
+    const valor = entero(form, "valor", "Valor") ?? 0;
     const { medio, referencia } = leerMedio(form);
     await db.$transaction(async (tx) => {
       await bloquearCliente(tx, clienteId);
@@ -60,7 +60,7 @@ export async function anularPago(pagoId: number, _: EstadoForm, _form: FormData)
 export async function registrarSaldoInicial(clienteId: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("anular");
   try {
-    const valor = entero(form, "valor") ?? 0;
+    const valor = entero(form, "valor", "Valor") ?? 0;
     if (valor <= 0) throw new ErrorUsuario("El valor debe ser mayor que cero.");
     const fechaISO = texto(form, "fecha");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaISO) || fechaISO > hoyISO()) throw new ErrorUsuario("Fecha no válida.");
