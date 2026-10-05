@@ -21,13 +21,13 @@ enum Acceso {
 }
 
 model Usuario {
-  id        Int      @id @default(autoincrement())
-  nombre    String
-  usuario   String   @unique
-  claveHash String
-  accesos   Acceso[]
-  activo    Boolean  @default(true)
-  creadoEn  DateTime @default(now())
+  id               Int       @id @default(autoincrement())
+  nombre           String
+  usuario          String    @unique
+  claveHash        String
+  accesos          Acceso[]
+  activo           Boolean   @default(true)
+  creadoEn         DateTime  @default(now())
   // Freno contra adivinar claves: tras varios intentos fallidos se bloquea un rato.
   intentosFallidos Int       @default(0)
   bloqueadoHasta   DateTime?
@@ -267,17 +267,19 @@ enum MedioPago {
 }
 
 model Pago {
-  id          Int       @id @default(autoincrement())
-  consecutivo Int       @unique
-  clienteId   Int
-  fecha       DateTime  @default(now())
-  dia         DateTime  @db.Date // día de caja (hora de Bogotá) en que entró el dinero
-  valor       Int
-  medio       MedioPago
-  referencia  String?
-  usuarioId   Int
-  anulado     Boolean   @default(false)
-  nota        String?
+  id           Int       @id @default(autoincrement())
+  consecutivo  Int       @unique
+  clienteId    Int
+  fecha        DateTime  @default(now())
+  dia          DateTime  @db.Date // día de caja (hora de Bogotá) en que entró el dinero
+  valor        Int
+  medio        MedioPago
+  referencia   String?
+  usuarioId    Int
+  anulado      Boolean   @default(false)
+  nota         String?
+  // Solo transferencias: cuándo se confirmó en el banco que el dinero llegó.
+  verificadoEn DateTime?
 
   cliente      Cliente          @relation(fields: [clienteId], references: [id])
   usuario      Usuario          @relation(fields: [usuarioId], references: [id])
@@ -333,15 +335,17 @@ enum TipoMovimientoCaja {
 }
 
 model MovimientoCaja {
-  id        Int                @id @default(autoincrement())
-  dia       DateTime           @db.Date
-  fecha     DateTime           @default(now())
-  tipo      TipoMovimientoCaja
-  concepto  String
-  valor     Int
-  medio     MedioPago
-  usuarioId Int
-  anulado   Boolean            @default(false)
+  id           Int                @id @default(autoincrement())
+  dia          DateTime           @db.Date
+  fecha        DateTime           @default(now())
+  tipo         TipoMovimientoCaja
+  concepto     String
+  valor        Int
+  medio        MedioPago
+  usuarioId    Int
+  anulado      Boolean            @default(false)
+  // Solo transferencias: cuándo se confirmó en el banco.
+  verificadoEn DateTime?
 
   caja    Caja    @relation(fields: [dia], references: [dia])
   usuario Usuario @relation(fields: [usuarioId], references: [id])

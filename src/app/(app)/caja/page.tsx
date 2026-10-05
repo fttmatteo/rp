@@ -7,7 +7,7 @@ import { diaUTC, formatoConsecutivo, formatoDia, formatoFechaHora, formatoPesos,
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 import { efectivoEsperado, totalTransferencias } from "@/modules/caja";
-import { actualizarBase, anularMovimientoCaja, cerrarCaja, reabrirCaja, registrarMovimientoCaja } from "./acciones";
+import { actualizarBase, anularMovimientoCaja, cerrarCaja, reabrirCaja, registrarMovimientoCaja, verificarTransferencia } from "./acciones";
 
 function Fila({ texto, valor, fuerte, signo }: { texto: string; valor: number; fuerte?: boolean; signo?: "+" | "−" }) {
   return (
@@ -21,6 +21,27 @@ function Fila({ texto, valor, fuerte, signo }: { texto: string; valor: number; f
   );
 }
 
+/** Estado de una transferencia frente al banco, con el botón para cambiarlo. */
+function Verificacion({ entidad, id, verificadoEn }: { entidad: "Pago" | "MovimientoCaja"; id: number; verificadoEn: Date | null }) {
+  return verificadoEn ? (
+    <Formulario accion={verificarTransferencia.bind(null, entidad, id, false)} className="inline" confirmar="¿Quitar la verificación de esta transferencia?">
+      <Etiqueta color="verde">Verificada</Etiqueta>{" "}
+      <button type="submit" className="text-xs text-stone-500 underline">
+        Quitar
+      </button>
+    </Formulario>
+  ) : (
+    <Formulario accion={verificarTransferencia.bind(null, entidad, id, true)} className="inline">
+      <Etiqueta color="ambar">Sin verificar</Etiqueta>{" "}
+      <button type="submit" className="text-xs underline">
+        Ya llegó al banco
+      </button>
+    </Formulario>
+  );
+}
+
+const SIN_VERIFICAR = { medio: "TRANSFERENCIA", anulado: false, verificadoEn: null } as const;
+
 export default async function CajaPage({ searchParams }: { searchParams: Promise<{ dia?: string }> }) {
   const sesion = await requerir("caja");
   const hoy = hoyISO();
@@ -30,12 +51,24 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
 
   // La caja de hoy se abre al entrar; los días pasados solo se consultan.
   const caja = await obtenerCaja(dia, db, diaISO === hoy);
-  const [totales, pagos, movimientos, sinCerrar] = await Promise.all([
+  const [totales, pagos, movimientos, sinCerrar, pagosPendientes, movimientosPendientes] = await Promise.all([
     totalesCaja(dia, caja.base),
     db.pago.findMany({ where: { dia }, orderBy: { fecha: "asc" }, include: { cliente: true, usuario: true } }),
     db.movimientoCaja.findMany({ where: { dia }, orderBy: { fecha: "asc" }, include: { usuario: true } }),
     db.caja.findMany({ where: { estado: "ABIERTA", dia: { lt: diaUTC(hoy) } }, orderBy: { dia: "asc" } }),
+    db.pago.findMany({ where: { ...SIN_VERIFICAR, dia: { not: dia } }, select: { dia: true }, distinct: ["dia"] }),
+    db.movimientoCaja.findMany({ where: { ...SIN_VERIFICAR, dia: { not: dia } }, select: { dia: true }, distinct: ["dia"] }),
   ]);
+  // Otros días con transferencias que aún no se han confirmado en el banco.
+  const diasSinVerificar = [...new Set([...pagosPendientes, ...movimientosPendientes].map((p) => p.dia.toISOString().slice(0, 10)))].sort();
+  const pendiente = (x: { medio: string; anulado: boolean; verificadoEn: Date | null }) =>
+    x.medio === "TRANSFERENCIA" && !x.anulado && !x.verificadoEn;
+  const pagosPorVerificar = pagos.filter(pendiente);
+  const movimientosPorVerificar = movimientos.filter(pendiente);
+  const hayPendienteHoy = pagosPorVerificar.length + movimientosPorVerificar.length > 0;
+  const pendienteHoy =
+    pagosPorVerificar.reduce((t, p) => t + p.valor, 0) +
+    movimientosPorVerificar.reduce((t, m) => t + (m.tipo === "EGRESO" ? -m.valor : m.valor), 0);
   const esperado = efectivoEsperado(totales);
   const abierta = caja.estado === "ABIERTA";
   const cerradaPor = caja.cerradaPorId ? await db.usuario.findUnique({ where: { id: caja.cerradaPorId } }) : null;
@@ -73,6 +106,22 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
         </div>
       )}
 
+      {diasSinVerificar.length > 0 && (
+        <div className="mb-4">
+          <Alerta tipo="aviso">
+            Transferencias sin verificar en el banco:{" "}
+            {diasSinVerificar.map((d, i) => (
+              <span key={d}>
+                {i > 0 && ", "}
+                <Link href={`/caja?dia=${d}`} className="underline">
+                  {formatoDia(diaUTC(d))}
+                </Link>
+              </span>
+            ))}
+          </Alerta>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           <Tarjeta titulo="Efectivo">
@@ -97,6 +146,11 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
             <Fila texto="Otros ingresos por transferencia" valor={totales.ingresosTransferencia} signo="+" />
             <Fila texto="Gastos por transferencia" valor={totales.egresosTransferencia} signo="−" />
             <Fila texto="Neto en transferencias" valor={totalTransferencias(totales)} fuerte />
+            {hayPendienteHoy && (
+              <p className="pt-1 text-sm text-amber-700">
+                Falta confirmar en el banco transferencias por un neto de {formatoPesos(pendienteHoy)}. Márcalas abajo cuando las veas en la cuenta.
+              </p>
+            )}
           </Tarjeta>
 
           {abierta ? (
@@ -147,6 +201,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
                       {p.cliente.nombre} · {p.medio === "EFECTIVO" ? "efectivo" : "transferencia"}
                       <span className="text-stone-400"> · {p.usuario.nombre}</span>{" "}
                       {p.anulado && <Etiqueta color="rojo">Anulado</Etiqueta>}
+                      {p.medio === "TRANSFERENCIA" && !p.anulado && <Verificacion entidad="Pago" id={p.id} verificadoEn={p.verificadoEn} />}
                     </span>
                     <span className={p.anulado ? "text-stone-400 line-through" : ""}>{formatoPesos(p.valor)}</span>
                   </li>
@@ -164,6 +219,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
                       {m.tipo === "INGRESO" ? "Ingreso" : "Gasto"}: {m.concepto} · {m.medio === "EFECTIVO" ? "efectivo" : "transferencia"}
                       <span className="text-stone-400"> · {m.usuario.nombre}</span>{" "}
                       {m.anulado && <Etiqueta color="rojo">Anulado</Etiqueta>}
+                      {m.medio === "TRANSFERENCIA" && !m.anulado && <Verificacion entidad="MovimientoCaja" id={m.id} verificadoEn={m.verificadoEn} />}
                     </span>
                     <span className="flex items-center gap-2">
                       <span className={m.anulado ? "text-stone-400 line-through" : m.tipo === "EGRESO" ? "text-red-700" : "text-green-700"}>

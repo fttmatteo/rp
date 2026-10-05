@@ -144,3 +144,31 @@ export async function reabrirCaja(diaISO: string, _: EstadoForm, _form: FormData
   refrescar();
   return { ok: "Caja reabierta." };
 }
+
+/**
+ * Marca (o desmarca) una transferencia como confirmada en el banco.
+ * No mueve dinero, así que se permite aunque la caja de ese día ya esté cerrada.
+ */
+export async function verificarTransferencia(
+  entidad: "Pago" | "MovimientoCaja",
+  id: number,
+  verificada: boolean,
+  _: EstadoForm,
+  _form: FormData,
+): Promise<EstadoForm> {
+  const sesion = await requerir("caja");
+  try {
+    const where = { id, medio: "TRANSFERENCIA" as const, anulado: false };
+    const data = { verificadoEn: verificada ? new Date() : null };
+    await db.$transaction(async (tx) => {
+      const r =
+        entidad === "Pago" ? await tx.pago.updateMany({ where, data }) : await tx.movimientoCaja.updateMany({ where, data });
+      if (r.count === 0) throw new ErrorUsuario("Transferencia no encontrada o anulada.");
+      await auditar(tx, sesion.usuario.id, entidad, id, verificada ? "verificar" : "desverificar");
+    });
+  } catch (e) {
+    return { error: mensajeError(e) };
+  }
+  refrescar();
+  return { ok: verificada ? "Transferencia verificada." : "Verificación quitada." };
+}
