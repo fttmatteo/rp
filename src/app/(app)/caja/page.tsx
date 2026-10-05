@@ -105,7 +105,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
                 <p className="text-sm text-stone-600">
                   Cuenta el efectivo que hay en caja. El sistema espera <strong>{formatoPesos(esperado)}</strong>.
                 </p>
-                <Campo etiqueta="Efectivo contado">
+                <Campo etiqueta="Efectivo contado" ayuda="Billetes y monedas, incluida la base. Las transferencias no se cuentan.">
                   <input name="contado" inputMode="numeric" required />
                 </Campo>
                 <Campo etiqueta="Observación" ayuda="Obligatoria si no cuadra.">

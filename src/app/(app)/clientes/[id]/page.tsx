@@ -5,7 +5,7 @@ import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } fro
 import { rangoAntiguedad, superaCupo } from "@/modules/cartera";
 import { deudasPendientes } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
-import { diaUTC, formatoConsecutivo, formatoFecha, formatoPesos, hoyISO } from "@/lib/formato";
+import { diaUTC, formatoConsecutivo, formatoDia, formatoFecha, formatoPesos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 import { anularPago, registrarAbono, registrarSaldoInicial } from "../../cartera/acciones";
@@ -92,6 +92,7 @@ export default async function ClientePage({
                 <tr>
                   <th>Recibo</th>
                   <th>Fecha</th>
+                  <th>Vence</th>
                   <th>Días</th>
                   <th className="text-right">Saldo</th>
                 </tr>
@@ -113,6 +114,7 @@ export default async function ClientePage({
                       )}
                     </td>
                     <td>{formatoFecha(d.fecha)}</td>
+                    <td>{formatoDia(d.vence)}</td>
                     <td>
                       {rangoAntiguedad(d.fecha, hoy)}
                       {d.vence < hoy && (
@@ -264,7 +266,7 @@ export default async function ClientePage({
                 <Campo etiqueta="Valor">
                   <input name="valor" inputMode="numeric" required />
                 </Campo>
-                <Campo etiqueta="Fecha de la deuda">
+                <Campo etiqueta="Fecha de la deuda" ayuda="Desde esta fecha se cuentan los días de crédito para saber si está vencida.">
                   <input name="fecha" type="date" defaultValue={hoyISO()} max={hoyISO()} required />
                 </Campo>
               </div>

@@ -82,13 +82,13 @@ export default async function InventarioPage() {
                 </select>
               </Campo>
               <div className="grid grid-cols-2 gap-3">
-                <Campo etiqueta="Tipo">
+                <Campo etiqueta="Tipo" ayuda="Ajuste: corrige tras un conteo. Rotura: siempre resta.">
                   <select name="tipo">
                     <option value="AJUSTE">Ajuste</option>
                     <option value="ROTURA">Rotura (salida)</option>
                   </select>
                 </Campo>
-                <Campo etiqueta="Sentido">
+                <Campo etiqueta="Sentido" ayuda="Entrada suma, salida resta. En rotura no se usa.">
                   <select name="sentido">
                     <option value="entrada">Entrada</option>
                     <option value="salida">Salida</option>
@@ -97,7 +97,7 @@ export default async function InventarioPage() {
                 <Campo etiqueta="Cubetas o gallinas">
                   <input name="cantidad" inputMode="numeric" defaultValue="0" />
                 </Campo>
-                <Campo etiqueta="Huevos sueltos">
+                <Campo etiqueta="Huevos sueltos" ayuda="Los que no completan una cubeta de 30. No aplica a gallinas.">
                   <input name="sueltos" inputMode="numeric" defaultValue="0" />
                 </Campo>
               </div>

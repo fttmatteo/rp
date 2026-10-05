@@ -25,10 +25,10 @@ export function CamposCliente({ c = {} }: { c?: Datos }) {
       <Campo etiqueta="Barrio o zona">
         <input name="zona" defaultValue={c.zona ?? ""} />
       </Campo>
-      <Campo etiqueta="Cupo de crédito" ayuda="Vacío = sin límite. Si se supera, se muestra un aviso.">
+      <Campo etiqueta="Cupo de crédito" ayuda="Lo máximo que puede deber. Vacío = sin límite. Si lo supera, sale un aviso, pero se le puede seguir vendiendo.">
         <input name="cupoCredito" inputMode="numeric" defaultValue={c.cupoCredito ?? ""} />
       </Campo>
-      <Campo etiqueta="Días de crédito">
+      <Campo etiqueta="Días de crédito" ayuda="Plazo para pagar un fiado. Pasado ese plazo, la deuda se marca como vencida. Si lo cambias, solo aplica a las ventas nuevas.">
         <input name="diasCredito" inputMode="numeric" defaultValue={c.diasCredito ?? 15} required />
       </Campo>
       <div className="sm:col-span-2">
