@@ -11,6 +11,8 @@ const CABECERAS = [
 ];
 
 const nextConfig: NextConfig = {
+  // Servidor autónomo para la imagen de Docker (solo copia lo que la app necesita).
+  output: "standalone",
   poweredByHeader: false,
   async headers() {
     return [{ source: "/:path*", headers: CABECERAS }];

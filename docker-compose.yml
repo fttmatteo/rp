@@ -1,0 +1,79 @@
+# RP Software en el servidor propio: base de datos, app, túnel de Cloudflare y copias diarias.
+# Uso: docker compose --env-file produccion.env up -d --build
+name: rp
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rp
+      POSTGRES_DB: rp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Falta POSTGRES_PASSWORD en produccion.env}
+    volumes:
+      - datos:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rp -d rp"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Migraciones y datos iniciales; corre en cada arranque y termina.
+  migrar:
+    build: { context: ., target: migrar }
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://rp:${POSTGRES_PASSWORD}@db:5432/rp
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?Falta SEED_ADMIN_PASSWORD en produccion.env}
+    depends_on:
+      db: { condition: service_healthy }
+
+  app:
+    build: { context: ., target: app }
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://rp:${POSTGRES_PASSWORD}@db:5432/rp
+    # Solo accesible desde el propio servidor; desde internet se entra por el túnel.
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      migrar: { condition: service_completed_successfully }
+
+  # Publica la app con HTTPS en el dominio configurado en Cloudflare, sin abrir puertos.
+  tunel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Falta TUNNEL_TOKEN en produccion.env}
+    depends_on:
+      - app
+
+  # Copia de la base de datos cada día en ./respaldos; se borran las de más de DIAS_RESPALDO días.
+  respaldo:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGUSER: rp
+      PGDATABASE: rp
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      DIAS: ${DIAS_RESPALDO:-30}
+      TZ: America/Bogota
+    volumes:
+      - ./respaldos:/respaldos
+    entrypoint:
+      - sh
+      - -c
+      - |
+        while true; do
+          f=/respaldos/rp-$$(date +%Y-%m-%d_%H%M).dump
+          if pg_dump -Fc -f "$$f.tmp"; then mv "$$f.tmp" "$$f"; echo "Copia lista: $$f"; else rm -f "$$f.tmp"; echo "ERROR en la copia"; fi
+          find /respaldos -name 'rp-*.dump' -mtime +$$DIAS -delete
+          sleep 86400
+        done
+    depends_on:
+      migrar: { condition: service_completed_successfully }
+
+volumes:
+  datos:
