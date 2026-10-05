@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Etiqueta, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
-import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
+import { diaUTC, formatoDia, formatoPesos, hoyISO, sumarDias } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { cierreReparto, valoresPedido, type PedidoReparto } from "@/modules/reparto";
 
@@ -22,6 +22,10 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
     }),
     db.producto.findMany({ orderBy: { orden: "asc" } }),
   ]);
+  // Para moverse entre días, incluidos los futuros (pedidos programados).
+  const otroDia = (dias: number) => sumarDias(diaUTC(fecha), dias).toISOString().slice(0, 10);
+  const hoy = hoyISO();
+  const manana = sumarDias(diaUTC(hoy), 1).toISOString().slice(0, 10);
   const nombres = new Map(productos.map((p) => [p.id, p.nombre]));
   const orden = new Map(productos.map((p) => [p.id, p.orden]));
 
@@ -55,7 +59,24 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
         <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
           Ver
         </button>
+        <span className="flex gap-3 py-2 text-sm">
+          <Link href={`/reparto?fecha=${otroDia(-1)}`} className="underline">
+            Día anterior
+          </Link>
+          <Link href={`/reparto?fecha=${hoy}`} className="underline">
+            Hoy
+          </Link>
+          <Link href={`/reparto?fecha=${manana}`} className="underline">
+            Mañana
+          </Link>
+          <Link href={`/reparto?fecha=${otroDia(1)}`} className="underline">
+            Día siguiente
+          </Link>
+        </span>
       </form>
+      {fecha > hoy && (
+        <p className="mb-4 text-sm text-stone-600">Reparto programado: son los pedidos creados para esa fecha. Se entregan y cobran ese día.</p>
+      )}
 
       {filas.length === 0 ? (
         <Vacio>No hay pedidos para entregar ese día.</Vacio>

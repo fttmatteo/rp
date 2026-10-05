@@ -65,7 +65,7 @@ export default async function NuevoPedidoPage({ searchParams }: { searchParams: 
         )}
         <Tarjeta>
           <Formulario accion={crearPedido.bind(null, cliente.id)}>
-            <Campo etiqueta="Fecha de entrega">
+            <Campo etiqueta="Fecha de entrega" ayuda="Puede ser hoy o un día futuro. El pedido aparece en el reparto de esa fecha.">
               <input type="date" name="fechaEntrega" defaultValue={hoyISO()} min={hoyISO()} required />
             </Campo>
             <Tabla>
