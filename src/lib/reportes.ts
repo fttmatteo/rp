@@ -135,11 +135,11 @@ async function lotes(desde: Date, hasta: Date): Promise<Reporte> {
     { titulo: "Muertes", tipo: "numero" },
     { titulo: "Descartes", tipo: "numero" },
     { titulo: "A venta", tipo: "numero" },
-    { titulo: "Traslados (neto)", tipo: "numero" },
+    { titulo: "Traslados", tipo: "numero" },
     { titulo: "Aves al final", tipo: "numero" },
     { titulo: "Mortalidad", tipo: "porcentaje" },
     { titulo: "Huevos", tipo: "numero" },
-    { titulo: "Postura promedio", tipo: "porcentaje" },
+    { titulo: "Postura prom.", tipo: "porcentaje" },
   ];
   const filas: Celda[][] = lista.map((l) => {
     const inicio = avesVivas(l, novedades, sumarDias(desde, -1));
@@ -163,7 +163,7 @@ async function lotes(desde: Date, hasta: Date): Promise<Reporte> {
       dias > 0 ? porcentajePostura(huevos / dias, fin) : null,
     ];
   });
-  return { titulo: REPORTES.lotes, nota: "Postura promedio: huevos por día con registro ÷ aves al final del período.", columnas, filas };
+  return { titulo: REPORTES.lotes, nota: "Traslados: aves que entraron menos las que salieron a otros lotes. Postura promedio: huevos por día con registro ÷ aves al final del período.", columnas, filas };
 }
 
 async function cartera(hoy: Date): Promise<Reporte> {
