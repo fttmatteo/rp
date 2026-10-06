@@ -29,7 +29,7 @@ export interface DatosEntrega {
   repartidorId: number | null;
 }
 
-/** Pedido pendiente bloqueado para el cliente y, si va en ruta, con la ruta abierta y del repartidor. */
+/** Pedido pendiente bloqueado para el cliente y, si va en ruta, con la ruta abierta y del repartidor (que no puede entregar pedidos sin ruta). */
 async function pedidoParaEntregar(tx: Tx, pedidoId: number, repartidorId: number | null) {
   const pedido = await tx.pedido.findUnique({
     where: { id: pedidoId },
@@ -37,6 +37,8 @@ async function pedidoParaEntregar(tx: Tx, pedidoId: number, repartidorId: number
   });
   if (!pedido) throw new ErrorUsuario("Pedido no encontrado.");
   await bloquearCliente(tx, pedido.clienteId);
+  // Un repartidor solo entrega pedidos de su propia ruta; los pedidos sin ruta los entrega ventas.
+  if (repartidorId !== null && !pedido.rutaId) throw new ErrorUsuario("Este pedido no está en tu ruta.");
   if (pedido.rutaId) {
     const ruta = await exigirRutaAbierta(tx, pedido.rutaId);
     if (repartidorId !== null && ruta.repartidorId !== repartidorId)

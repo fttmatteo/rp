@@ -45,6 +45,8 @@ export default async function PedidoPage({
   const pagado = venta ? venta.aplicaciones.filter((a) => !a.pago.anulado).reduce((s, a) => s + a.valor, 0) : 0;
   const entregado = pedido.estado === "ENTREGADO";
   const parcial = entregado && esParcial(pedido.detalles);
+  // El repartidor solo entrega los pedidos de su propia ruta.
+  const puedeEntregar = puede(op, "pedidos.entregar") && (op !== "REPARTIDOR" || pedido.ruta?.repartidorId === sesion.usuario.id);
   // Mensaje listo para WhatsApp: confirmación si está pendiente, recibo si ya se entregó.
   const whatsapp =
     pedido.estado === "PENDIENTE"
@@ -155,7 +157,7 @@ export default async function PedidoPage({
             )}
           </Tarjeta>
 
-          {pedido.estado === "PENDIENTE" && puede(op, "pedidos.entregar") && (
+          {pedido.estado === "PENDIENTE" && puedeEntregar && (
             <Tarjeta titulo="Registrar entrega">
               <Formulario accion={entregarPedido.bind(null, pedido.id)}>
                 <Campo
