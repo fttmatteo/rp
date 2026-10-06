@@ -35,6 +35,20 @@ npm run dev                 # http://localhost:3000
 
 Ingresa con el usuario `admin` y la clave de `SEED_ADMIN_PASSWORD`, y cámbiala desde **Usuarios**.
 
+### Datos de ejemplo (pruebas y preproducción)
+
+Para ver la app como si llevara meses en uso, en una base **de pruebas** recién creada:
+
+```bash
+npm run db:demo             # después de db:deploy y db:seed
+```
+
+Simula 90 días hasta hoy (`DEMO_DIAS=180` para más): unos 170 clientes con precios especiales y deudas que traían, pedidos diarios en dos rutas liquidadas, entregas parciales y no entregadas, cartera al día y vencida, abonos, cajas cerradas con gastos y consignaciones, lotes con producción, mortalidad y gallinas pasadas a la venta, clasificación diaria, compras a proveedores de contado y a crédito con sus abonos, ajustes, roturas y algunas anulaciones. Hoy queda con la caja abierta y las rutas por entregar.
+
+Crea los usuarios `laura` (ventas), `carlos` y `andres` (repartidores), `jorge` (galponero) y `diana` (ventas y repartidor), con la clave de `DEMO_PASSWORD` (si no está, la de `SEED_ADMIN_PASSWORD`). Solo corre en una base sin clientes, galpones, proveedores, caja ni inventario, así que no toca la de producción. Para empezar de nuevo: `npx prisma migrate reset` y otra vez `npm run db:demo`.
+
+Con Docker: `docker compose --env-file pruebas.env run --rm migrar npm run db:demo`.
+
 ## Puesta en marcha en el servidor
 
 La app corre en el servidor propio con Docker Compose y se publica con un túnel de Cloudflare: HTTPS en el dominio de la empresa sin abrir puertos del router ni tener IP fija.
