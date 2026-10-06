@@ -80,3 +80,18 @@ export async function primerMesLibro(): Promise<string | null> {
   const dias = [caja?.dia, pago?.dia, mov?.dia].filter((d): d is Date => !!d).map((d) => iso(d).slice(0, 7));
   return dias.length ? dias.sort()[0] : null;
 }
+
+/**
+ * Días del periodo que no se pueden pasar al libro porque su caja no está cerrada:
+ * cajas abiertas y días con cobros sin caja cerrada. Lista vacía = se puede generar.
+ */
+export async function diasSinCerrar(desde: string, hasta: string): Promise<string[]> {
+  const dia = { gte: diaUTC(desde), lte: diaUTC(hasta) };
+  const [cajas, pagos] = await Promise.all([
+    db.caja.findMany({ where: { dia }, select: { dia: true, estado: true } }),
+    db.pago.groupBy({ by: ["dia"], where: { dia, anulado: false } }),
+  ]);
+  const cerradas = new Set(cajas.filter((c) => c.estado === "CERRADA").map((c) => iso(c.dia)));
+  const pendientes = new Set([...cajas.filter((c) => c.estado !== "CERRADA").map((c) => iso(c.dia)), ...pagos.map((p) => iso(p.dia)).filter((d) => !cerradas.has(d))]);
+  return [...pendientes].sort();
+}
