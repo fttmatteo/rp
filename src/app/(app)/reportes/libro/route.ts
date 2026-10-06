@@ -1,27 +1,27 @@
-import { hoyISO } from "@/lib/formato";
-import { libroDelMes } from "@/lib/libro-db";
+import { diaUTC, formatoDia, hoyISO } from "@/lib/formato";
+import { libroDelPeriodo } from "@/lib/libro-db";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
-import { leerMes, nombreMes, rangoMes } from "@/modules/libro";
+import { leerPeriodo, nombreMes } from "@/modules/libro";
 import { generarXlsx } from "@/modules/xlsx";
 
-/** Libro mensual en Excel: fecha, concepto, ingreso, egreso y saldo. */
+/** Libro en Excel de un mes o de un periodo: fecha, concepto, ingreso, egreso y saldo. */
 export async function GET(req: Request) {
   const sesion = await requerir();
   if (!puede(sesion.operacion, "reportes")) return new Response("Acceso denegado", { status: 403 });
-  const actual = hoyISO().slice(0, 7);
-  const mes = leerMes(new URL(req.url).searchParams.get("mes")) ?? actual;
-  if (mes > actual) return new Response("Ese mes aún no empieza", { status: 400 });
+  const hoy = hoyISO();
+  const q = new URL(req.url).searchParams;
+  const { desde, hasta, mes } = leerPeriodo({ mes: q.get("mes"), desde: q.get("desde"), hasta: q.get("hasta") }, hoy);
 
-  const libro = await libroDelMes(mes);
-  const { desde } = rangoMes(mes);
+  const libro = await libroDelPeriodo(desde, hasta);
+  const periodo = mes ? nombreMes(mes) : `del ${formatoDia(diaUTC(desde))} al ${formatoDia(diaUTC(hasta))}`;
   const filas = [
-    [desde, `Saldo inicial de ${nombreMes(mes)}`, null, null, libro.saldoInicial],
+    [desde, `Saldo inicial ${mes ? `de ${periodo}` : periodo}`, null, null, libro.saldoInicial],
     ...libro.filas.map((f) => [f.fecha, f.concepto, f.ingreso, f.egreso, f.saldo]),
-    [null, mes === actual ? `Totales hasta hoy (${nombreMes(mes)} en curso)` : "Totales del mes", libro.ingresos, libro.egresos, libro.saldoFinal],
+    [null, hasta === hoy ? `Totales hasta hoy (${periodo})` : `Totales ${mes ? `de ${periodo}` : periodo}`, libro.ingresos, libro.egresos, libro.saldoFinal],
   ];
   const archivo = generarXlsx({
-    nombre: `Libro ${mes}`,
+    nombre: mes ? `Libro ${mes}` : `Libro ${desde} a ${hasta}`,
     columnas: [
       { titulo: "Fecha", tipo: "fecha", ancho: 12 },
       { titulo: "Concepto", ancho: 70 },
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   return new Response(Buffer.from(archivo), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="libro_${mes}.xlsx"`,
+      "Content-Disposition": `attachment; filename="libro_${mes ?? `${desde}_${hasta}`}.xlsx"`,
       "Cache-Control": "private, no-store",
     },
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { armarLibro, leerMes, mesesEntre, nombreMes, rangoMes } from "./libro";
+import { armarLibro, leerMes, leerPeriodo, mesesEntre, nombreMes, rangoMes } from "./libro";
 
 describe("libro mensual", () => {
   it("ordena por día y hora y acumula el saldo desde el saldo inicial", () => {
@@ -27,5 +27,21 @@ describe("libro mensual", () => {
     expect(rangoMes("2028-02")).toEqual({ desde: "2028-02-01", hasta: "2028-02-29" });
     expect(mesesEntre("2025-11", "2026-02")).toEqual(["2026-02", "2026-01", "2025-12", "2025-11"]);
     expect(nombreMes("2026-09")).toBe("septiembre de 2026");
+  });
+});
+
+describe("periodo del libro", () => {
+  const hoy = "2026-10-06";
+  it("un mes cerrado va completo y el mes en curso hasta hoy", () => {
+    expect(leerPeriodo({ mes: "2026-09" }, hoy)).toEqual({ desde: "2026-09-01", hasta: "2026-09-30", mes: "2026-09" });
+    expect(leerPeriodo({ mes: "2026-10" }, hoy)).toEqual({ desde: "2026-10-01", hasta: "2026-10-06", mes: "2026-10" });
+    expect(leerPeriodo({ mes: "2027-01" }, hoy)).toEqual({ desde: "2026-10-01", hasta: "2026-10-06", mes: "2026-10" });
+    expect(leerPeriodo({}, hoy).mes).toBe("2026-10");
+  });
+
+  it("un rango se ordena y no pasa de hoy", () => {
+    expect(leerPeriodo({ desde: "2026-09-20", hasta: "2026-08-15" }, hoy)).toEqual({ desde: "2026-08-15", hasta: "2026-09-20", mes: null });
+    expect(leerPeriodo({ desde: "2026-10-01", hasta: "2026-12-31" }, hoy)).toEqual({ desde: "2026-10-01", hasta: "2026-10-06", mes: null });
+    expect(leerPeriodo({ desde: "2026-02-30", hasta: "x" }, hoy).mes).toBe("2026-10");
   });
 });

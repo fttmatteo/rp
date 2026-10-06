@@ -1,19 +1,18 @@
 import "server-only";
 import { db } from "@/lib/db";
 import { diaUTC, formatoConsecutivo } from "@/lib/formato";
-import { armarLibro, rangoMes, type Libro, type MovimientoLibro } from "@/modules/libro";
+import { armarLibro, type Libro, type MovimientoLibro } from "@/modules/libro";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const medio = (m: string) => (m === "EFECTIVO" ? "efectivo" : "transferencia");
 
 /**
- * Libro del mes "AAAA-MM" armado con lo que ya guarda la caja: cobros a clientes, ingresos y
+ * Libro del periodo (días "AAAA-MM-DD", ambos incluidos) armado con lo que ya guarda la caja: cobros a clientes, ingresos y
  * egresos de caja (gastos, compras, pagos a proveedores, liquidaciones de ruta) y las
  * diferencias de los cierres. El saldo arranca en la base de la primera caja y acumula
- * efectivo y transferencias desde entonces, así cada mes empieza donde terminó el anterior.
+ * efectivo y transferencias desde entonces, así cada periodo empieza donde terminó el anterior.
  */
-export async function libroDelMes(mes: string): Promise<Libro> {
-  const { desde, hasta } = rangoMes(mes);
+export async function libroDelPeriodo(desde: string, hasta: string): Promise<Libro> {
   const inicio = diaUTC(desde);
   const rango = { gte: inicio, lte: diaUTC(hasta) };
   const antes = { lt: inicio };

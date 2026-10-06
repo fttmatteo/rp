@@ -97,10 +97,10 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
 
       <Tarjeta titulo="Libro mensual" className="mt-6">
         <p className="mb-3 text-sm text-stone-500">
-          Cada cobro, ingreso y egreso del mes con su saldo (fecha, concepto, ingreso, egreso y saldo). Al terminar el mes queda listo para descargar; el mes en
-          curso sale hasta hoy.
+          Cada cobro, ingreso y egreso con su saldo (fecha, concepto, ingreso, egreso y saldo). Descarga un mes completo o el periodo que quieras; lo
+          que incluya hoy sale hasta hoy.
         </p>
-        <form action="/reportes/libro" className="flex flex-wrap items-end gap-2">
+        <form action="/reportes/libro" className="mb-3 flex flex-wrap items-end gap-2">
           <label>
             Mes
             <select name="mes" defaultValue={meses[0]} className="mt-1">
@@ -113,7 +113,20 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
             </select>
           </label>
           <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
-            Descargar Excel
+            Descargar Excel del mes
+          </button>
+        </form>
+        <form action="/reportes/libro" className="flex flex-wrap items-end gap-2">
+          <label>
+            Desde
+            <input type="date" name="desde" defaultValue={p.desde} max={hoy} required className="mt-1" />
+          </label>
+          <label>
+            Hasta
+            <input type="date" name="hasta" defaultValue={p.hasta} max={hoy} required className="mt-1" />
+          </label>
+          <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+            Descargar Excel del periodo
           </button>
         </form>
       </Tarjeta>

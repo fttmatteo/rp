@@ -65,6 +65,35 @@ export function mesesEntre(primero: string, actual: string): string[] {
   return meses;
 }
 
+const DIA = /^\d{4}-\d{2}-\d{2}$/;
+const diaValido = (v: string | null | undefined) => (v && DIA.test(v) && !Number.isNaN(Date.parse(v)) ? v : null);
+
+export interface PeriodoLibro {
+  desde: string;
+  hasta: string;
+  /** Para el título y el nombre del archivo. */
+  mes: string | null;
+}
+
+/**
+ * Periodo pedido: un mes ("mes=AAAA-MM") o un rango ("desde" y "hasta"). Sin datos válidos, el mes en curso.
+ * Las fechas al revés se ordenan y nada pasa de hoy.
+ */
+export function leerPeriodo(p: { mes?: string | null; desde?: string | null; hasta?: string | null }, hoy: string): PeriodoLibro {
+  const mes = leerMes(p.mes);
+  let desde = diaValido(p.desde);
+  let hasta = diaValido(p.hasta);
+  if (mes || !desde || !hasta) {
+    const m = mes && mes <= hoy.slice(0, 7) ? mes : hoy.slice(0, 7);
+    const r = rangoMes(m);
+    return { desde: r.desde, hasta: r.hasta < hoy ? r.hasta : hoy, mes: m };
+  }
+  if (desde > hasta) [desde, hasta] = [hasta, desde];
+  if (hasta > hoy) hasta = hoy;
+  if (desde > hoy) desde = hoy;
+  return { desde, hasta, mes: null };
+}
+
 const NOMBRES_MES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
 /** "2026-09" → "septiembre de 2026". */
