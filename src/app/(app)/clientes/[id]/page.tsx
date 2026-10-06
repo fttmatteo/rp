@@ -156,7 +156,7 @@ export default async function ClientePage({
               </tbody>
             </Tabla>
           )}
-          {puede(op, "pagos.registrar") && saldo > 0 && (
+          {puede(op, "pagos.registrar") && op !== "REPARTIDOR" && saldo > 0 && (
             <Formulario accion={registrarAbono.bind(null, id)} className="mt-4 space-y-3">
               <h3 className="font-medium">Registrar abono</h3>
               <div className="grid gap-3 sm:grid-cols-3">

@@ -41,7 +41,8 @@ services:
 
   # Publica la app con HTTPS en el dominio configurado en Cloudflare, sin abrir puertos.
   tunel:
-    image: cloudflare/cloudflared:latest
+    # Versión fija: se actualiza a propósito, no en cada descarga.
+    image: cloudflare/cloudflared:2026.10.0
     restart: unless-stopped
     command: tunnel --no-autoupdate run
     environment:

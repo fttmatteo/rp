@@ -8,6 +8,8 @@ const CABECERAS = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "same-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // El navegador recuerda por un año que la app solo se abre por HTTPS.
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
 ];
 
 const nextConfig: NextConfig = {
