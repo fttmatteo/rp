@@ -11,6 +11,7 @@ describe("permisos", () => {
     expect(puede("VENTAS", "precios")).toBe(false);
     expect(puede("REPARTIDOR", "pedidos.entregar")).toBe(true);
     expect(puede("REPARTIDOR", "pedidos.crear")).toBe(false);
+    expect(puede("REPARTIDOR", "pedidos.ver")).toBe(false);
     expect(puede("GALPONERO", "clasificacion")).toBe(true);
     expect(puede("GALPONERO", "clientes.ver")).toBe(false);
     expect(puede("VENTAS", "reportes")).toBe(true);

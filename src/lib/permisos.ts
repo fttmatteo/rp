@@ -47,7 +47,8 @@ const PERMISOS: Record<Exclude<Operacion, "ADMIN">, readonly Permiso[]> = {
     "compras",
     "reportes",
   ],
-  REPARTIDOR: ["clientes.ver", "pedidos.ver", "pedidos.entregar", "pagos.registrar", "ruta.propia"],
+  // El repartidor trabaja desde "Mi ruta": no ve la lista general de pedidos ni el reparto del día.
+  REPARTIDOR: ["clientes.ver", "pedidos.entregar", "pagos.registrar", "ruta.propia"],
   GALPONERO: ["clasificacion", "inventario.ver", "aves"],
 };
 
