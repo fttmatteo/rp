@@ -1,13 +1,17 @@
-import { BotonLink, Tabla, Titulo, Vacio } from "@/components/ui";
+import { BotonLink, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { diaUTC, hoyISO } from "@/lib/formato";
+import { primerMesLibro } from "@/lib/libro-db";
 import { formatoCelda, generarReporte, leerParametros, REPORTES } from "@/lib/reportes";
 import { requerir } from "@/lib/sesion";
+import { mesesEntre, nombreMes } from "@/modules/libro";
 
 export default async function ReportesPage({ searchParams }: { searchParams: Promise<{ tipo?: string; desde?: string; hasta?: string }> }) {
   await requerir("reportes");
   const hoy = hoyISO();
   const p = leerParametros(await searchParams, hoy);
-  const reporte = await generarReporte(p.tipo, diaUTC(p.desde), diaUTC(p.hasta), diaUTC(hoy));
+  const [reporte, primerMes] = await Promise.all([generarReporte(p.tipo, diaUTC(p.desde), diaUTC(p.hasta), diaUTC(hoy)), primerMesLibro()]);
+  const mesActual = hoy.slice(0, 7);
+  const meses = mesesEntre(primerMes ?? mesActual, mesActual);
   const consulta = new URLSearchParams({ tipo: p.tipo, desde: p.desde, hasta: p.hasta }).toString();
   const derecha = (i: number) => (reporte.columnas[i].tipo && reporte.columnas[i].tipo !== "texto" ? "text-right" : "");
 
@@ -90,6 +94,29 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         </Tabla>
       )}
       {reporte.nota && <p className="mt-2 text-sm text-stone-500">{reporte.nota}</p>}
+
+      <Tarjeta titulo="Libro mensual" className="mt-6">
+        <p className="mb-3 text-sm text-stone-500">
+          Cada cobro, ingreso y egreso del mes con su saldo (fecha, concepto, ingreso, egreso y saldo). Al terminar el mes queda listo para descargar; el mes en
+          curso sale hasta hoy.
+        </p>
+        <form action="/reportes/libro" className="flex flex-wrap items-end gap-2">
+          <label>
+            Mes
+            <select name="mes" defaultValue={meses[0]} className="mt-1">
+              {meses.map((m) => (
+                <option key={m} value={m}>
+                  {nombreMes(m)}
+                  {m === mesActual ? " (en curso)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+            Descargar Excel
+          </button>
+        </form>
+      </Tarjeta>
     </>
   );
 }
