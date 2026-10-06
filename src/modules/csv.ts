@@ -3,7 +3,9 @@
 const celda = (v: string | number | null): string => {
   if (v === null) return "";
   if (typeof v === "number") return String(v);
-  return /[";\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  // Un texto que empieza con = + - @ Excel lo toma como fórmula; el apóstrofo lo deja como texto.
+  const seguro = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  return /[";\n\r]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
 };
 
 export function aCsv(columnas: string[], filas: (string | number | null)[][]): string {

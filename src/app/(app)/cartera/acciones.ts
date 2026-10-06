@@ -14,6 +14,8 @@ import { requerir } from "@/lib/sesion";
 
 export async function registrarAbono(clienteId: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("pagos.registrar");
+  // Lo que cobra el repartidor debe quedar en su ruta para que la liquidación se lo cobre.
+  if (sesion.operacion === "REPARTIDOR") return { error: "Registra el abono desde la parada del cliente en Mi ruta." };
   try {
     const valor = entero(form, "valor", "Valor") ?? 0;
     const { medio, referencia } = leerMedio(form);
