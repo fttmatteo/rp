@@ -1,14 +1,13 @@
 // Matriz de accesos (operaciones) y lo que cada uno puede hacer.
 // Se usa en el servidor para cada página y acción, no solo para el menú.
 
-export const OPERACIONES = ["ADMIN", "VENTAS", "REPARTIDOR", "GALPONERO"] as const;
+export const OPERACIONES = ["ADMIN", "VENTAS", "REPARTIDOR"] as const;
 export type Operacion = (typeof OPERACIONES)[number];
 
 export const ETIQUETA_OPERACION: Record<Operacion, string> = {
   ADMIN: "Administrador",
   VENTAS: "Ventas",
   REPARTIDOR: "Repartidor",
-  GALPONERO: "Galponero",
 };
 
 export type Permiso =
@@ -50,7 +49,6 @@ const PERMISOS: Record<Exclude<Operacion, "ADMIN">, readonly Permiso[]> = {
   ],
   // El repartidor trabaja desde "Mi ruta": no ve la lista general de pedidos, el reparto del día ni los clientes.
   REPARTIDOR: ["pedidos.entregar", "pagos.registrar", "ruta.propia"],
-  GALPONERO: ["clasificacion", "inventario.ver", "aves"],
 };
 
 export function puede(operacion: Operacion, permiso: Permiso): boolean {

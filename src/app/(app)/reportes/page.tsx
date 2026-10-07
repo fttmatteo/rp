@@ -1,18 +1,20 @@
 import Link from "next/link";
-import { Alerta, BotonLink, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { leerPagina, Paginacion, paginar } from "@/components/paginacion";
+import { Alerta, BotonLink, Subnav, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { diaUTC, formatoDia, hoyISO } from "@/lib/formato";
 import { diasSinCerrar, primerMesLibro } from "@/lib/libro-db";
 import { formatoCelda, generarReporte, leerParametros, REPORTES } from "@/lib/reportes";
 import { requerir } from "@/lib/sesion";
 import { leerPeriodo, mesesEntre, nombreMes } from "@/modules/libro";
 
-type Parametros = { tipo?: string; desde?: string; hasta?: string; libroMes?: string; libroDesde?: string; libroHasta?: string };
+type Parametros = { tipo?: string; desde?: string; hasta?: string; libroMes?: string; libroDesde?: string; libroHasta?: string; pagina?: string };
 
 export default async function ReportesPage({ searchParams }: { searchParams: Promise<Parametros> }) {
   await requerir("reportes");
   const hoy = hoyISO();
   const sp = await searchParams;
   const p = leerParametros(sp, hoy);
+  const pagina = leerPagina(sp.pagina);
   // Vuelve aquí desde la descarga del libro cuando el periodo tiene cajas sin cerrar.
   const pedido = sp.libroMes || sp.libroDesde ? leerPeriodo({ mes: sp.libroMes, desde: sp.libroDesde, hasta: sp.libroHasta }, hoy) : null;
   const [reporte, primerMes, sinCerrar] = await Promise.all([
@@ -41,6 +43,12 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
       >
         Reportes
       </Titulo>
+      <Subnav
+        enlaces={[
+          { id: "reporte", texto: reporte.titulo },
+          { id: "libro", texto: "Libro mensual" },
+        ]}
+      />
       <form action="/reportes" className="mb-4 flex flex-wrap items-end gap-2">
         <label>
           Reporte
@@ -65,7 +73,9 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         </button>
       </form>
 
-      <h2 className="mb-2 font-semibold">{reporte.titulo}</h2>
+      <h2 id="reporte" className="mb-2 font-semibold">
+        {reporte.titulo}
+      </h2>
       {reporte.filas.length === 0 ? (
         <Vacio>Sin datos en este período.</Vacio>
       ) : (
@@ -80,7 +90,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
             </tr>
           </thead>
           <tbody>
-            {reporte.filas.map((f, j) => (
+            {paginar(reporte.filas, pagina).map((f, j) => (
               <tr key={j}>
                 {f.map((v, i) => (
                   <td key={i} className={derecha(i)}>
@@ -103,9 +113,10 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
           )}
         </Tabla>
       )}
+      <Paginacion ruta="/reportes" params={{ tipo: p.tipo, desde: p.desde, hasta: p.hasta }} pagina={pagina} total={reporte.filas.length} ancla="reporte" />
       {reporte.nota && <p className="mt-2 text-sm text-stone-500">{reporte.nota}</p>}
 
-      <Tarjeta titulo={<span id="libro">Libro mensual</span>} className="mt-6">
+      <Tarjeta id="libro" titulo="Libro mensual" className="mt-6">
         <p className="mb-3 text-sm text-stone-500">
           Cada cobro, ingreso y egreso con su saldo (fecha, concepto, ingreso, egreso y saldo). Descarga un mes completo o el periodo que quieras. Solo
           sale si todas las cajas de esas fechas están cerradas; lo que incluya hoy sale hasta hoy.

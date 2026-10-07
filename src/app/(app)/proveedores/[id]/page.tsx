@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { leerPagina, Paginacion } from "@/components/paginacion";
+import { Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoFecha, formatoHuevos, formatoPesos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
@@ -9,15 +10,35 @@ import { requerir } from "@/lib/sesion";
 import { actualizarProveedor, anularPagoProveedor, registrarAbonoProveedor } from "../acciones";
 import { CamposProveedor } from "../campos";
 
-export default async function ProveedorPage({ params }: { params: Promise<{ id: string }> }) {
+const MOVIMIENTOS = 20;
+
+export default async function ProveedorPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ pagina?: string }>;
+}) {
   const sesion = await requerir("compras");
+  const pagina = leerPagina((await searchParams).pagina);
+  // Compras y abonos van juntos por fecha: para la página N basta con las N páginas más recientes de cada uno.
+  const hastaAqui = pagina * MOVIMIENTOS;
   const id = Number((await params).id);
   const proveedor = Number.isInteger(id) ? await db.proveedor.findUnique({ where: { id } }) : null;
   if (!proveedor) notFound();
   const [deudas, compras, pagos] = await Promise.all([
     comprasPorPagar(id),
-    db.compra.findMany({ where: { proveedorId: id }, orderBy: { fecha: "desc" }, take: 30 }),
-    db.pagoProveedor.findMany({ where: { proveedorId: id }, orderBy: { fecha: "desc" }, take: 30, include: { usuario: true } }),
+    db.compra.findMany({ where: { proveedorId: id }, orderBy: [{ fecha: "desc" }, { id: "desc" }], take: hastaAqui }),
+    db.pagoProveedor.findMany({
+      where: { proveedorId: id },
+      orderBy: [{ fecha: "desc" }, { id: "desc" }],
+      take: hastaAqui,
+      include: { usuario: { select: { nombre: true } } },
+    }),
+  ]);
+  const [totalCompras, totalPagos] = await Promise.all([
+    db.compra.count({ where: { proveedorId: id } }),
+    db.pagoProveedor.count({ where: { proveedorId: id } }),
   ]);
   const saldo = deudas.reduce((s, d) => s + d.saldo, 0);
   const hoy = diaUTC(hoyISO());
@@ -33,13 +54,20 @@ export default async function ProveedorPage({ params }: { params: Promise<{ id: 
       >
         {proveedor.nombre} {!proveedor.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
       </Titulo>
+      <Subnav
+        enlaces={[
+          { id: "por-pagar", texto: `Cuentas por pagar (${deudas.length})` },
+          { id: "movimientos", texto: "Movimientos" },
+          { id: "datos", texto: "Datos" },
+        ]}
+      />
       <p className="mb-6">
         <span className="text-sm text-stone-600">Le debemos: </span>
         <span className={`text-2xl font-semibold ${saldo > 0 ? "text-red-700" : ""}`}>{formatoPesos(saldo)}</span>
       </p>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Tarjeta titulo="Cuentas por pagar">
+        <Tarjeta id="por-pagar" titulo="Cuentas por pagar">
           {deudas.length === 0 ? (
             <p className="text-sm text-stone-500">No le debemos nada.</p>
           ) : (
@@ -98,10 +126,11 @@ export default async function ProveedorPage({ params }: { params: Promise<{ id: 
           )}
         </Tarjeta>
 
-        <Tarjeta titulo="Movimientos">
+        <Tarjeta id="movimientos" titulo="Movimientos">
           <ul className="divide-y divide-stone-100 text-sm">
             {[...compras.map((c) => ({ fecha: c.fecha, c })), ...pagos.map((p) => ({ fecha: p.fecha, p }))]
               .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
+              .slice(hastaAqui - MOVIMIENTOS, hastaAqui)
               .map((m) =>
                 "c" in m ? (
                   <li key={`c${m.c.id}`} className="flex justify-between gap-2 py-2">
@@ -135,9 +164,10 @@ export default async function ProveedorPage({ params }: { params: Promise<{ id: 
                 ),
               )}
           </ul>
+          <Paginacion ruta={`/proveedores/${id}`} pagina={pagina} total={totalCompras + totalPagos} porPagina={MOVIMIENTOS} ancla="movimientos" />
         </Tarjeta>
 
-        <Tarjeta titulo="Datos del proveedor">
+        <Tarjeta id="datos" titulo="Datos del proveedor">
           <Formulario accion={actualizarProveedor.bind(null, id)}>
             <CamposProveedor p={proveedor} />
             <label className="flex items-center gap-2 font-normal">

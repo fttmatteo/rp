@@ -17,6 +17,8 @@ function leerDia(diaISO: string): Date {
 
 function refrescar() {
   revalidatePath("/caja");
+  revalidatePath("/ingresos");
+  revalidatePath("/egresos");
 }
 
 export async function actualizarBase(diaISO: string, _: EstadoForm, form: FormData): Promise<EstadoForm> {

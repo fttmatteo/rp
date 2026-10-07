@@ -1,7 +1,7 @@
 import { Buscador } from "@/components/buscador";
 import { Formulario } from "@/components/formulario";
 import { leerFecha, SelectorDia } from "@/components/selector-dia";
-import { Alerta, Boton, Campo, Etiqueta, Titulo, Vacio } from "@/components/ui";
+import { Alerta, Boton, Campo, Etiqueta, Subnav, Titulo, Vacio } from "@/components/ui";
 import { deudasDeClientes, type DeudaCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
 import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
@@ -196,7 +196,7 @@ function pedidosSinTomar(dia: Date) {
 
 function TomarPedidos({ pedidos }: { pedidos: Disponible[] }) {
   return (
-    <section className="mt-6">
+    <section id="sin-tomar-seccion" className="mt-6">
       <h2 className="mb-2 font-semibold">Pedidos sin tomar ({pedidos.length})</h2>
       {/* El formulario queda montado aunque ya no haya pedidos, para que se vea la confirmación. */}
       <Formulario accion={tomarPedidos} className="space-y-3">
@@ -249,11 +249,22 @@ export default async function MiRutaPage({ searchParams }: { searchParams: Promi
   // Los pedidos se toman el mismo día de la entrega, mientras la ruta siga abierta.
   const puedeTomar = dia.getTime() === hoy.getTime() && (!ruta || ruta.estado === "ABIERTA");
   const disponibles = puedeTomar ? await pedidosSinTomar(dia) : [];
+  const abierta = ruta?.estado === "ABIERTA";
+  const paradas = datos?.filas.length ?? 0;
+  const pendientes = datos?.filas.filter((f) => f.pedido.estado === "PENDIENTE").length ?? 0;
 
   return (
     <>
       <Titulo>Mi ruta del {formatoDia(dia)}</Titulo>
       <SelectorDia ruta="/mi-ruta" fecha={fecha} />
+      <Subnav
+        enlaces={[
+          abierta && pendientes > 0 && { id: "por-entregar", texto: `Por entregar (${pendientes})` },
+          abierta && pendientes === 0 && paradas > 0 && { id: "precierre", texto: "Precierre" },
+          paradas - pendientes > 0 && { id: "hechas", texto: `Hechas (${paradas - pendientes})` },
+          puedeTomar && { id: "sin-tomar-seccion", texto: `Sin tomar (${disponibles.length})` },
+        ]}
+      />
       {datos ? (
         <RutaRepartidor datos={datos} hoy={hoy} />
       ) : (
@@ -268,6 +279,7 @@ function Precierre({ rutaId, esperado }: { rutaId: number; esperado: number }) {
   return (
     <Formulario
       accion={precerrarRuta.bind(null, rutaId)}
+      id="precierre"
       confirmar="¿Enviar el precierre? Después ya no puedes registrar entregas ni cobros en esta ruta."
       className="space-y-3 rounded border border-stone-200 bg-white p-4"
     >
@@ -325,7 +337,7 @@ async function RutaRepartidor({ datos, hoy }: { datos: Datos; hoy: Date }) {
       )}
 
       {abierta && pendientes.length > 0 && (
-        <>
+        <div id="por-entregar">
           <div className="mb-3">
             <Buscador objetivo="paradas" placeholder="Buscar cliente, barrio o dirección" />
           </div>
@@ -334,13 +346,15 @@ async function RutaRepartidor({ datos, hoy }: { datos: Datos; hoy: Date }) {
               <Parada key={f.pedido.id} fila={f} rutaId={ruta.id} deuda={deudas.get(f.pedido.clienteId)} hoy={hoy} />
             ))}
           </ul>
-        </>
+        </div>
       )}
       {abierta && pendientes.length === 0 && filas.length > 0 && <Precierre rutaId={ruta.id} esperado={liquidacion.efectivoEsperado} />}
 
       {hechas.length > 0 && (
         <>
-          <h2 className="mb-2 mt-6 font-semibold">Hechas ({hechas.length})</h2>
+          <h2 id="hechas" className="mb-2 mt-6 font-semibold">
+            Hechas ({hechas.length})
+          </h2>
           <ul className="divide-y divide-stone-100 rounded border border-stone-200 bg-white text-sm">
             {hechas.map(({ pedido: p, valores }) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">

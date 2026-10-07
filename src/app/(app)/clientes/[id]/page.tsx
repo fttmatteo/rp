@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { leerPagina, Paginacion } from "@/components/paginacion";
+import { Alerta, Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { rangoAntiguedad, superaCupo } from "@/modules/cartera";
 import { enlaceMaps, enlaceWhatsApp } from "@/modules/contacto";
 import { mensajeEstadoCuenta } from "@/modules/mensajes";
@@ -15,16 +16,21 @@ import { anularVenta } from "../../pedidos/acciones";
 import { actualizarCliente, guardarPreciosCliente } from "../acciones";
 import { CamposCliente } from "../campos";
 
+
+const MOVIMIENTOS = 20;
 export default async function ClientePage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ creado?: string }>;
+  searchParams: Promise<{ creado?: string; pagina?: string }>;
 }) {
   const sesion = await requerir("clientes.ver");
   const id = Number((await params).id);
-  const { creado } = await searchParams;
+  const { creado, pagina: paginaParam } = await searchParams;
+  const pagina = leerPagina(paginaParam);
+  // Ventas y pagos van juntos por fecha: para la página N basta con las N páginas más recientes de cada uno.
+  const hastaAqui = pagina * MOVIMIENTOS;
   const cliente = Number.isInteger(id)
     ? await db.cliente.findUnique({ where: { id }, include: { precios: true } })
     : null;
@@ -33,9 +39,10 @@ export default async function ClientePage({
   const [productos, deudas, ventas, pagos] = await Promise.all([
     db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
     deudasPendientes(id),
-    db.venta.findMany({ where: { clienteId: id }, orderBy: { fecha: "desc" }, take: 30 }),
-    db.pago.findMany({ where: { clienteId: id }, orderBy: { fecha: "desc" }, take: 30 }),
+    db.venta.findMany({ where: { clienteId: id }, orderBy: [{ fecha: "desc" }, { id: "desc" }], take: hastaAqui }),
+    db.pago.findMany({ where: { clienteId: id }, orderBy: [{ fecha: "desc" }, { id: "desc" }], take: hastaAqui }),
   ]);
+  const [totalVentas, totalPagos] = await Promise.all([db.venta.count({ where: { clienteId: id } }), db.pago.count({ where: { clienteId: id } })]);
   const saldo = deudas.reduce((s, d) => s + d.saldo, 0);
   const hoy = diaUTC(hoyISO());
   const especiales = new Map(cliente.precios.map((p) => [p.productoId, p.precio]));
@@ -58,7 +65,9 @@ export default async function ClientePage({
   const historial = [
     ...ventas.map((v) => ({ tipo: "venta" as const, fecha: v.fecha, v })),
     ...pagos.map((p) => ({ tipo: "pago" as const, fecha: p.fecha, p })),
-  ].sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+  ]
+    .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
+    .slice(hastaAqui - MOVIMIENTOS, hastaAqui);
 
   return (
     <>
@@ -74,6 +83,15 @@ export default async function ClientePage({
       >
         {cliente.nombre} {!cliente.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
       </Titulo>
+      <Subnav
+        enlaces={[
+          { id: "deudas", texto: `Deudas (${deudas.length})` },
+          { id: "movimientos", texto: "Movimientos" },
+          { id: "precios", texto: "Precios" },
+          { id: "datos", texto: "Datos" },
+          puede(op, "anular") && { id: "saldo-inicial", texto: "Saldo inicial" },
+        ]}
+      />
       {creado && (
         <div className="mb-4">
           <Alerta tipo="ok">Cliente creado. Ya puedes tomarle pedidos o cargar su saldo inicial.</Alerta>
@@ -109,7 +127,7 @@ export default async function ClientePage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Tarjeta titulo="Deudas pendientes">
+        <Tarjeta id="deudas" titulo="Deudas pendientes">
           {deudas.length === 0 ? (
             <p className="text-sm text-stone-500">No debe nada.</p>
           ) : (
@@ -192,7 +210,7 @@ export default async function ClientePage({
           )}
         </Tarjeta>
 
-        <Tarjeta titulo="Movimientos">
+        <Tarjeta id="movimientos" titulo="Movimientos">
           {historial.length === 0 ? (
             <p className="text-sm text-stone-500">Sin compras ni pagos todavía.</p>
           ) : (
@@ -234,9 +252,10 @@ export default async function ClientePage({
               )}
             </ul>
           )}
+          <Paginacion ruta={`/clientes/${id}`} pagina={pagina} total={totalVentas + totalPagos} porPagina={MOVIMIENTOS} ancla="movimientos" />
         </Tarjeta>
 
-        <Tarjeta titulo="Precios">
+        <Tarjeta id="precios" titulo="Precios">
           {puede(op, "precios") ? (
             <Formulario accion={guardarPreciosCliente.bind(null, id)}>
               <Tabla>
@@ -279,7 +298,7 @@ export default async function ClientePage({
           )}
         </Tarjeta>
 
-        <Tarjeta titulo="Datos del cliente">
+        <Tarjeta id="datos" titulo="Datos del cliente">
           {puede(op, "clientes.editar") ? (
             <Formulario accion={actualizarCliente.bind(null, id)}>
               <CamposCliente c={cliente} />
@@ -298,7 +317,7 @@ export default async function ClientePage({
         </Tarjeta>
 
         {puede(op, "anular") && (
-          <Tarjeta titulo="Saldo inicial">
+          <Tarjeta id="saldo-inicial" titulo="Saldo inicial">
             <Formulario accion={registrarSaldoInicial.bind(null, id)} className="space-y-3">
               <Alerta tipo="aviso">Úsalo solo para cargar lo que el cliente ya debía antes de usar la app.</Alerta>
               <div className="grid gap-3 sm:grid-cols-2">

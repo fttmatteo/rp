@@ -140,18 +140,19 @@ async function main() {
   const usuarios: Prisma.UsuarioCreateManyInput[] = [];
   const ids: Record<string, number> = { Usuario: (await db.usuario.aggregate({ _max: { id: true } }))._max.id ?? 0 };
   const nuevoId = (tabla: string) => (ids[tabla] = (ids[tabla] ?? 0) + 1);
-  const nuevoUsuario = (nombre: string, usuario: string, accesos: ("VENTAS" | "REPARTIDOR" | "GALPONERO")[], activo = true) => {
+  const nuevoUsuario = (nombre: string, usuario: string, accesos: ("VENTAS" | "REPARTIDOR")[], activo = true) => {
     const fila = { id: nuevoId("Usuario"), nombre, usuario, claveHash, accesos, activo, creadoEn: sumar(inicio, -10) };
     usuarios.push(fila);
     return fila;
   };
   const ventas = nuevoUsuario("Laura Gómez", "laura", ["VENTAS"]);
   const repartidores = [nuevoUsuario("Carlos Rivera", "carlos", ["REPARTIDOR"]), nuevoUsuario("Andrés Muñoz", "andres", ["REPARTIDOR"])];
-  const galponero = nuevoUsuario("Jorge Patiño", "jorge", ["GALPONERO"]);
+  // La clasificación y las aves las registra el administrador.
+  const galponero = admin;
   nuevoUsuario("Diana Ruiz", "diana", ["VENTAS", "REPARTIDOR"]);
   nuevoUsuario("Pedro Gil", "pedro", ["REPARTIDOR"], false);
   if (await db.usuario.count({ where: { usuario: { in: usuarios.map((u) => u.usuario) } } }))
-    throw new Error("Ya existen usuarios con los nombres de los de ejemplo (laura, carlos, andres, jorge, diana, pedro).");
+    throw new Error("Ya existen usuarios con los nombres de los de ejemplo (laura, carlos, andres, diana, pedro).");
 
   // Gallinaza en venta y mínimos para las alertas de existencias bajas.
   const PRECIO_GALLINAZA = 9000;
@@ -870,7 +871,7 @@ async function main() {
   console.log(`Datos de ejemplo cargados: ${dias} días desde ${inicio.toISOString().slice(0, 10)}.`);
   console.log(`  ${filas.clientes.length} clientes, ${filas.pedidos.length} pedidos (${pedidosEntregados} entregados, ${pedidosParciales} parciales), ${filas.pagos.length} pagos.`);
   console.log(`  Cartera pendiente: $${cartera.toLocaleString("es-CO")}. Cajas cerradas hasta ayer; hoy hay rutas abiertas.`);
-  console.log(`  Usuarios: laura (ventas), carlos y andres (repartidores), jorge (galponero), diana (ventas y repartidor), con la clave de DEMO_PASSWORD.`);
+  console.log(`  Usuarios: laura (ventas), carlos y andres (repartidores), diana (ventas y repartidor), con la clave de DEMO_PASSWORD.`);
 }
 
 main()

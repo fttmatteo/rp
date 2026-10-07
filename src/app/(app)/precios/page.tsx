@@ -1,21 +1,34 @@
 import { Formulario } from "@/components/formulario";
-import { Boton, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { leerPagina, Paginacion, rango } from "@/components/paginacion";
+import { Boton, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatoFechaHora, formatoPesos, nombreProducto, UNIDADES_GALLINAZA } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { guardarPreciosGenerales } from "./acciones";
 
-export default async function PreciosPage() {
+export default async function PreciosPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
   await requerir("precios");
-  const [productos, historial] = await Promise.all([
+  const pagina = leerPagina((await searchParams).pagina);
+  const [productos, historial, totalHistorial] = await Promise.all([
     db.producto.findMany({ orderBy: { orden: "asc" } }),
-    db.historialPrecio.findMany({ take: 20, orderBy: { fecha: "desc" }, include: { producto: true, cliente: true } }),
+    db.historialPrecio.findMany({
+      ...rango(pagina, 20),
+      orderBy: [{ fecha: "desc" }, { id: "desc" }],
+      include: { producto: { select: { nombre: true } }, cliente: { select: { nombre: true } } },
+    }),
+    db.historialPrecio.count(),
   ]);
   return (
     <>
       <Titulo>Precios</Titulo>
+      <Subnav
+        enlaces={[
+          { id: "generales", texto: "Precios generales" },
+          { id: "cambios", texto: "Cambios de precio" },
+        ]}
+      />
       <div className="space-y-6">
-        <Formulario accion={guardarPreciosGenerales}>
+        <Formulario accion={guardarPreciosGenerales} id="generales">
           <Tabla>
             <thead>
               <tr>
@@ -75,7 +88,7 @@ export default async function PreciosPage() {
           <Boton type="submit">Guardar precios</Boton>
         </Formulario>
 
-        <Tarjeta titulo="Últimos cambios de precio">
+        <Tarjeta id="cambios" titulo="Cambios de precio">
           {historial.length === 0 ? (
             <p className="text-sm text-stone-500">Sin cambios todavía.</p>
           ) : (
@@ -90,6 +103,7 @@ export default async function PreciosPage() {
               ))}
             </ul>
           )}
+          <Paginacion ruta="/precios" pagina={pagina} total={totalHistorial} porPagina={20} ancla="cambios" />
         </Tarjeta>
       </div>
     </>

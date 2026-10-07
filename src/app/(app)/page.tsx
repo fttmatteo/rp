@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Tarjeta, Titulo } from "@/components/ui";
+import { Subnav, Tarjeta, Titulo } from "@/components/ui";
 import { avesPorLote, huevosPorLoteYDia } from "@/lib/aves-db";
 import { obtenerCaja, totalesCaja } from "@/lib/caja-db";
 import { db } from "@/lib/db";
@@ -119,8 +119,15 @@ export default async function InicioPage() {
   return (
     <>
       <Titulo>Inicio</Titulo>
+      <Subnav
+        enlaces={[
+          alertas.length > 0 && { id: "revisar", texto: `Para revisar (${alertas.length})` },
+          { id: "resumen", texto: "Resumen del día" },
+          productos && stock && { id: "inventario", texto: "Inventario" },
+        ]}
+      />
       {alertas.length > 0 && (
-        <div className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm">
+        <div id="revisar" className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm">
           <p className="mb-1 font-semibold text-amber-900">Para revisar</p>
           <ul className="space-y-1">
             {alertas.map((a) => (
@@ -133,7 +140,7 @@ export default async function InicioPage() {
           </ul>
         </div>
       )}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div id="resumen" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {miRuta !== undefined && (
           <Dato titulo="Mi ruta de hoy" valor={miRuta ? `${miRuta._count.pedidos} por entregar` : "Sin pedidos"} href="/mi-ruta" enlace={miRuta ? "Ver mi ruta" : "Tomar pedidos"} />
         )}
@@ -187,7 +194,7 @@ export default async function InicioPage() {
           />
         )}
         {productos && stock && (
-          <Tarjeta titulo="Inventario" className="sm:col-span-2 lg:col-span-3">
+          <Tarjeta id="inventario" titulo="Inventario" className="sm:col-span-2 lg:col-span-3">
             <ul className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
               {productos.map((p) => (
                 <li key={p.id}>

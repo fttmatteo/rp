@@ -1,23 +1,33 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
-import { Boton, Campo, Etiqueta, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { leerPagina, Paginacion, rango } from "@/components/paginacion";
+import { Boton, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { avesPorLote, huevosPorLoteYDia } from "@/lib/aves-db";
 import { db } from "@/lib/db";
 import { ESTADO_LOTE } from "@/lib/etiquetas-aves";
 import { diaUTC, hoyISO, sumarDias } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { edadSemanas, porcentajePostura } from "@/modules/aves";
+import { PestanasInventario } from "../inventario/pestanas";
 import { crearGalpon, crearLote } from "./acciones";
 
-export default async function AvesPage() {
-  await requerir("aves");
+export default async function AvesPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
+  const sesion = await requerir("aves");
+  const pagina = leerPagina((await searchParams).pagina);
   const hoy = diaUTC(hoyISO());
   const desde = sumarDias(hoy, -6);
-  const [galpones, lotes] = await Promise.all([
+  // Los lotes activos son pocos y se muestran todos; los cerrados crecen con los años y van por páginas.
+  const [galpones, activos, cerrados, totalCerrados] = await Promise.all([
     db.galpon.findMany({ orderBy: { nombre: "asc" } }),
-    db.lote.findMany({ orderBy: [{ activo: "desc" }, { fechaIngreso: "asc" }], include: { galpon: true } }),
+    db.lote.findMany({ where: { activo: true }, orderBy: { fechaIngreso: "asc" }, include: { galpon: true } }),
+    db.lote.findMany({
+      where: { activo: false },
+      orderBy: [{ fechaIngreso: "desc" }, { id: "desc" }],
+      ...rango(pagina, 20),
+      include: { galpon: { select: { nombre: true } } },
+    }),
+    db.lote.count({ where: { activo: false } }),
   ]);
-  const activos = lotes.filter((l) => l.activo);
   const [vivas, huevos] = await Promise.all([
     avesPorLote(activos),
     huevosPorLoteYDia(
@@ -36,11 +46,20 @@ export default async function AvesPage() {
   return (
     <>
       <Titulo>Aves</Titulo>
+      <PestanasInventario actual="/aves" operacion={sesion.operacion} />
+      <Subnav
+        enlaces={[
+          { id: "activos", texto: `Lotes activos (${activos.length})` },
+          totalCerrados > 0 && { id: "cerrados", texto: `Lotes cerrados (${totalCerrados})` },
+          galpones.length > 0 && { id: "nuevo-lote", texto: "Nuevo lote" },
+          { id: "nuevo-galpon", texto: "Nuevo galpón" },
+        ]}
+      />
       <p className="mb-4">
         Aves vivas: <strong>{totalAves.toLocaleString("es-CO")}</strong> en {activos.length} lotes activos.
       </p>
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-        <div className="space-y-6">
+        <div id="activos" className="space-y-6">
           {activos.length === 0 ? (
             <Vacio>Todavía no hay lotes. Crea primero el galpón y luego el lote con sus aves.</Vacio>
           ) : (
@@ -84,28 +103,27 @@ export default async function AvesPage() {
           <p className="text-xs text-stone-500">
             La postura sale de la clasificación diaria cuando se elige el lote: huevos clasificados más rotos ÷ aves vivas.
           </p>
-          {lotes.length > activos.length && (
-            <details>
-              <summary className="cursor-pointer text-sm underline">Lotes cerrados</summary>
-              <ul className="mt-2 text-sm">
-                {lotes
-                  .filter((l) => !l.activo)
-                  .map((l) => (
-                    <li key={l.id}>
-                      <Link href={`/aves/${l.id}`} className="underline">
-                        {l.nombre}
-                      </Link>{" "}
-                      · {l.galpon.nombre} <Etiqueta>Cerrado</Etiqueta>
-                    </li>
-                  ))}
+          {totalCerrados > 0 && (
+            <section id="cerrados">
+              <h2 className="mb-2 font-semibold">Lotes cerrados</h2>
+              <ul className="text-sm">
+                {cerrados.map((l) => (
+                  <li key={l.id}>
+                    <Link href={`/aves/${l.id}`} className="underline">
+                      {l.nombre}
+                    </Link>{" "}
+                    · {l.galpon.nombre} <Etiqueta>Cerrado</Etiqueta>
+                  </li>
+                ))}
               </ul>
-            </details>
+              <Paginacion ruta="/aves" pagina={pagina} total={totalCerrados} porPagina={20} ancla="cerrados" />
+            </section>
           )}
         </div>
 
         <div className="space-y-4">
           {galpones.length > 0 && (
-            <Tarjeta titulo="Nuevo lote">
+            <Tarjeta id="nuevo-lote" titulo="Nuevo lote">
               <Formulario accion={crearLote}>
                 <div className="grid grid-cols-2 gap-3">
                   <Campo etiqueta="Galpón">
@@ -149,7 +167,7 @@ export default async function AvesPage() {
               </Formulario>
             </Tarjeta>
           )}
-          <Tarjeta titulo="Nuevo galpón">
+          <Tarjeta id="nuevo-galpon" titulo="Nuevo galpón">
             <Formulario accion={crearGalpon}>
               <Campo etiqueta="Nombre">
                 <input name="nombre" required />

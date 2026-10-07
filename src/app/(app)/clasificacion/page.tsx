@@ -1,26 +1,30 @@
 import { Formulario } from "@/components/formulario";
-import { Boton, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { leerPagina, Paginacion, rango } from "@/components/paginacion";
+import { Boton, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatoCantidad, formatoDia, formatoHuevos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
+import { PestanasInventario } from "../inventario/pestanas";
 import { anularClasificacion, registrarClasificacion } from "./acciones";
 
-export default async function ClasificacionPage() {
+export default async function ClasificacionPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
   const sesion = await requerir("clasificacion");
-  const [productos, registros, compras, lotes] = await Promise.all([
+  const pagina = leerPagina((await searchParams).pagina);
+  const [productos, registros, totalRegistros, compras, lotes] = await Promise.all([
     db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
     db.registroClasificacion.findMany({
       orderBy: { id: "desc" },
-      take: 20,
+      ...rango(pagina, 20),
       include: {
-        usuario: true,
-        lote: true,
+        usuario: { select: { nombre: true } },
+        lote: { select: { nombre: true } },
         compra: { include: { proveedor: true } },
         detalles: { include: { producto: true } },
-        movimientos: { where: { tipo: "ANULACION" }, take: 1 },
+        movimientos: { where: { tipo: "ANULACION" }, take: 1, select: { id: true } },
       },
     }),
+    db.registroClasificacion.count(),
     db.compra.findMany({ where: { anulada: false, porClasificar: { gt: 0 } }, orderBy: { fecha: "asc" }, include: { proveedor: true } }),
     db.lote.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, include: { galpon: true } }),
   ]);
@@ -30,8 +34,15 @@ export default async function ClasificacionPage() {
   return (
     <>
       <Titulo>Clasificación diaria</Titulo>
+      <PestanasInventario actual="/clasificacion" operacion={sesion.operacion} />
+      <Subnav
+        enlaces={[
+          { id: "registrar", texto: "Registrar" },
+          { id: "registros", texto: `Registros (${totalRegistros})` },
+        ]}
+      />
       <div className="grid gap-6 lg:grid-cols-2">
-        <Tarjeta titulo="Registrar clasificación">
+        <Tarjeta id="registrar" titulo="Registrar clasificación">
           <Formulario accion={registrarClasificacion}>
             <Campo etiqueta="Fecha">
               <input name="fecha" type="date" defaultValue={hoyISO()} max={hoyISO()} required />
@@ -101,7 +112,9 @@ export default async function ClasificacionPage() {
         </Tarjeta>
 
         <div>
-          <h2 className="mb-2 font-semibold">Registros recientes</h2>
+          <h2 id="registros" className="mb-2 font-semibold">
+            Registros
+          </h2>
           <ul className="space-y-2">
             {registros.map((r) => (
               <li key={r.id} className="rounded border border-stone-200 bg-white p-3 text-sm">
@@ -130,6 +143,7 @@ export default async function ClasificacionPage() {
               </li>
             ))}
           </ul>
+          <Paginacion ruta="/clasificacion" pagina={pagina} total={totalRegistros} porPagina={20} ancla="registros" />
         </div>
       </div>
     </>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { leerFecha, SelectorDia } from "@/components/selector-dia";
-import { Etiqueta, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { Etiqueta, Subnav, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { ESTADO_RUTA } from "@/lib/estados";
 import { diaUTC, formatoDia, formatoPesos } from "@/lib/formato";
@@ -29,9 +29,15 @@ export default async function RutasPage({ searchParams }: { searchParams: Promis
     <>
       <Titulo>Rutas del {formatoDia(dia)}</Titulo>
       <SelectorDia ruta="/rutas" fecha={fecha} etiqueta="Fecha de entrega" />
+      <Subnav
+        enlaces={[
+          { id: "sin-tomar", texto: `Pedidos sin tomar (${sinRuta.length})` },
+          { id: "rutas", texto: `Rutas (${rutas.length})` },
+        ]}
+      />
 
       <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-        <Tarjeta titulo={`Pedidos sin tomar (${sinRuta.length})`}>
+        <Tarjeta id="sin-tomar" titulo={`Pedidos sin tomar (${sinRuta.length})`}>
           {sinRuta.length === 0 ? (
             <p className="text-sm text-stone-500">Los repartidores ya tomaron todos los pedidos pendientes de ese día.</p>
           ) : (
@@ -66,7 +72,9 @@ export default async function RutasPage({ searchParams }: { searchParams: Promis
         </Tarjeta>
 
         <div className="space-y-3">
-          <h2 className="font-semibold">Rutas</h2>
+          <h2 id="rutas" className="font-semibold">
+            Rutas
+          </h2>
           {rutas.length === 0 && <Vacio>Todavía no hay rutas para ese día.</Vacio>}
           {rutas.map((r) => {
             const pendientes = r.pedidos.filter((p) => p.estado === "PENDIENTE").length;

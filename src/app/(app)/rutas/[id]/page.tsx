@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { ESTADO_PEDIDO, ESTADO_RUTA, esParcial } from "@/lib/estados";
 import { formatoConsecutivo, formatoDia, formatoFechaHora, formatoPesos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
@@ -83,6 +83,12 @@ export default async function RutaPage({ params }: { params: Promise<{ id: strin
         Ruta de {ruta.repartidor.nombre} · {formatoDia(ruta.fecha)}{" "}
         <Etiqueta color={ESTADO_RUTA[ruta.estado].color}>{ESTADO_RUTA[ruta.estado].texto}</Etiqueta>
       </Titulo>
+      <Subnav
+        enlaces={[
+          { id: "liquidacion", texto: ruta.estado === "PRECERRADA" ? "Liquidación · precierre por aprobar" : "Liquidación" },
+          { id: "cobros", texto: `Cobros (${pagos.length})` },
+        ]}
+      />
       <p className="mb-4 text-sm text-stone-600">
         {filas.length} paradas · {cierre.entregados} entregadas · {pendientes} por entregar · {cierre.noEntregados} no entregadas
       </p>
@@ -172,7 +178,9 @@ export default async function RutaPage({ params }: { params: Promise<{ id: strin
         </p>
       )}
 
-      <h2 className="mb-3 mt-6 text-lg font-semibold">Liquidación de la ruta</h2>
+      <h2 id="liquidacion" className="mb-3 mt-6 text-lg font-semibold">
+        Liquidación de la ruta
+      </h2>
       <div className="grid gap-4 lg:grid-cols-2">
         <Tarjeta titulo="Producto">
           <Tabla>
@@ -295,7 +303,7 @@ export default async function RutaPage({ params }: { params: Promise<{ id: strin
           </Tarjeta>
         )}
 
-        <Tarjeta titulo={`Cobros en la ruta (${pagos.length})`}>
+        <Tarjeta id="cobros" titulo={`Cobros en la ruta (${pagos.length})`}>
           {pagos.length === 0 ? (
             <p className="text-sm text-stone-500">Sin cobros.</p>
           ) : (

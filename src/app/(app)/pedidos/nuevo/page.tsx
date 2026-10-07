@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
+import { leerPagina, Paginacion, rango } from "@/components/paginacion";
 import { Alerta, Boton, BotonLink, Campo, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { deudasDeClientes } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
@@ -8,20 +9,21 @@ import { requerir } from "@/lib/sesion";
 import { precioParaCliente } from "@/modules/precios";
 import { crearPedido } from "../acciones";
 
-export default async function NuevoPedidoPage({ searchParams }: { searchParams: Promise<{ cliente?: string; q?: string }> }) {
+export default async function NuevoPedidoPage({ searchParams }: { searchParams: Promise<{ cliente?: string; q?: string; pagina?: string }> }) {
   await requerir("pedidos.crear");
-  const { cliente: clienteParam, q = "" } = await searchParams;
+  const { cliente: clienteParam, q = "", pagina: paginaParam } = await searchParams;
+  const pagina = leerPagina(paginaParam);
   const clienteId = Number(clienteParam);
   const cliente = Number.isInteger(clienteId) && clienteId > 0
     ? await db.cliente.findFirst({ where: { id: clienteId, activo: true }, include: { precios: true } })
     : null;
 
   if (!cliente) {
-    const clientes = await db.cliente.findMany({
-      where: { activo: true, ...(q ? { OR: [{ nombre: { contains: q, mode: "insensitive" } }, { telefono: { contains: q } }] } : {}) },
-      orderBy: { nombre: "asc" },
-      take: 50,
-    });
+    const where = { activo: true, ...(q ? { OR: [{ nombre: { contains: q, mode: "insensitive" as const } }, { telefono: { contains: q } }] } : {}) };
+    const [clientes, total] = await Promise.all([
+      db.cliente.findMany({ where, orderBy: [{ nombre: "asc" }, { id: "asc" }], ...rango(pagina), select: { id: true, nombre: true, zona: true, telefono: true } }),
+      db.cliente.count({ where }),
+    ]);
     return (
       <>
         <Titulo accion={<BotonLink href="/pedidos" variante="secundario">Volver</BotonLink>}>Nuevo pedido: elige el cliente</Titulo>
@@ -41,6 +43,7 @@ export default async function NuevoPedidoPage({ searchParams }: { searchParams: 
           ))}
           {clientes.length === 0 && <li className="px-4 py-3 text-sm text-stone-500">Sin resultados.</li>}
         </ul>
+        <Paginacion ruta="/pedidos/nuevo" params={{ q }} pagina={pagina} total={total} />
       </>
     );
   }
