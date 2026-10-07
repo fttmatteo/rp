@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { saldoCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
 import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
@@ -75,6 +75,14 @@ export default async function PedidoPage({
           {parcial && " parcial"}
         </Etiqueta>
       </Titulo>
+      <Subnav
+        enlaces={[
+          { id: "cuenta", texto: "Cuenta del cliente" },
+          pedido.estado === "PENDIENTE" && puedeEntregar && { id: "entrega", texto: "Registrar entrega" },
+          pedido.estado === "NO_ENTREGADO" && puede(op, "pedidos.crear") && { id: "reprogramar", texto: "Reprogramar" },
+          venta && { id: "venta", texto: "Venta" },
+        ]}
+      />
       {creado && (
         <div className="mb-4">
           <Alerta tipo="ok">Pedido creado. Queda pendiente hasta que se entregue.</Alerta>
@@ -146,7 +154,7 @@ export default async function PedidoPage({
         </Tarjeta>
 
         <div className="space-y-4">
-          <Tarjeta titulo="Cuenta del cliente">
+          <Tarjeta id="cuenta" titulo="Cuenta del cliente">
             <p>
               Debe hoy: <strong className={saldo > 0 ? "text-red-700" : ""}>{formatoPesos(saldo)}</strong>
             </p>
@@ -158,7 +166,7 @@ export default async function PedidoPage({
           </Tarjeta>
 
           {pedido.estado === "PENDIENTE" && puedeEntregar && (
-            <Tarjeta titulo="Registrar entrega">
+            <Tarjeta id="entrega" titulo="Registrar entrega">
               <Formulario accion={entregarPedido.bind(null, pedido.id)}>
                 <Campo
                   etiqueta="¿Cuánto pagó al recibir?"
@@ -205,7 +213,7 @@ export default async function PedidoPage({
           )}
 
           {pedido.estado === "NO_ENTREGADO" && puede(op, "pedidos.crear") && (
-            <Tarjeta titulo="Reprogramar">
+            <Tarjeta id="reprogramar" titulo="Reprogramar">
               <Formulario accion={reprogramarPedido.bind(null, pedido.id)} className="space-y-3">
                 <Campo etiqueta="Nueva fecha de entrega" ayuda="Se crea un pedido nuevo con los mismos productos y precios.">
                   <input type="date" name="fechaEntrega" defaultValue={hoyISO()} min={hoyISO()} required />
@@ -226,7 +234,7 @@ export default async function PedidoPage({
           )}
 
           {venta && (
-            <Tarjeta titulo="Venta">
+            <Tarjeta id="venta" titulo="Venta">
               <p>
                 Recibo{" "}
                 <a href={`/recibos/venta/${venta.id}`} target="_blank" className="font-semibold underline">

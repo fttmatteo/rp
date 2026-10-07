@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { huevosPorLoteYDia, novedadesDe } from "@/lib/aves-db";
 import { db } from "@/lib/db";
 import { ESTADO_LOTE, TIPO_NOVEDAD } from "@/lib/etiquetas-aves";
@@ -52,6 +52,14 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
       >
         {lote.nombre} · {lote.galpon.nombre} {!lote.activo && <Etiqueta>Cerrado</Etiqueta>}
       </Titulo>
+      <Subnav
+        enlaces={[
+          lote.activo && { id: "novedad", texto: "Registrar novedad" },
+          { id: "produccion", texto: "Producción" },
+          { id: "novedades", texto: "Novedades" },
+          { id: "estado", texto: "Estado del lote" },
+        ]}
+      />
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Tarjeta>
           <p className="text-sm text-stone-600">Aves vivas</p>
@@ -76,7 +84,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
 
       <div className="grid gap-6 lg:grid-cols-2">
         {lote.activo && (
-          <Tarjeta titulo="Registrar novedad">
+          <Tarjeta id="novedad" titulo="Registrar novedad">
             <Formulario accion={registrarNovedad.bind(null, id)}>
               <div className="grid grid-cols-2 gap-3">
                 <Campo etiqueta="Tipo">
@@ -116,7 +124,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
           </Tarjeta>
         )}
 
-        <Tarjeta titulo={`Producción de los últimos ${DIAS} días`}>
+        <Tarjeta id="produccion" titulo={`Producción de los últimos ${DIAS} días`}>
           {produccion.length === 0 ? (
             <p className="text-sm text-stone-500">
               Sin registros. En{" "}
@@ -149,7 +157,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
           )}
         </Tarjeta>
 
-        <Tarjeta titulo="Novedades">
+        <Tarjeta id="novedades" titulo="Novedades">
           <p className="mb-2 text-sm text-stone-600">
             Ingresaron {lote.cantidadInicial.toLocaleString("es-CO")} aves el {formatoDia(lote.fechaIngreso)}
             {lote.raza && ` · ${lote.raza}`}.
@@ -186,7 +194,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
           </ul>
         </Tarjeta>
 
-        <Tarjeta titulo="Estado del lote">
+        <Tarjeta id="estado" titulo="Estado del lote">
           <Formulario accion={actualizarLote.bind(null, id)}>
             <Campo etiqueta="Estado">
               <select name="estado" defaultValue={lote.estado}>

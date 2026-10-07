@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { ListaDinero, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
-import { Alerta, Boton, BotonLink, Campo, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Campo, Subnav, Tarjeta, Titulo } from "@/components/ui";
 import { obtenerCaja } from "@/lib/caja-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
@@ -84,6 +84,14 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
         .
       </p>
       <SelectorDiaCaja ruta="/egresos" diaISO={diaISO} />
+      <Subnav
+        enlaces={[
+          comprar && { id: "compra", texto: "Compra" },
+          comprar && { id: "pago", texto: "Pago a proveedor" },
+          abierta && { id: "gasto", texto: "Gasto" },
+          { id: "lista", texto: `Salidas del día (${filas.filter((f) => !f.anulado).length})` },
+        ]}
+      />
       {!abierta && (
         <div className="mb-4">
           <Alerta tipo="aviso">La caja de este día está cerrada. Para registrar algo, el administrador debe reabrirla.</Alerta>
@@ -93,13 +101,13 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           {comprar && (
-            <Tarjeta titulo="Compra de huevo">
+            <Tarjeta id="compra" titulo="Compra de huevo">
               <FormularioCompra proveedores={proveedores} tipos={tipos} />
             </Tarjeta>
           )}
 
           {comprar && (
-            <Tarjeta titulo="Pago a proveedor">
+            <Tarjeta id="pago" titulo="Pago a proveedor">
               {porPagar.length === 0 ? (
                 <p className="text-sm text-stone-500">No le debemos a ningún proveedor.</p>
               ) : (
@@ -137,13 +145,13 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
           )}
 
           {abierta && (
-            <Tarjeta titulo="Gasto o retiro">
+            <Tarjeta id="gasto" titulo="Gasto o retiro">
               <FormularioMovimiento diaISO={diaISO} tipo="EGRESO" />
             </Tarjeta>
           )}
         </div>
 
-        <ListaDinero titulo="Salidas del día" filas={filas} vacio="Sin egresos." />
+        <ListaDinero id="lista" titulo="Salidas del día" filas={filas} vacio="Sin egresos." />
       </div>
     </>
   );

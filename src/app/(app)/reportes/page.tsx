@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Alerta, BotonLink, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { Alerta, BotonLink, Subnav, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { diaUTC, formatoDia, hoyISO } from "@/lib/formato";
 import { diasSinCerrar, primerMesLibro } from "@/lib/libro-db";
 import { formatoCelda, generarReporte, leerParametros, REPORTES } from "@/lib/reportes";
@@ -41,6 +41,12 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
       >
         Reportes
       </Titulo>
+      <Subnav
+        enlaces={[
+          { id: "reporte", texto: reporte.titulo },
+          { id: "libro", texto: "Libro mensual" },
+        ]}
+      />
       <form action="/reportes" className="mb-4 flex flex-wrap items-end gap-2">
         <label>
           Reporte
@@ -65,7 +71,9 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         </button>
       </form>
 
-      <h2 className="mb-2 font-semibold">{reporte.titulo}</h2>
+      <h2 id="reporte" className="mb-2 font-semibold">
+        {reporte.titulo}
+      </h2>
       {reporte.filas.length === 0 ? (
         <Vacio>Sin datos en este período.</Vacio>
       ) : (
@@ -105,7 +113,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
       )}
       {reporte.nota && <p className="mt-2 text-sm text-stone-500">{reporte.nota}</p>}
 
-      <Tarjeta titulo={<span id="libro">Libro mensual</span>} className="mt-6">
+      <Tarjeta id="libro" titulo="Libro mensual" className="mt-6">
         <p className="mb-3 text-sm text-stone-500">
           Cada cobro, ingreso y egreso con su saldo (fecha, concepto, ingreso, egreso y saldo). Descarga un mes completo o el periodo que quieras. Solo
           sale si todas las cajas de esas fechas están cerradas; lo que incluya hoy sale hasta hoy.

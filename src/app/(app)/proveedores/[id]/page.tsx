@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoFecha, formatoHuevos, formatoPesos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
@@ -33,13 +33,20 @@ export default async function ProveedorPage({ params }: { params: Promise<{ id: 
       >
         {proveedor.nombre} {!proveedor.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
       </Titulo>
+      <Subnav
+        enlaces={[
+          { id: "por-pagar", texto: `Cuentas por pagar (${deudas.length})` },
+          { id: "movimientos", texto: "Movimientos" },
+          { id: "datos", texto: "Datos" },
+        ]}
+      />
       <p className="mb-6">
         <span className="text-sm text-stone-600">Le debemos: </span>
         <span className={`text-2xl font-semibold ${saldo > 0 ? "text-red-700" : ""}`}>{formatoPesos(saldo)}</span>
       </p>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Tarjeta titulo="Cuentas por pagar">
+        <Tarjeta id="por-pagar" titulo="Cuentas por pagar">
           {deudas.length === 0 ? (
             <p className="text-sm text-stone-500">No le debemos nada.</p>
           ) : (
@@ -98,7 +105,7 @@ export default async function ProveedorPage({ params }: { params: Promise<{ id: 
           )}
         </Tarjeta>
 
-        <Tarjeta titulo="Movimientos">
+        <Tarjeta id="movimientos" titulo="Movimientos">
           <ul className="divide-y divide-stone-100 text-sm">
             {[...compras.map((c) => ({ fecha: c.fecha, c })), ...pagos.map((p) => ({ fecha: p.fecha, p }))]
               .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
@@ -137,7 +144,7 @@ export default async function ProveedorPage({ params }: { params: Promise<{ id: 
           </ul>
         </Tarjeta>
 
-        <Tarjeta titulo="Datos del proveedor">
+        <Tarjeta id="datos" titulo="Datos del proveedor">
           <Formulario accion={actualizarProveedor.bind(null, id)}>
             <CamposProveedor p={proveedor} />
             <label className="flex items-center gap-2 font-normal">

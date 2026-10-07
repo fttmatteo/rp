@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { ListaDinero, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
-import { Alerta, Boton, BotonLink, Campo, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Campo, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { obtenerCaja } from "@/lib/caja-db";
 import { saldosPorCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
@@ -113,6 +113,14 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
         .
       </p>
       <SelectorDiaCaja ruta="/ingresos" diaISO={diaISO} />
+      <Subnav
+        enlaces={[
+          vender && { id: "venta", texto: "Venta" },
+          abonar && { id: "abono", texto: "Abono" },
+          abierta && { id: "otro", texto: "Otro ingreso" },
+          { id: "lista", texto: `Entradas del día (${filas.filter((f) => !f.anulado).length})` },
+        ]}
+      />
       {!abierta && (
         <div className="mb-4">
           <Alerta tipo="aviso">La caja de este día está cerrada. Para registrar algo, el administrador debe reabrirla.</Alerta>
@@ -122,7 +130,7 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
           {vender && (
-            <Tarjeta titulo="Venta en la granja">
+            <Tarjeta id="venta" titulo="Venta en la granja">
               <Formulario accion={registrarVentaDirecta} className="space-y-3">
                 <p className="text-xs text-stone-500">
                   Para el cliente que se lleva el producto ahora: queda entregada con su recibo. Los pedidos para repartir se crean en{" "}
@@ -184,7 +192,7 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
           )}
 
           {abonar && (
-            <Tarjeta titulo="Abono de cliente">
+            <Tarjeta id="abono" titulo="Abono de cliente">
               {deudores.length === 0 ? (
                 <p className="text-sm text-stone-500">Ningún cliente debe dinero.</p>
               ) : (
@@ -222,13 +230,13 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
           )}
 
           {abierta && (
-            <Tarjeta titulo="Otro ingreso">
+            <Tarjeta id="otro" titulo="Otro ingreso">
               <FormularioMovimiento diaISO={diaISO} tipo="INGRESO" />
             </Tarjeta>
           )}
         </div>
 
-        <ListaDinero titulo="Entradas del día" filas={filas} vacio="Sin ingresos." />
+        <ListaDinero id="lista" titulo="Entradas del día" filas={filas} vacio="Sin ingresos." />
       </div>
     </>
   );

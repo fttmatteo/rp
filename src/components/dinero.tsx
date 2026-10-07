@@ -31,11 +31,11 @@ export function SelectorDiaCaja({ ruta, diaISO }: { ruta: string; diaISO: string
 }
 
 /** Lista de entradas o salidas de dinero de un día, con su origen y los totales por medio. */
-export function ListaDinero({ titulo, filas, vacio }: { titulo: string; filas: FilaDinero[]; vacio: string }) {
+export function ListaDinero({ id, titulo, filas, vacio }: { id?: string; titulo: string; filas: FilaDinero[]; vacio: string }) {
   const vigentes = filas.filter((f) => !f.anulado);
   const total = (medio: FilaDinero["medio"]) => vigentes.filter((f) => f.medio === medio).reduce((s, f) => s + f.valor, 0);
   return (
-    <Tarjeta titulo={`${titulo} (${vigentes.length})`} className="self-start">
+    <Tarjeta id={id} titulo={`${titulo} (${vigentes.length})`} className="self-start">
       {filas.length === 0 ? (
         <p className="text-sm text-stone-500">{vacio}</p>
       ) : (

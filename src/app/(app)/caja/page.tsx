@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
-import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { obtenerCaja, totalesCaja } from "@/lib/caja-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoConsecutivo, formatoDia, formatoFechaHora, formatoPesos, hoyISO } from "@/lib/formato";
@@ -93,6 +93,16 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
         Caja del {formatoDia(dia)}{" "}
         <Etiqueta color={abierta ? "ambar" : "verde"}>{abierta ? "Abierta" : "Cerrada"}</Etiqueta>
       </Titulo>
+      <Subnav
+        enlaces={[
+          { id: "efectivo", texto: "Efectivo" },
+          { id: "transferencias", texto: "Transferencias" },
+          { id: "cierre", texto: abierta ? "Cerrar caja" : "Cierre" },
+          { id: "cobros", texto: `Cobros (${pagos.length})` },
+          { id: "movimientos", texto: `Otros movimientos (${movimientos.length})` },
+          abierta && { id: "base", texto: "Base" },
+        ]}
+      />
 
       <form className="mb-4 flex flex-wrap items-end gap-2">
         <label>
@@ -138,7 +148,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
 
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="space-y-4">
-          <Tarjeta titulo="Efectivo">
+          <Tarjeta id="efectivo" titulo="Efectivo">
             <Fila texto="Base (efectivo al empezar)" valor={totales.base} />
             <Fila texto="Cobros en efectivo" valor={totales.cobrosEfectivo} signo="+" />
             <Fila texto="Otros ingresos en efectivo" valor={totales.ingresosEfectivo} signo="+" />
@@ -155,7 +165,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
             )}
           </Tarjeta>
 
-          <Tarjeta titulo="Transferencias (no entran al conteo)">
+          <Tarjeta id="transferencias" titulo="Transferencias (no entran al conteo)">
             <Fila texto="Cobros por transferencia" valor={totales.cobrosTransferencia} />
             <Fila texto="Otros ingresos por transferencia" valor={totales.ingresosTransferencia} signo="+" />
             <Fila texto="Gastos por transferencia" valor={totales.egresosTransferencia} signo="−" />
@@ -168,7 +178,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
           </Tarjeta>
 
           {abierta ? (
-            <Tarjeta titulo="Cerrar caja">
+            <Tarjeta id="cierre" titulo="Cerrar caja">
               <Formulario accion={cerrarCaja.bind(null, diaISO)} confirmar="¿Cerrar la caja de este día? Después solo el administrador puede reabrirla.">
                 <p className="text-sm text-stone-600">
                   Cuenta el efectivo que hay en caja. El sistema espera <strong>{formatoPesos(esperado)}</strong>.
@@ -183,7 +193,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
               </Formulario>
             </Tarjeta>
           ) : (
-            <Tarjeta titulo="Cierre">
+            <Tarjeta id="cierre" titulo="Cierre">
               <p className="text-sm">
                 Cerrada por {cerradaPor?.nombre ?? "—"}
                 {caja.cerradaEn && ` el ${formatoFechaHora(caja.cerradaEn)}`}
@@ -201,7 +211,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
         </div>
 
         <div className="space-y-4">
-          <Tarjeta titulo={`Cobros del día (${pagos.length})`}>
+          <Tarjeta id="cobros" titulo={`Cobros del día (${pagos.length})`}>
             {pagos.length === 0 ? (
               <p className="text-sm text-stone-500">Sin cobros.</p>
             ) : (
@@ -224,7 +234,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
             )}
           </Tarjeta>
 
-          <Tarjeta titulo="Otros ingresos, compras y gastos">
+          <Tarjeta id="movimientos" titulo="Otros ingresos, compras y gastos">
             {movimientos.length > 0 && (
               <ul className="mb-4 divide-y divide-stone-100 text-sm">
                 {movimientos.map((m) => (
@@ -267,7 +277,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
           </Tarjeta>
 
           {abierta && (
-            <Tarjeta titulo="Base">
+            <Tarjeta id="base" titulo="Base">
               <Formulario accion={actualizarBase.bind(null, diaISO)} className="space-y-3">
                 <p className="text-xs text-stone-500">Se toma del efectivo contado en el último cierre. Corrígela si no coincide.</p>
                 <Campo etiqueta="Base">

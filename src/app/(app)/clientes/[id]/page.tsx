@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { rangoAntiguedad, superaCupo } from "@/modules/cartera";
 import { enlaceMaps, enlaceWhatsApp } from "@/modules/contacto";
 import { mensajeEstadoCuenta } from "@/modules/mensajes";
@@ -74,6 +74,15 @@ export default async function ClientePage({
       >
         {cliente.nombre} {!cliente.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
       </Titulo>
+      <Subnav
+        enlaces={[
+          { id: "deudas", texto: `Deudas (${deudas.length})` },
+          { id: "movimientos", texto: "Movimientos" },
+          { id: "precios", texto: "Precios" },
+          { id: "datos", texto: "Datos" },
+          puede(op, "anular") && { id: "saldo-inicial", texto: "Saldo inicial" },
+        ]}
+      />
       {creado && (
         <div className="mb-4">
           <Alerta tipo="ok">Cliente creado. Ya puedes tomarle pedidos o cargar su saldo inicial.</Alerta>
@@ -109,7 +118,7 @@ export default async function ClientePage({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Tarjeta titulo="Deudas pendientes">
+        <Tarjeta id="deudas" titulo="Deudas pendientes">
           {deudas.length === 0 ? (
             <p className="text-sm text-stone-500">No debe nada.</p>
           ) : (
@@ -192,7 +201,7 @@ export default async function ClientePage({
           )}
         </Tarjeta>
 
-        <Tarjeta titulo="Movimientos">
+        <Tarjeta id="movimientos" titulo="Movimientos">
           {historial.length === 0 ? (
             <p className="text-sm text-stone-500">Sin compras ni pagos todavía.</p>
           ) : (
@@ -236,7 +245,7 @@ export default async function ClientePage({
           )}
         </Tarjeta>
 
-        <Tarjeta titulo="Precios">
+        <Tarjeta id="precios" titulo="Precios">
           {puede(op, "precios") ? (
             <Formulario accion={guardarPreciosCliente.bind(null, id)}>
               <Tabla>
@@ -279,7 +288,7 @@ export default async function ClientePage({
           )}
         </Tarjeta>
 
-        <Tarjeta titulo="Datos del cliente">
+        <Tarjeta id="datos" titulo="Datos del cliente">
           {puede(op, "clientes.editar") ? (
             <Formulario accion={actualizarCliente.bind(null, id)}>
               <CamposCliente c={cliente} />
@@ -298,7 +307,7 @@ export default async function ClientePage({
         </Tarjeta>
 
         {puede(op, "anular") && (
-          <Tarjeta titulo="Saldo inicial">
+          <Tarjeta id="saldo-inicial" titulo="Saldo inicial">
             <Formulario accion={registrarSaldoInicial.bind(null, id)} className="space-y-3">
               <Alerta tipo="aviso">Úsalo solo para cargar lo que el cliente ya debía antes de usar la app.</Alerta>
               <div className="grid gap-3 sm:grid-cols-2">

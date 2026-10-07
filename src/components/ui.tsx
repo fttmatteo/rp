@@ -42,9 +42,9 @@ export function Titulo({ children, accion }: { children: ReactNode; accion?: Rea
   );
 }
 
-export function Tarjeta({ titulo, children, className = "" }: { titulo?: ReactNode; children: ReactNode; className?: string }) {
+export function Tarjeta({ titulo, children, className = "", id }: { titulo?: ReactNode; children: ReactNode; className?: string; id?: string }) {
   return (
-    <section className={`min-w-0 rounded border border-stone-200 bg-white p-4 ${className}`}>
+    <section id={id} className={`min-w-0 rounded border border-stone-200 bg-white p-4 ${className}`}>
       {titulo && <h2 className="mb-3 font-semibold">{titulo}</h2>}
       {children}
     </section>
@@ -86,4 +86,33 @@ export function Etiqueta({ children, color = "gris" }: { children: ReactNode; co
     ambar: "bg-amber-100 text-amber-900",
   }[color];
   return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${estilos}`}>{children}</span>;
+}
+
+export type EnlaceSeccion = { id: string; texto: string };
+
+/**
+ * Barra fija con enlaces a las secciones de una página larga, para no tener que bajar con el dedo
+ * hasta la última. Las secciones se marcan con id; los falsos se omiten.
+ */
+export function Subnav({ enlaces }: { enlaces: (EnlaceSeccion | false | null | undefined)[] }) {
+  const lista = enlaces.filter((e): e is EnlaceSeccion => !!e);
+  if (lista.length < 2) return null;
+  return (
+    <nav aria-label="Secciones de la página" className="sticky top-0 z-10 -mx-4 mb-4 overflow-x-auto border-b border-stone-200 bg-stone-50 px-4">
+      <ul className="flex gap-2 whitespace-nowrap py-2 text-sm">
+        {lista.map((e) => (
+          <li key={e.id}>
+            <a href={`#${e.id}`} className="block rounded border border-stone-300 bg-white px-3 py-1.5 hover:bg-stone-100">
+              {e.texto}
+            </a>
+          </li>
+        ))}
+        <li>
+          <a href="#" className="block px-2 py-1.5 text-stone-600 underline">
+            Arriba
+          </a>
+        </li>
+      </ul>
+    </nav>
+  );
 }
