@@ -7,8 +7,9 @@ import { requerir } from "@/lib/sesion";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const sesion = await requerir();
-  if (!puede(sesion.operacion, "pedidos.ver") && !puede(sesion.operacion, "clientes.ver"))
-    return new Response("Acceso denegado", { status: 403 });
+  const general = puede(sesion.operacion, "pedidos.ver") || puede(sesion.operacion, "clientes.ver");
+  // El repartidor solo ve los recibos de los pedidos de su propia ruta (desde Mi ruta).
+  if (!general && !puede(sesion.operacion, "ruta.propia")) return new Response("Acceso denegado", { status: 403 });
   const id = Number((await params).id);
   const venta = Number.isInteger(id)
     ? await db.venta.findUnique({
@@ -16,12 +17,13 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         include: {
           cliente: true,
           usuario: true,
-          pedido: { include: { detalles: { include: { producto: true } } } },
+          pedido: { include: { ruta: true, detalles: { include: { producto: true } } } },
           aplicaciones: { include: { pago: true } },
         },
       })
     : null;
   if (!venta) return new Response("No encontrado", { status: 404 });
+  if (!general && venta.pedido?.ruta?.repartidorId !== sesion.usuario.id) return new Response("Acceso denegado", { status: 403 });
 
   const numero = formatoConsecutivo("RP", venta.consecutivo);
   const lineas =
