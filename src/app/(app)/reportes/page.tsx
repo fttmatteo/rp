@@ -29,20 +29,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <Titulo
-        accion={
-          <span className="flex gap-2">
-            <BotonLink href={`/reportes/exportar?${consulta}&formato=csv`} variante="secundario" prefetch={false}>
-              Excel (CSV)
-            </BotonLink>
-            <BotonLink href={`/reportes/exportar?${consulta}&formato=pdf`} variante="secundario" prefetch={false} target="_blank">
-              PDF
-            </BotonLink>
-          </span>
-        }
-      >
-        Reportes
-      </Titulo>
+      <Titulo>Reportes</Titulo>
       <Subnav
         enlaces={[
           { id: "reporte", texto: reporte.titulo },
@@ -73,9 +60,18 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         </button>
       </form>
 
-      <h2 id="reporte" className="mb-2 font-semibold">
-        {reporte.titulo}
-      </h2>
+      <div id="reporte" className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold">{reporte.titulo}</h2>
+        {/* Descargan solo este reporte con los filtros elegidos; el libro mensual tiene su propio botón abajo. */}
+        <span className="flex gap-2">
+          <BotonLink href={`/reportes/exportar?${consulta}&formato=csv`} variante="secundario" prefetch={false}>
+            Descargar este reporte en Excel (CSV)
+          </BotonLink>
+          <BotonLink href={`/reportes/exportar?${consulta}&formato=pdf`} variante="secundario" prefetch={false} target="_blank">
+            Descargar este reporte en PDF
+          </BotonLink>
+        </span>
+      </div>
       {reporte.filas.length === 0 ? (
         <Vacio>Sin datos en este período.</Vacio>
       ) : (
