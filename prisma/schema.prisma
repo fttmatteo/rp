@@ -330,6 +330,8 @@ model Pago {
 
 enum EstadoRuta {
   ABIERTA
+  // El repartidor terminó y declaró el efectivo que entrega; falta la aprobación del administrador.
+  PRECERRADA
   LIQUIDADA
 }
 
@@ -339,11 +341,13 @@ model Ruta {
   repartidorId      Int
   estado            EstadoRuta @default(ABIERTA)
   creadaEn          DateTime   @default(now())
-  // Se llenan al liquidar: efectivo cobrado según el sistema y el que el repartidor entregó.
+  // Se llenan en el precierre del repartidor y se confirman al liquidar: efectivo cobrado
+  // según el sistema y el que el repartidor entregó.
   efectivoEsperado  Int?
   efectivoEntregado Int?
   diferencia        Int?
   observacion       String?
+  precerradaEn      DateTime?
   liquidadaEn       DateTime?
   liquidadaPorId    Int?
 

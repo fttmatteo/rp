@@ -34,44 +34,62 @@ async function numerar(tx: Tx, ids: number[]) {
   for (const [i, id] of ids.entries()) await tx.pedido.update({ where: { id }, data: { ordenEnRuta: i + 1 } });
 }
 
-/** Asigna los pedidos marcados a la ruta del repartidor para ese día (la crea si no existe). */
-export async function asignarPedidos(fechaISO: string, _: EstadoForm, form: FormData): Promise<EstadoForm> {
-  const sesion = await requerir("rutas");
-  try {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaISO)) throw new ErrorUsuario("Fecha no válida.");
-    const fecha = diaUTC(fechaISO);
-    const repartidorId = entero(form, "repartidorId", "Repartidor");
-    const repartidor = repartidorId ? await db.usuario.findUnique({ where: { id: repartidorId } }) : null;
-    if (!repartidor || !repartidor.activo || !repartidor.accesos.includes("REPARTIDOR")) throw new ErrorUsuario("Elige el repartidor.");
-    const ids = form.getAll("pedido").map(Number).filter(Number.isInteger);
-    if (ids.length === 0) throw new ErrorUsuario("Marca al menos un pedido.");
+/** Agrega pedidos a la ruta: los nuevos quedan al final, agrupados por zona; los que ya estaban conservan su orden. */
+async function renumerar(tx: Tx, rutaId: number) {
+  const todas = await paradas(tx, rutaId);
+  const previas = todas.filter((p) => p.orden !== null).sort((a, b) => a.orden! - b.orden!);
+  const nuevas = ordenarPorZona(todas.filter((p) => p.orden === null));
+  await numerar(tx, [...previas.map((p) => p.id), ...nuevas]);
+}
 
+/** El repartidor toma pedidos de hoy que nadie ha tomado y quedan en su ruta del día (la crea si no existe). */
+export async function tomarPedidos(_: EstadoForm, form: FormData): Promise<EstadoForm> {
+  const sesion = await requerir("ruta.propia");
+  try {
+    const ids = [...new Set(form.getAll("pedido").map(Number).filter(Number.isInteger))];
+    if (ids.length === 0) throw new ErrorUsuario("Marca al menos un pedido.");
+    const fecha = diaUTC(hoyISO());
     await db.$transaction(async (tx) => {
       const ruta = await tx.ruta.upsert({
-        where: { fecha_repartidorId: { fecha, repartidorId: repartidor.id } },
-        create: { fecha, repartidorId: repartidor.id },
+        where: { fecha_repartidorId: { fecha, repartidorId: sesion.usuario.id } },
+        create: { fecha, repartidorId: sesion.usuario.id },
         update: {},
       });
       await exigirRutaAbierta(tx, ruta.id);
-      const pedidos = await tx.pedido.findMany({ where: { id: { in: ids } }, include: { ruta: true } });
-      for (const p of pedidos) {
-        if (p.estado !== "PENDIENTE") throw new ErrorUsuario(`El pedido #${p.id} ya no está pendiente.`);
-        if (p.fechaEntrega.getTime() !== fecha.getTime()) throw new ErrorUsuario(`El pedido #${p.id} es para otro día.`);
-        if (p.ruta && p.ruta.estado !== "ABIERTA") throw new ErrorUsuario(`El pedido #${p.id} está en una ruta ya liquidada.`);
-      }
-      await tx.pedido.updateMany({ where: { id: { in: ids } }, data: { rutaId: ruta.id, ordenEnRuta: null } });
-      // Los nuevos quedan al final, agrupados por zona; los que ya estaban conservan su orden.
-      const todas = await paradas(tx, ruta.id);
-      const previas = todas.filter((p) => p.orden !== null).sort((a, b) => a.orden! - b.orden!);
-      const nuevas = ordenarPorZona(todas.filter((p) => p.orden === null));
-      await numerar(tx, [...previas.map((p) => p.id), ...nuevas]);
-      await auditar(tx, sesion.usuario.id, "Ruta", ruta.id, "asignar", { pedidos: ids });
+      // Solo se toman si siguen libres: si otro repartidor se adelantó, no se toma ninguno.
+      const r = await tx.pedido.updateMany({
+        where: { id: { in: ids }, rutaId: null, estado: "PENDIENTE", fechaEntrega: fecha },
+        data: { rutaId: ruta.id, ordenEnRuta: null },
+      });
+      if (r.count !== ids.length) throw new ErrorUsuario("Alguno de esos pedidos ya lo tomó otro repartidor o cambió. Revisa la lista.");
+      await renumerar(tx, ruta.id);
+      await auditar(tx, sesion.usuario.id, "Ruta", ruta.id, "tomar", { pedidos: ids });
     });
   } catch (e) {
     return { error: mensajeError(e) };
   }
   refrescar();
-  return { ok: "Pedidos asignados a la ruta." };
+  return { ok: "Pedidos agregados a tu ruta." };
+}
+
+/** El repartidor suelta un pedido pendiente de su ruta para que otro lo tome. */
+export async function soltarPedido(pedidoId: number, _: EstadoForm, _form: FormData): Promise<EstadoForm> {
+  const sesion = await requerir("ruta.propia");
+  try {
+    await db.$transaction(async (tx) => {
+      const pedido = await tx.pedido.findUnique({ where: { id: pedidoId } });
+      if (!pedido?.rutaId) throw new ErrorUsuario("El pedido no está en una ruta.");
+      const ruta = await exigirRutaAbierta(tx, pedido.rutaId);
+      if (ruta.repartidorId !== sesion.usuario.id) throw new ErrorUsuario("Este pedido no está en tu ruta.");
+      const r = await tx.pedido.updateMany({ where: { id: pedidoId, estado: "PENDIENTE" }, data: { rutaId: null, ordenEnRuta: null } });
+      if (r.count === 0) throw new ErrorUsuario("Solo se sueltan pedidos pendientes.");
+      await auditar(tx, sesion.usuario.id, "Ruta", ruta.id, "soltar", { pedidoId });
+    });
+  } catch (e) {
+    return { error: mensajeError(e) };
+  }
+  refrescar();
+  return { ok: "Pedido soltado. Queda libre para otro repartidor." };
 }
 
 export async function quitarDeRuta(pedidoId: number, _: EstadoForm, _form: FormData): Promise<EstadoForm> {
@@ -126,22 +144,89 @@ export async function guardarOrden(rutaId: number, _: EstadoForm, form: FormData
   return { ok: "Orden guardado." };
 }
 
+async function efectivoCobrado(tx: Tx, rutaId: number) {
+  const cobrado = await tx.pago.aggregate({ where: { rutaId, anulado: false, medio: "EFECTIVO" }, _sum: { valor: true } });
+  return cobrado._sum.valor ?? 0;
+}
+
 /**
- * Liquidación al regresar: el repartidor entrega el efectivo cobrado. Lo pendiente que no
+ * Precierre del repartidor al terminar: declara el efectivo que entrega. La ruta queda cerrada
+ * para entregas y cobros hasta que el administrador la apruebe o se la devuelva.
+ */
+export async function precerrarRuta(rutaId: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
+  const sesion = await requerir("ruta.propia");
+  try {
+    const entregado = entero(form, "entregado", "Efectivo que entregas");
+    if (entregado === null) throw new ErrorUsuario("Escribe el efectivo que entregas.");
+    const observacion = textoOpcional(form, "observacion");
+    await db.$transaction(async (tx) => {
+      const ruta = await exigirRutaAbierta(tx, rutaId);
+      if (ruta.repartidorId !== sesion.usuario.id) throw new ErrorUsuario("Esta no es tu ruta.");
+      const pendientes = await tx.pedido.count({ where: { rutaId, estado: "PENDIENTE" } });
+      if (pendientes > 0)
+        throw new ErrorUsuario(`Te quedan ${pendientes} pedidos por entregar. Márcalos como entregados o no entregados, o suéltalos.`);
+      const esperado = await efectivoCobrado(tx, rutaId);
+      const diferencia = validarCierre(esperado, entregado, observacion);
+      await tx.ruta.update({
+        where: { id: rutaId },
+        data: {
+          estado: "PRECERRADA",
+          efectivoEsperado: esperado,
+          efectivoEntregado: entregado,
+          diferencia,
+          observacion,
+          precerradaEn: new Date(),
+        },
+      });
+      await auditar(tx, sesion.usuario.id, "Ruta", rutaId, "precierre", { esperado, entregado, diferencia, observacion });
+    });
+  } catch (e) {
+    return { error: mensajeError(e) };
+  }
+  refrescar(rutaId);
+  return { ok: "Precierre enviado. Falta la aprobación del administrador." };
+}
+
+/** El administrador devuelve el precierre al repartidor para que corrija (la ruta vuelve a quedar abierta). */
+export async function devolverPrecierre(rutaId: number, _: EstadoForm, _form: FormData): Promise<EstadoForm> {
+  const sesion = await requerir("rutas.aprobar");
+  try {
+    await db.$transaction(async (tx) => {
+      const ruta = await bloquearRuta(tx, rutaId);
+      if (ruta.estado !== "PRECERRADA") throw new ErrorUsuario("La ruta no tiene precierre.");
+      await tx.ruta.update({
+        where: { id: rutaId },
+        data: { estado: "ABIERTA", efectivoEsperado: null, efectivoEntregado: null, diferencia: null, precerradaEn: null },
+      });
+      await auditar(tx, sesion.usuario.id, "Ruta", rutaId, "devolver", {
+        entregado: ruta.efectivoEntregado,
+        observacion: ruta.observacion,
+      });
+    });
+  } catch (e) {
+    return { error: mensajeError(e) };
+  }
+  refrescar(rutaId);
+  return { ok: "Precierre devuelto al repartidor." };
+}
+
+/**
+ * Aprobación final del administrador: confirma el efectivo que entregó el repartidor (el de su
+ * precierre, o el que cuente el administrador si la ruta no tiene precierre). Lo pendiente que no
  * se entregó queda como no entregado. Si hay diferencia, se exige la explicación y se registra
  * en la caja de hoy (faltante como gasto, sobrante como ingreso) para que la caja cuadre.
  */
 export async function liquidarRuta(rutaId: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
-  const sesion = await requerir("rutas");
+  const sesion = await requerir("rutas.aprobar");
   try {
     const entregado = entero(form, "entregado", "Efectivo entregado");
     if (entregado === null) throw new ErrorUsuario("Escribe el efectivo que entregó el repartidor.");
     const observacion = textoOpcional(form, "observacion");
     await db.$transaction(async (tx) => {
-      const ruta = await exigirRutaAbierta(tx, rutaId);
+      const ruta = await bloquearRuta(tx, rutaId);
+      if (ruta.estado === "LIQUIDADA") throw new ErrorUsuario("Esta ruta ya se liquidó.");
       const repartidor = await tx.usuario.findUniqueOrThrow({ where: { id: ruta.repartidorId } });
-      const cobrado = await tx.pago.aggregate({ where: { rutaId, anulado: false, medio: "EFECTIVO" }, _sum: { valor: true } });
-      const esperado = cobrado._sum.valor ?? 0;
+      const esperado = await efectivoCobrado(tx, rutaId);
       const diferencia = validarCierre(esperado, entregado, observacion);
       const sinEntregar = await tx.pedido.updateMany({
         where: { rutaId, estado: "PENDIENTE" },
@@ -186,7 +271,7 @@ export async function liquidarRuta(rutaId: number, _: EstadoForm, form: FormData
     return { error: mensajeError(e) };
   }
   refrescar(rutaId);
-  return { ok: "Ruta liquidada." };
+  return { ok: "Cierre aprobado. Ruta liquidada." };
 }
 
 /** Solo el administrador: deshace la liquidación (anula la diferencia registrada en caja). */
@@ -208,6 +293,7 @@ export async function reabrirRuta(rutaId: number, _: EstadoForm, _form: FormData
           efectivoEsperado: null,
           efectivoEntregado: null,
           diferencia: null,
+          precerradaEn: null,
           liquidadaEn: null,
           liquidadaPorId: null,
         },

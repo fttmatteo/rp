@@ -25,8 +25,9 @@ export type Permiso =
   | "pagos.registrar"
   | "cartera.ver"
   | "caja"
-  | "rutas" // armar rutas, ordenarlas y liquidarlas
-  | "ruta.propia" // la ruta del día del repartidor
+  | "rutas" // ver las rutas del día, ordenarlas y quitarles pedidos
+  | "rutas.aprobar" // aprobar el precierre del repartidor y liquidar la ruta (solo administrador)
+  | "ruta.propia" // la ruta del día del repartidor: toma pedidos, entrega, cobra y hace el precierre
   | "aves" // galpones, lotes y novedades
   | "compras" // proveedores, compras de huevo a terceros y cuentas por pagar
   | "reportes" // reportes y exportaciones
@@ -47,7 +48,8 @@ const PERMISOS: Record<Exclude<Operacion, "ADMIN">, readonly Permiso[]> = {
     "compras",
     "reportes",
   ],
-  REPARTIDOR: ["clientes.ver", "pedidos.ver", "pedidos.entregar", "pagos.registrar", "ruta.propia"],
+  // El repartidor trabaja desde "Mi ruta": no ve la lista general de pedidos, el reparto del día ni los clientes.
+  REPARTIDOR: ["pedidos.entregar", "pagos.registrar", "ruta.propia"],
   GALPONERO: ["clasificacion", "inventario.ver", "aves"],
 };
 

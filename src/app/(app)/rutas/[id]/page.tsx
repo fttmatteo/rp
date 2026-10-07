@@ -2,12 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
 import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
-import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
+import { ESTADO_PEDIDO, ESTADO_RUTA, esParcial } from "@/lib/estados";
 import { formatoConsecutivo, formatoDia, formatoFechaHora, formatoPesos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { datosRuta } from "@/lib/rutas-datos";
 import { requerir } from "@/lib/sesion";
-import { guardarOrden, liquidarRuta, ordenarRutaPorZona, quitarDeRuta, reabrirRuta } from "../acciones";
+import { devolverPrecierre, guardarOrden, liquidarRuta, ordenarRutaPorZona, quitarDeRuta, reabrirRuta } from "../acciones";
 
 function Fila({ texto, valor, fuerte, rojo }: { texto: string; valor: number; fuerte?: boolean; rojo?: boolean }) {
   return (
@@ -20,6 +20,42 @@ function Fila({ texto, valor, fuerte, rojo }: { texto: string; valor: number; fu
   );
 }
 
+function FormularioLiquidar({
+  rutaId,
+  pendientes,
+  esperado,
+  entregado,
+  observacion = "",
+  aprobar = false,
+}: {
+  rutaId: number;
+  pendientes: number;
+  esperado: number;
+  entregado: number;
+  observacion?: string;
+  aprobar?: boolean;
+}) {
+  return (
+    <Formulario
+      accion={liquidarRuta.bind(null, rutaId)}
+      confirmar={`¿${aprobar ? "Aprobar el cierre y liquidar" : "Liquidar"} la ruta? Después ya no se registran entregas ni cobros en ella.`}
+    >
+      {pendientes > 0 && (
+        <Alerta tipo="aviso">
+          Quedan {pendientes} paradas por entregar. Al liquidar quedan como no entregadas y se pueden reprogramar.
+        </Alerta>
+      )}
+      <Campo etiqueta="Efectivo que entregó el repartidor" ayuda={`El sistema espera ${formatoPesos(esperado)}. Corrígelo si al contar da otro valor.`}>
+        <input name="entregado" inputMode="numeric" defaultValue={entregado} required />
+      </Campo>
+      <Campo etiqueta="Observación" ayuda="Obligatoria si no cuadra. La diferencia se registra en la caja de hoy.">
+        <textarea name="observacion" rows={2} defaultValue={observacion} />
+      </Campo>
+      <Boton type="submit">{aprobar ? "Aprobar cierre" : "Liquidar ruta"}</Boton>
+    </Formulario>
+  );
+}
+
 export default async function RutaPage({ params }: { params: Promise<{ id: string }> }) {
   const sesion = await requerir("rutas");
   const id = Number((await params).id);
@@ -27,6 +63,7 @@ export default async function RutaPage({ params }: { params: Promise<{ id: strin
   if (!datos) notFound();
   const { ruta, filas, cierre, liquidacion, pagos } = datos;
   const abierta = ruta.estado === "ABIERTA";
+  const aprueba = puede(sesion.operacion, "rutas.aprobar");
   const pendientes = filas.filter((f) => f.pedido.estado === "PENDIENTE").length;
   const fecha = ruta.fecha.toISOString().slice(0, 10);
   const nombres = new Map(filas.flatMap((f) => f.pedido.detalles.map((d) => [d.productoId, d.producto] as const)));
@@ -44,7 +81,7 @@ export default async function RutaPage({ params }: { params: Promise<{ id: strin
         }
       >
         Ruta de {ruta.repartidor.nombre} · {formatoDia(ruta.fecha)}{" "}
-        <Etiqueta color={abierta ? "ambar" : "verde"}>{abierta ? "Abierta" : "Liquidada"}</Etiqueta>
+        <Etiqueta color={ESTADO_RUTA[ruta.estado].color}>{ESTADO_RUTA[ruta.estado].texto}</Etiqueta>
       </Titulo>
       <p className="mb-4 text-sm text-stone-600">
         {filas.length} paradas · {cierre.entregados} entregadas · {pendientes} por entregar · {cierre.noEntregados} no entregadas
@@ -66,7 +103,7 @@ export default async function RutaPage({ params }: { params: Promise<{ id: strin
       )}
 
       {filas.length === 0 ? (
-        <Alerta tipo="aviso">La ruta no tiene paradas. Asígnale pedidos desde Rutas.</Alerta>
+        <Alerta tipo="aviso">La ruta no tiene paradas. El repartidor toma sus pedidos desde Mi ruta.</Alerta>
       ) : (
         <Tabla>
           <thead>
@@ -176,32 +213,61 @@ export default async function RutaPage({ params }: { params: Promise<{ id: strin
           <p className="pt-1 text-xs text-stone-500">Las transferencias no se cuentan; se verifican en la caja.</p>
         </Tarjeta>
 
-        {abierta ? (
-          puede(sesion.operacion, "rutas") && (
-            <Tarjeta titulo="Liquidar">
-              <Formulario
-                accion={liquidarRuta.bind(null, ruta.id)}
-                confirmar="¿Liquidar la ruta? Después ya no se registran entregas ni cobros en ella."
-              >
-                {pendientes > 0 && (
-                  <Alerta tipo="aviso">
-                    Quedan {pendientes} paradas por entregar. Al liquidar quedan como no entregadas y se pueden reprogramar.
-                  </Alerta>
-                )}
-                <Campo
-                  etiqueta="Efectivo que entregó el repartidor"
-                  ayuda={`El sistema espera ${formatoPesos(liquidacion.efectivoEsperado)}.`}
-                >
-                  <input name="entregado" inputMode="numeric" defaultValue={liquidacion.efectivoEsperado} required />
-                </Campo>
-                <Campo etiqueta="Observación" ayuda="Obligatoria si no cuadra. La diferencia se registra en la caja de hoy.">
-                  <textarea name="observacion" rows={2} />
-                </Campo>
-                <Boton type="submit">Liquidar ruta</Boton>
-              </Formulario>
+        {ruta.estado === "ABIERTA" &&
+          (aprueba ? (
+            <Tarjeta titulo="Liquidar sin precierre">
+              <p className="mb-3 text-sm text-stone-600">
+                El repartidor todavía no ha enviado su precierre. Si ya entregó el efectivo, puedes liquidar la ruta directamente.
+              </p>
+              <FormularioLiquidar rutaId={ruta.id} pendientes={pendientes} esperado={liquidacion.efectivoEsperado} entregado={liquidacion.efectivoEsperado} />
             </Tarjeta>
-          )
-        ) : (
+          ) : (
+            <Tarjeta titulo="Cierre">
+              <p className="text-sm text-stone-600">
+                Cuando termine, el repartidor envía su precierre desde Mi ruta y el administrador lo aprueba.
+              </p>
+            </Tarjeta>
+          ))}
+
+        {ruta.estado === "PRECERRADA" && (
+          <Tarjeta titulo="Precierre del repartidor">
+            <Fila texto="Efectivo que debía entregar" valor={ruta.efectivoEsperado ?? 0} />
+            <Fila texto="Efectivo que dice entregar" valor={ruta.efectivoEntregado ?? 0} />
+            <div className={`flex justify-between py-1 font-semibold ${ruta.diferencia ? "text-red-700" : "text-green-700"}`}>
+              <span>Diferencia</span>
+              <span>{ruta.diferencia === 0 ? "Cuadrada" : formatoPesos(ruta.diferencia ?? 0)}</span>
+            </div>
+            {ruta.precerradaEn && <p className="mt-2 text-sm">Enviado el {formatoFechaHora(ruta.precerradaEn)}</p>}
+            {ruta.observacion && <p className="text-sm text-stone-600">Observación: {ruta.observacion}</p>}
+            {liquidacion.efectivoEsperado !== ruta.efectivoEsperado && (
+              <Alerta tipo="aviso">
+                Desde el precierre cambiaron los cobros: ahora el sistema espera {formatoPesos(liquidacion.efectivoEsperado)}.
+              </Alerta>
+            )}
+            {aprueba && (
+              <div className="mt-4 space-y-3 border-t border-stone-200 pt-4">
+                <FormularioLiquidar
+                  rutaId={ruta.id}
+                  pendientes={pendientes}
+                  esperado={liquidacion.efectivoEsperado}
+                  entregado={ruta.efectivoEntregado ?? 0}
+                  observacion={ruta.observacion ?? ""}
+                  aprobar
+                />
+                <Formulario
+                  accion={devolverPrecierre.bind(null, ruta.id)}
+                  confirmar="¿Devolver el precierre? La ruta vuelve a quedar abierta para que el repartidor corrija."
+                >
+                  <Boton type="submit" variante="secundario">
+                    Devolver al repartidor
+                  </Boton>
+                </Formulario>
+              </div>
+            )}
+          </Tarjeta>
+        )}
+
+        {ruta.estado === "LIQUIDADA" && (
           <Tarjeta titulo="Liquidada">
             <Fila texto="Efectivo esperado" valor={ruta.efectivoEsperado ?? 0} />
             <Fila texto="Efectivo entregado" valor={ruta.efectivoEntregado ?? 0} />
@@ -209,8 +275,9 @@ export default async function RutaPage({ params }: { params: Promise<{ id: strin
               <span>Diferencia</span>
               <span>{ruta.diferencia === 0 ? "Cuadrada" : formatoPesos(ruta.diferencia ?? 0)}</span>
             </div>
-            <p className="mt-2 text-sm">
-              Por {ruta.liquidadaPor?.nombre ?? "—"}
+            {ruta.precerradaEn && <p className="mt-2 text-sm">Precierre del repartidor el {formatoFechaHora(ruta.precerradaEn)}</p>}
+            <p className="text-sm">
+              Aprobada por {ruta.liquidadaPor?.nombre ?? "—"}
               {ruta.liquidadaEn && ` el ${formatoFechaHora(ruta.liquidadaEn)}`}
             </p>
             {ruta.observacion && <p className="text-sm text-stone-600">Observación: {ruta.observacion}</p>}

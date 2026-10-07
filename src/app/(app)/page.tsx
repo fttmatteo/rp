@@ -53,6 +53,7 @@ export default async function InicioPage() {
     ventasHoy,
     transferencias,
     rutasSinLiquidar,
+    rutasPorAprobar,
     porPagar,
     comprasVencidas,
     porClasificar,
@@ -81,6 +82,7 @@ export default async function InicioPage() {
     si("caja", () => db.venta.aggregate({ where: { tipo: "VENTA", anulada: false, fecha: instantes(hoy, hoy) }, _sum: { total: true }, _count: true })),
     si("caja", async () => (await db.pago.count({ where: SIN_VERIFICAR })) + (await db.movimientoCaja.count({ where: SIN_VERIFICAR }))),
     si("rutas", () => db.ruta.count({ where: { estado: "ABIERTA", fecha: { lt: hoy } } })),
+    si("rutas.aprobar", () => db.ruta.count({ where: { estado: "PRECERRADA" } })),
     si("compras", () => db.compra.aggregate({ where: { anulada: false, saldo: { gt: 0 } }, _sum: { saldo: true } })),
     si("compras", () => db.compra.count({ where: { anulada: false, saldo: { gt: 0 }, vence: { lt: hoy } } })),
     si("inventario.ver", () => db.compra.aggregate({ where: { anulada: false, porClasificar: { gt: 0 } }, _sum: { porClasificar: true } })),
@@ -107,6 +109,8 @@ export default async function InicioPage() {
     alertas.push({ texto: `${cuenta(clientesVencidos.length, "cliente", "clientes")} con deudas vencidas por ${formatoPesos(vencida?._sum.saldo ?? 0)}.`, href: "/cartera" });
   if (cajasAbiertas?.length) alertas.push({ texto: `${cuenta(cajasAbiertas.length, "día", "días")} de caja sin cerrar.`, href: "/caja" });
   if (transferencias) alertas.push({ texto: `${cuenta(transferencias, "transferencia", "transferencias")} sin verificar en el banco.`, href: "/caja" });
+  if (rutasPorAprobar)
+    alertas.push({ texto: `${cuenta(rutasPorAprobar, "ruta", "rutas")} con precierre del repartidor por aprobar.`, href: "/rutas" });
   if (rutasSinLiquidar) alertas.push({ texto: `${cuenta(rutasSinLiquidar, "ruta", "rutas")} de días anteriores sin liquidar.`, href: "/rutas" });
   if (comprasVencidas) alertas.push({ texto: `${cuenta(comprasVencidas, "compra a proveedor vencida", "compras a proveedores vencidas")}.`, href: "/proveedores" });
   if (sinClasificar > 0) alertas.push({ texto: `${formatoHuevos(sinClasificar)} de huevo comprado por clasificar.`, href: "/clasificacion" });
@@ -131,7 +135,7 @@ export default async function InicioPage() {
       )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {miRuta !== undefined && (
-          <Dato titulo="Mi ruta de hoy" valor={miRuta ? `${miRuta._count.pedidos} por entregar` : "Sin ruta"} href="/mi-ruta" enlace="Ver mi ruta" />
+          <Dato titulo="Mi ruta de hoy" valor={miRuta ? `${miRuta._count.pedidos} por entregar` : "Sin pedidos"} href="/mi-ruta" enlace={miRuta ? "Ver mi ruta" : "Tomar pedidos"} />
         )}
         {ventasHoy && (
           <Dato
@@ -143,10 +147,10 @@ export default async function InicioPage() {
           />
         )}
         {pendientesHoy !== null && (
-          <Dato titulo="Pedidos para hoy" valor={pendientesHoy} detalle={sinRuta ? `${sinRuta} sin ruta` : undefined} href="/pedidos" enlace="Ver pedidos" />
+          <Dato titulo="Pedidos para hoy" valor={pendientesHoy} detalle={sinRuta ? `${sinRuta} sin tomar` : undefined} href="/pedidos" enlace="Ver pedidos" />
         )}
         {sinRuta !== null && (
-          <Dato titulo="Rutas de hoy" valor={sinRuta > 0 ? `${cuenta(sinRuta, "pedido", "pedidos")} sin ruta` : "Todo asignado"} alerta={sinRuta > 0} href="/rutas" enlace="Armar rutas" />
+          <Dato titulo="Rutas de hoy" valor={sinRuta > 0 ? `${cuenta(sinRuta, "pedido", "pedidos")} sin tomar` : "Todo tomado"} alerta={sinRuta > 0} href="/rutas" enlace="Ver rutas" />
         )}
         {cartera && (
           <Dato
