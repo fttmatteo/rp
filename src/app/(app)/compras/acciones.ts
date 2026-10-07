@@ -19,6 +19,7 @@ import { huevosDe } from "@/modules/inventario";
  */
 export async function registrarCompra(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("compras");
+  let credito = false;
   try {
     const proveedorId = entero(form, "proveedorId", "Proveedor");
     const proveedor = proveedorId ? await db.proveedor.findUnique({ where: { id: proveedorId } }) : null;
@@ -49,6 +50,7 @@ export async function registrarCompra(_: EstadoForm, form: FormData): Promise<Es
     const formaPago = texto(form, "formaPago");
     if (formaPago !== "CONTADO" && formaPago !== "CREDITO") throw new ErrorUsuario("Elige si se paga de contado o a crédito.");
     const medio = formaPago === "CONTADO" ? leerMedio(form).medio : null;
+    credito = formaPago === "CREDITO";
     const hoy = diaUTC(hoyISO());
 
     await db.$transaction(async (tx) => {
@@ -102,7 +104,8 @@ export async function registrarCompra(_: EstadoForm, form: FormData): Promise<Es
     return { error: mensajeError(e) };
   }
   revalidatePath("/compras");
-  return { ok: "Compra registrada." };
+  revalidatePath("/egresos");
+  return { ok: credito ? "Compra registrada como cuenta por pagar." : "Compra registrada y descontada de la caja." };
 }
 
 /** Solo el administrador: devuelve el inventario y el dinero de una compra equivocada. */
@@ -157,5 +160,6 @@ export async function anularCompra(id: number, _: EstadoForm, _form: FormData): 
     return { error: mensajeError(e) };
   }
   revalidatePath("/compras");
+  revalidatePath("/egresos");
   return { ok: "Compra anulada." };
 }

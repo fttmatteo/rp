@@ -7,7 +7,7 @@ import { diaUTC, formatoConsecutivo, formatoDia, formatoFechaHora, formatoPesos,
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 import { efectivoEsperado, totalTransferencias } from "@/modules/caja";
-import { actualizarBase, anularMovimientoCaja, cerrarCaja, reabrirCaja, registrarMovimientoCaja, verificarTransferencia } from "./acciones";
+import { actualizarBase, anularMovimientoCaja, cerrarCaja, reabrirCaja, verificarTransferencia } from "./acciones";
 
 function Fila({ texto, valor, fuerte, signo }: { texto: string; valor: number; fuerte?: boolean; signo?: "+" | "−" }) {
   return (
@@ -75,7 +75,21 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
 
   return (
     <>
-      <Titulo accion={<BotonLink href="/caja/reporte" variante="secundario">Reporte quincenal</BotonLink>}>
+      <Titulo
+        accion={
+          <span className="flex flex-wrap gap-2">
+            <BotonLink href={`/ingresos?dia=${diaISO}`} variante="secundario">
+              Ingresos
+            </BotonLink>
+            <BotonLink href={`/egresos?dia=${diaISO}`} variante="secundario">
+              Egresos
+            </BotonLink>
+            <BotonLink href="/caja/reporte" variante="secundario">
+              Reporte quincenal
+            </BotonLink>
+          </span>
+        }
+      >
         Caja del {formatoDia(dia)}{" "}
         <Etiqueta color={abierta ? "ambar" : "verde"}>{abierta ? "Abierta" : "Cerrada"}</Etiqueta>
       </Titulo>
@@ -210,13 +224,13 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
             )}
           </Tarjeta>
 
-          <Tarjeta titulo="Otros ingresos, gastos y retiros">
+          <Tarjeta titulo="Otros ingresos, compras y gastos">
             {movimientos.length > 0 && (
               <ul className="mb-4 divide-y divide-stone-100 text-sm">
                 {movimientos.map((m) => (
                   <li key={m.id} className="flex flex-wrap justify-between gap-2 py-2">
                     <span>
-                      {m.tipo === "INGRESO" ? "Ingreso" : "Gasto"}: {m.concepto} · {m.medio === "EFECTIVO" ? "efectivo" : "transferencia"}
+                      {m.tipo === "INGRESO" ? "Ingreso" : m.compraId ? "Compra" : m.pagoProveedorId ? "Pago a proveedor" : "Gasto"}: {m.concepto} · {m.medio === "EFECTIVO" ? "efectivo" : "transferencia"}
                       <span className="text-stone-400"> · {m.usuario.nombre}</span>{" "}
                       {m.anulado && <Etiqueta color="rojo">Anulado</Etiqueta>}
                       {m.medio === "TRANSFERENCIA" && !m.anulado && <Verificacion entidad="MovimientoCaja" id={m.id} verificadoEn={m.verificadoEn} />}
@@ -238,35 +252,18 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
                 ))}
               </ul>
             )}
-            {abierta ? (
-              <Formulario accion={registrarMovimientoCaja.bind(null, diaISO)} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <Campo etiqueta="Tipo">
-                    <select name="tipo" defaultValue="EGRESO">
-                      <option value="EGRESO">Gasto o retiro</option>
-                      <option value="INGRESO">Otro ingreso</option>
-                    </select>
-                  </Campo>
-                  <Campo etiqueta="Medio">
-                    <select name="medio" defaultValue="EFECTIVO">
-                      <option value="EFECTIVO">Efectivo</option>
-                      <option value="TRANSFERENCIA">Transferencia</option>
-                    </select>
-                  </Campo>
-                </div>
-                <Campo etiqueta="Concepto">
-                  <input name="concepto" required placeholder="Ej.: gasolina, compra de cubetas, consignación" />
-                </Campo>
-                <Campo etiqueta="Valor">
-                  <input name="valor" inputMode="numeric" required />
-                </Campo>
-                <Boton type="submit" variante="secundario">
-                  Registrar
-                </Boton>
-              </Formulario>
-            ) : (
-              movimientos.length === 0 && <p className="text-sm text-stone-500">Sin movimientos.</p>
-            )}
+            {movimientos.length === 0 && <p className="mb-2 text-sm text-stone-500">Sin movimientos.</p>}
+            <p className="text-sm text-stone-600">
+              Se registran en{" "}
+              <Link href={`/ingresos?dia=${diaISO}`} className="underline">
+                Ingresos
+              </Link>{" "}
+              y{" "}
+              <Link href={`/egresos?dia=${diaISO}`} className="underline">
+                Egresos
+              </Link>
+              .
+            </p>
           </Tarjeta>
 
           {abierta && (

@@ -33,6 +33,10 @@ export function formatoFechaHora(fecha: Date): string {
   }).format(fecha);
 }
 
+export function formatoHora(fecha: Date): string {
+  return new Intl.DateTimeFormat("es-CO", { timeZone: ZONA_HORARIA, hour: "2-digit", minute: "2-digit" }).format(fecha);
+}
+
 /** Fecha de un campo @db.Date (guardada a medianoche UTC). */
 export function formatoDia(fecha: Date): string {
   return new Intl.DateTimeFormat("es-CO", {
