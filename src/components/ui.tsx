@@ -116,3 +116,25 @@ export function Subnav({ enlaces }: { enlaces: (EnlaceSeccion | false | null | u
     </nav>
   );
 }
+
+/** Pestañas que agrupan páginas de una misma sección (por ejemplo, todo lo de inventario). */
+export function Pestanas({ actual, pestanas }: { actual: string; pestanas: { href: string; texto: string }[] }) {
+  if (pestanas.length < 2) return null;
+  return (
+    <nav aria-label="Pestañas" className="mb-4 overflow-x-auto border-b border-stone-200">
+      <ul className="flex gap-1 whitespace-nowrap text-sm">
+        {pestanas.map((p) => (
+          <li key={p.href}>
+            <Link
+              href={p.href}
+              aria-current={p.href === actual ? "page" : undefined}
+              className={`-mb-px block border-b-2 px-3 py-2 ${p.href === actual ? "border-amber-600 font-semibold" : "border-transparent text-stone-600 hover:text-stone-900"}`}
+            >
+              {p.texto}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}

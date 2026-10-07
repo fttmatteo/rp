@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { paginar, Paginacion } from "@/components/paginacion";
 import { Etiqueta, Tarjeta } from "@/components/ui";
 import { formatoHora, formatoPesos, hoyISO } from "@/lib/formato";
 
@@ -31,7 +32,23 @@ export function SelectorDiaCaja({ ruta, diaISO }: { ruta: string; diaISO: string
 }
 
 /** Lista de entradas o salidas de dinero de un día, con su origen y los totales por medio. */
-export function ListaDinero({ id, titulo, filas, vacio }: { id?: string; titulo: string; filas: FilaDinero[]; vacio: string }) {
+export function ListaDinero({
+  id,
+  titulo,
+  filas,
+  vacio,
+  ruta,
+  diaISO,
+  pagina,
+}: {
+  id?: string;
+  titulo: string;
+  filas: FilaDinero[];
+  vacio: string;
+  ruta: string;
+  diaISO: string;
+  pagina: number;
+}) {
   const vigentes = filas.filter((f) => !f.anulado);
   const total = (medio: FilaDinero["medio"]) => vigentes.filter((f) => f.medio === medio).reduce((s, f) => s + f.valor, 0);
   return (
@@ -40,7 +57,7 @@ export function ListaDinero({ id, titulo, filas, vacio }: { id?: string; titulo:
         <p className="text-sm text-stone-500">{vacio}</p>
       ) : (
         <ul className="divide-y divide-stone-100 text-sm">
-          {filas.map((f) => (
+          {paginar(filas, pagina).map((f) => (
             <li key={f.clave} className="flex flex-wrap justify-between gap-2 py-2">
               <span>
                 <span className="text-stone-400">{formatoHora(f.fecha)}</span> <strong>{f.origen}</strong> · {f.detalle} ·{" "}
@@ -55,6 +72,7 @@ export function ListaDinero({ id, titulo, filas, vacio }: { id?: string; titulo:
           ))}
         </ul>
       )}
+      <Paginacion ruta={ruta} params={{ dia: diaISO }} pagina={pagina} total={filas.length} ancla={id} />
       <div className="mt-2 space-y-1 border-t border-stone-200 pt-2 text-sm">
         <div className="flex justify-between">
           <span>Efectivo</span>

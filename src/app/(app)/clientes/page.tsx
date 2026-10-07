@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
+import { leerPagina, Paginacion, rango } from "@/components/paginacion";
 import { BotonLink, Etiqueta, Tabla, Titulo, Vacio } from "@/components/ui";
 import { saldosPorCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
@@ -7,9 +8,11 @@ import { formatoPesos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 
-export default async function ClientesPage({ searchParams }: { searchParams: Promise<{ q?: string; inactivos?: string }> }) {
+export default async function ClientesPage({ searchParams }: { searchParams: Promise<{ q?: string; inactivos?: string; pagina?: string }> }) {
   const sesion = await requerir("clientes.ver");
-  const { q = "", inactivos } = await searchParams;
+  const params = await searchParams;
+  const { q = "", inactivos } = params;
+  const pagina = leerPagina(params.pagina);
   const where: Prisma.ClienteWhereInput = {
     ...(inactivos ? {} : { activo: true }),
     ...(q
@@ -22,12 +25,15 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
         }
       : {}),
   };
-  const clientes = await db.cliente.findMany({
-    where,
-    orderBy: { nombre: "asc" },
-    take: 200,
-    include: { _count: { select: { precios: true } } },
-  });
+  const [clientes, total] = await Promise.all([
+    db.cliente.findMany({
+      where,
+      orderBy: [{ nombre: "asc" }, { id: "asc" }],
+      ...rango(pagina),
+      include: { _count: { select: { precios: true } } },
+    }),
+    db.cliente.count({ where }),
+  ]);
   const saldos = await saldosPorCliente(clientes.map((c) => c.id));
 
   return (
@@ -79,6 +85,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
           </tbody>
         </Tabla>
       )}
+      <Paginacion ruta="/clientes" params={params} pagina={pagina} total={total} />
     </>
   );
 }

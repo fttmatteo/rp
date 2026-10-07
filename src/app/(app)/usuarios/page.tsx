@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
-import { Boton, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { ETIQUETA_OPERACION, esOperacion } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
@@ -13,7 +13,13 @@ export default async function UsuariosPage() {
   return (
     <>
       <Titulo>Usuarios</Titulo>
-      <div className="grid gap-6 md:grid-cols-[2fr_1fr]">
+      <Subnav
+        enlaces={[
+          { id: "lista", texto: `Usuarios (${usuarios.length})` },
+          { id: "nuevo", texto: "Nuevo usuario" },
+        ]}
+      />
+      <div id="lista" className="grid gap-6 md:grid-cols-[2fr_1fr]">
         <Tabla>
           <thead>
             <tr>
@@ -42,7 +48,7 @@ export default async function UsuariosPage() {
             ))}
           </tbody>
         </Tabla>
-        <Tarjeta titulo="Nuevo usuario">
+        <Tarjeta id="nuevo" titulo="Nuevo usuario" className="self-start">
           <Formulario accion={crearUsuario}>
             <CampoNombre />
             <Campo etiqueta="Usuario" ayuda="Con este nombre ingresa a la app.">

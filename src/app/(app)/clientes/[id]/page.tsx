@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
+import { leerPagina, Paginacion } from "@/components/paginacion";
 import { Alerta, Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { rangoAntiguedad, superaCupo } from "@/modules/cartera";
 import { enlaceMaps, enlaceWhatsApp } from "@/modules/contacto";
@@ -15,16 +16,21 @@ import { anularVenta } from "../../pedidos/acciones";
 import { actualizarCliente, guardarPreciosCliente } from "../acciones";
 import { CamposCliente } from "../campos";
 
+
+const MOVIMIENTOS = 20;
 export default async function ClientePage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ creado?: string }>;
+  searchParams: Promise<{ creado?: string; pagina?: string }>;
 }) {
   const sesion = await requerir("clientes.ver");
   const id = Number((await params).id);
-  const { creado } = await searchParams;
+  const { creado, pagina: paginaParam } = await searchParams;
+  const pagina = leerPagina(paginaParam);
+  // Ventas y pagos van juntos por fecha: para la página N basta con las N páginas más recientes de cada uno.
+  const hastaAqui = pagina * MOVIMIENTOS;
   const cliente = Number.isInteger(id)
     ? await db.cliente.findUnique({ where: { id }, include: { precios: true } })
     : null;
@@ -33,9 +39,10 @@ export default async function ClientePage({
   const [productos, deudas, ventas, pagos] = await Promise.all([
     db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
     deudasPendientes(id),
-    db.venta.findMany({ where: { clienteId: id }, orderBy: { fecha: "desc" }, take: 30 }),
-    db.pago.findMany({ where: { clienteId: id }, orderBy: { fecha: "desc" }, take: 30 }),
+    db.venta.findMany({ where: { clienteId: id }, orderBy: [{ fecha: "desc" }, { id: "desc" }], take: hastaAqui }),
+    db.pago.findMany({ where: { clienteId: id }, orderBy: [{ fecha: "desc" }, { id: "desc" }], take: hastaAqui }),
   ]);
+  const [totalVentas, totalPagos] = await Promise.all([db.venta.count({ where: { clienteId: id } }), db.pago.count({ where: { clienteId: id } })]);
   const saldo = deudas.reduce((s, d) => s + d.saldo, 0);
   const hoy = diaUTC(hoyISO());
   const especiales = new Map(cliente.precios.map((p) => [p.productoId, p.precio]));
@@ -58,7 +65,9 @@ export default async function ClientePage({
   const historial = [
     ...ventas.map((v) => ({ tipo: "venta" as const, fecha: v.fecha, v })),
     ...pagos.map((p) => ({ tipo: "pago" as const, fecha: p.fecha, p })),
-  ].sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
+  ]
+    .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
+    .slice(hastaAqui - MOVIMIENTOS, hastaAqui);
 
   return (
     <>
@@ -243,6 +252,7 @@ export default async function ClientePage({
               )}
             </ul>
           )}
+          <Paginacion ruta={`/clientes/${id}`} pagina={pagina} total={totalVentas + totalPagos} porPagina={MOVIMIENTOS} ancla="movimientos" />
         </Tarjeta>
 
         <Tarjeta id="precios" titulo="Precios">

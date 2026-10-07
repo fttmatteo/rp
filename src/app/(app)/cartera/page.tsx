@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { leerPagina, Paginacion, paginar } from "@/components/paginacion";
 import { Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { diaUTC, formatoPesos, hoyISO } from "@/lib/formato";
@@ -9,25 +10,22 @@ import { mensajeRecordatorio } from "@/modules/mensajes";
 
 const dias = (desde: Date, hasta: Date) => Math.max(0, Math.floor((hasta.getTime() - desde.getTime()) / 86_400_000));
 
-export default async function CarteraPage() {
+export default async function CarteraPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
   await requerir("cartera.ver");
+  const pagina = leerPagina((await searchParams).pagina);
+  // Solo las columnas que se suman; los datos del cliente se piden después, solo para la página que se muestra.
   const deudas = await db.venta.findMany({
     where: { anulada: false, saldo: { gt: 0 } },
-    include: { cliente: true },
+    select: { id: true, clienteId: true, fecha: true, vence: true, saldo: true },
     orderBy: { fecha: "asc" },
   });
   const hoy = diaUTC(hoyISO());
   const total = deudas.reduce((s, d) => s + d.saldo, 0);
   const resumen = resumenAntiguedad(deudas, hoy);
 
-  const porCliente = new Map<
-    number,
-    { nombre: string; telefono: string | null; saldo: number; masAntigua: Date; vencido: number; vencidaDesde: Date | null }
-  >();
+  const porCliente = new Map<number, { saldo: number; masAntigua: Date; vencido: number; vencidaDesde: Date | null }>();
   for (const d of deudas) {
     const fila = porCliente.get(d.clienteId) ?? {
-      nombre: d.cliente.nombre,
-      telefono: d.cliente.telefono,
       saldo: 0,
       masAntigua: d.fecha,
       vencido: 0,
@@ -40,7 +38,12 @@ export default async function CarteraPage() {
     }
     porCliente.set(d.clienteId, fila);
   }
-  const clientes = [...porCliente.entries()].sort((a, b) => b[1].saldo - a[1].saldo);
+  const ordenados = [...porCliente.entries()].sort((a, b) => b[1].saldo - a[1].saldo);
+  const enPagina = paginar(ordenados, pagina);
+  const datos = new Map(
+    (await db.cliente.findMany({ where: { id: { in: enPagina.map(([id]) => id) } }, select: { id: true, nombre: true, telefono: true } })).map((c) => [c.id, c]),
+  );
+  const clientes = enPagina.map(([id, f]) => [id, { ...f, nombre: datos.get(id)?.nombre ?? "", telefono: datos.get(id)?.telefono ?? null }] as const);
 
   return (
     <>
@@ -89,6 +92,7 @@ export default async function CarteraPage() {
           </tbody>
         </Tabla>
       )}
+      <Paginacion ruta="/cartera" pagina={pagina} total={ordenados.length} />
     </>
   );
 }

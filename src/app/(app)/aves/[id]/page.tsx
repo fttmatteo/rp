@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
+import { leerPagina, Paginacion, paginar } from "@/components/paginacion";
 import { Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { huevosPorLoteYDia, novedadesDe } from "@/lib/aves-db";
 import { db } from "@/lib/db";
@@ -13,21 +14,25 @@ import { actualizarLote, anularNovedad, registrarNovedad } from "../acciones";
 
 const DIAS = 30;
 
-export default async function LotePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LotePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ pagina?: string }>;
+}) {
   const sesion = await requerir("aves");
+  const pagina = leerPagina((await searchParams).pagina);
   const id = Number((await params).id);
   const lote = Number.isInteger(id) ? await db.lote.findUnique({ where: { id }, include: { galpon: true } }) : null;
   if (!lote) notFound();
   const hoy = diaUTC(hoyISO());
   const desde = sumarDias(hoy, -(DIAS - 1));
-  const [novedades, otros, huevos, usuarios] = await Promise.all([
+  const [novedades, otros, huevos] = await Promise.all([
     novedadesDe([id]),
     db.lote.findMany({ where: { activo: true, id: { not: id } }, include: { galpon: true }, orderBy: { nombre: "asc" } }),
     huevosPorLoteYDia([id], desde, hoy),
-    db.usuario.findMany({ select: { id: true, nombre: true } }),
   ]);
-  const nombresLote = new Map((await db.lote.findMany({ select: { id: true, nombre: true } })).map((l) => [l.id, l.nombre]));
-  const nombreUsuario = new Map(usuarios.map((u) => [u.id, u.nombre]));
   const vivas = avesVivas(lote, novedades);
   const bajas = bajasPorTipo(novedades.filter((n) => n.loteId === id));
   const mortalidad = lote.cantidadInicial > 0 ? Math.round((bajas.MUERTE / lote.cantidadInicial) * 1000) / 10 : 0;
@@ -39,7 +44,16 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
     const aves = avesVivas(lote, novedades, dia);
     return { dia, total, aves, postura: total === undefined ? null : porcentajePostura(total, aves) };
   }).filter((p) => p.total !== undefined);
-  const lista = [...novedades].sort((a, b) => b.fecha.getTime() - a.fecha.getTime() || b.id - a.id);
+  // Todas las novedades cuentan para las aves vivas; en pantalla van por páginas.
+  const ordenadas = [...novedades].sort((a, b) => b.fecha.getTime() - a.fecha.getTime() || b.id - a.id);
+  const lista = paginar(ordenadas, pagina);
+  // Solo los nombres de los lotes y usuarios que aparecen en esta página.
+  const [lotesVistos, usuariosVistos] = await Promise.all([
+    db.lote.findMany({ where: { id: { in: [...new Set(lista.flatMap((n) => [n.loteId, n.loteDestinoId ?? n.loteId]))] } }, select: { id: true, nombre: true } }),
+    db.usuario.findMany({ where: { id: { in: [...new Set(lista.map((n) => n.usuarioId))] } }, select: { id: true, nombre: true } }),
+  ]);
+  const nombresLote = new Map(lotesVistos.map((l) => [l.id, l.nombre]));
+  const nombreUsuario = new Map(usuariosVistos.map((u) => [u.id, u.nombre]));
 
   return (
     <>
@@ -192,6 +206,7 @@ export default async function LotePage({ params }: { params: Promise<{ id: strin
             })}
             {lista.length === 0 && <li className="py-2 text-stone-500">Sin novedades.</li>}
           </ul>
+          <Paginacion ruta={`/aves/${id}`} pagina={pagina} total={ordenadas.length} ancla="novedades" />
         </Tarjeta>
 
         <Tarjeta id="estado" titulo="Estado del lote">

@@ -17,7 +17,6 @@ enum Acceso {
   ADMIN
   VENTAS
   REPARTIDOR
-  GALPONERO
 }
 
 model Usuario {
@@ -131,6 +130,8 @@ model HistorialPrecio {
 
   producto Producto @relation(fields: [productoId], references: [id])
   cliente  Cliente? @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([fecha])
 }
 
 // ---------- Clientes ----------
@@ -155,6 +156,8 @@ model Cliente {
   pedidos   Pedido[]
   ventas    Venta[]
   pagos     Pago[]
+
+  @@index([activo, nombre])
 }
 
 // ---------- Inventario ----------
@@ -250,6 +253,7 @@ model Pedido {
   venta     Venta?
 
   @@index([estado, fechaEntrega])
+  @@index([fechaEntrega])
   @@index([rutaId])
 }
 
@@ -292,6 +296,7 @@ model Venta {
   movimientos  MovimientoInventario[]
 
   @@index([clienteId, saldo])
+  @@index([clienteId, fecha])
 }
 
 enum MedioPago {
@@ -321,7 +326,7 @@ model Pago {
   ruta         Ruta?            @relation(fields: [rutaId], references: [id])
   aplicaciones AplicacionPago[]
 
-  @@index([clienteId])
+  @@index([clienteId, fecha])
   @@index([dia])
   @@index([rutaId])
 }
@@ -479,6 +484,7 @@ model Compra {
   movimientosCaja MovimientoCaja[]
 
   @@index([proveedorId, saldo])
+  @@index([proveedorId, fecha])
 }
 
 model DetalleCompra {
@@ -507,6 +513,8 @@ model PagoProveedor {
   usuario         Usuario                   @relation(fields: [usuarioId], references: [id])
   aplicaciones    AplicacionPagoProveedor[]
   movimientosCaja MovimientoCaja[]
+
+  @@index([proveedorId, fecha])
 }
 
 model AplicacionPagoProveedor {

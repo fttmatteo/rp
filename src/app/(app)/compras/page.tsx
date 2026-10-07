@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
+import { leerPagina, Paginacion, rango } from "@/components/paginacion";
 import { BotonLink, Etiqueta, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatoFecha, formatoHuevos, formatoPesos } from "@/lib/formato";
@@ -7,9 +8,17 @@ import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 import { anularCompra } from "./acciones";
 
-export default async function ComprasPage() {
+export default async function ComprasPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
   const sesion = await requerir("compras");
-  const compras = await db.compra.findMany({ orderBy: { id: "desc" }, take: 50, include: { proveedor: true, detalles: { include: { producto: true } } } });
+  const pagina = leerPagina((await searchParams).pagina);
+  const [compras, total] = await Promise.all([
+    db.compra.findMany({
+      orderBy: { id: "desc" },
+      ...rango(pagina),
+      include: { proveedor: { select: { nombre: true } }, detalles: { include: { producto: { select: { nombre: true } } } } },
+    }),
+    db.compra.count(),
+  ]);
 
   return (
     <>
@@ -72,6 +81,7 @@ export default async function ComprasPage() {
           ))}
         </ul>
       )}
+      <Paginacion ruta="/compras" pagina={pagina} total={total} />
     </>
   );
 }

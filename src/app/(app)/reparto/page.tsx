@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { leerFecha, SelectorDia } from "@/components/selector-dia";
-import { Etiqueta, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { leerPagina, Paginacion, paginar } from "@/components/paginacion";
+import { Etiqueta, Subnav, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { esParcial } from "@/lib/estados";
 import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { cierreReparto, valoresPedido, type PedidoReparto } from "@/modules/reparto";
 
-export default async function RepartoPage({ searchParams }: { searchParams: Promise<{ fecha?: string; ruta?: string }> }) {
+export default async function RepartoPage({ searchParams }: { searchParams: Promise<{ fecha?: string; ruta?: string; pagina?: string }> }) {
   await requerir("pedidos.ver");
-  const { fecha: f, ruta: rutaParam = "" } = await searchParams;
+  const { fecha: f, ruta: rutaParam = "", pagina: paginaParam } = await searchParams;
+  const pagina = leerPagina(paginaParam);
   const fecha = leerFecha(f);
   const rutas = await db.ruta.findMany({ where: { fecha: diaUTC(fecha) }, include: { repartidor: true }, orderBy: { repartidor: { nombre: "asc" } } });
   // Filtro por ruta (requerimiento 4): todas, una ruta o los pedidos sin ruta.
@@ -88,10 +90,17 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
         <p className="mb-4 text-sm text-stone-600">Reparto programado: son los pedidos creados para esa fecha. Se entregan y cobran ese día.</p>
       )}
 
+      <Subnav
+        enlaces={[
+          filas.length > 0 && { id: "pedidos", texto: `Pedidos (${filas.length})` },
+          filas.length > 0 && { id: "cierre", texto: "Cierre del reparto" },
+        ]}
+      />
       {filas.length === 0 ? (
         <Vacio>No hay pedidos para entregar ese día.</Vacio>
       ) : (
         <>
+          <div id="pedidos" />
           <Tabla>
             <thead>
               <tr>
@@ -104,7 +113,7 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
               </tr>
             </thead>
             <tbody>
-              {filas.map(({ pedido: p, reparto, valores }) => (
+              {paginar(filas, pagina).map(({ pedido: p, reparto, valores }) => (
                 <tr key={p.id}>
                   <td>
                     <Link href={`/pedidos/${p.id}`} className="underline">
@@ -133,11 +142,14 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
               ))}
             </tbody>
           </Tabla>
+          <Paginacion ruta="/reparto" params={{ fecha, ruta: rutaParam }} pagina={pagina} total={filas.length} ancla="pedidos" />
           <p className="mt-2 text-xs text-stone-500">
             Pagado es lo que el cliente pagó el día de la entrega. Lo que no pagó queda como pendiente (fiado) y se ve en su cartera.
           </p>
 
-          <h2 className="mb-3 mt-6 text-lg font-semibold">Cierre del reparto</h2>
+          <h2 id="cierre" className="mb-3 mt-6 text-lg font-semibold">
+            Cierre del reparto
+          </h2>
           <div className="grid gap-4 lg:grid-cols-2">
             <Tarjeta titulo="Cantidad por clasificación">
               <Tabla>

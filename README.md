@@ -6,7 +6,7 @@ El plan completo está en el documento del proyecto (`plan-rp-software.md`). Est
 
 ## Qué incluye
 
-- **Fase 0 · Base:** login con usuario y clave, accesos por operación (Administrador, Ventas, Repartidor, Galponero). Después de ingresar, el usuario elige la operación; si el administrador no se la asignó, ve "Acceso denegado". Los permisos se verifican en el servidor en cada página y acción. Administración de usuarios y bitácora de auditoría.
+- **Fase 0 · Base:** login con usuario y clave, accesos por operación (Administrador, Ventas, Repartidor). Después de ingresar, el usuario elige la operación; si el administrador no se la asignó, ve "Acceso denegado". Los permisos se verifican en el servidor en cada página y acción. Administración de usuarios y bitácora de auditoría.
 - **Fase 1 · Clientes, precios e inventario:** clientes con cupo y días de crédito; precio general por producto y precio especial por cliente (el pedido congela el precio); clasificación diaria en cubetas y huevos sueltos; inventario calculado a partir de movimientos, con ajustes y anulaciones.
 - **Fase 2 · Pedidos, ventas y cartera:** pedidos por cliente, entrega con pago total, parcial o fiado; recibos en PDF con consecutivo (`RP-000001` para ventas y `AB-000001` para pagos); abonos aplicados a la deuda más antigua o al recibo que el cliente elija; estado de cuenta, antigüedad de cartera, aviso de cupo, carga de saldos iniciales y anulaciones (solo administrador).
 - **Pedidos y reparto por fecha:** al filtrar pedidos por fecha se ve el total del día por clasificación y su valor. La pantalla **Reparto** muestra, para una fecha, cada cliente con clasificación, cantidad, valor, lo pagado en la entrega y lo pendiente, y abajo el cierre del reparto: cantidad por clasificación, valor pagado (efectivo y transferencia) y valor pendiente.
@@ -46,7 +46,7 @@ npm run db:demo             # después de db:deploy y db:seed
 
 Simula 90 días hasta hoy (`DEMO_DIAS=180` para más): unos 170 clientes con precios especiales y deudas que traían, pedidos diarios en dos rutas liquidadas, entregas parciales y no entregadas, cartera al día y vencida, abonos, cajas cerradas con gastos y consignaciones, lotes con producción, mortalidad y gallinas pasadas a la venta, clasificación diaria, compras a proveedores de contado y a crédito con sus abonos, ajustes, roturas y algunas anulaciones. Hoy queda con la caja abierta y las rutas por entregar.
 
-Crea los usuarios `laura` (ventas), `carlos` y `andres` (repartidores), `jorge` (galponero) y `diana` (ventas y repartidor), con la clave de `DEMO_PASSWORD` (si no está, la de `SEED_ADMIN_PASSWORD`). Solo corre en una base sin clientes, galpones, proveedores, caja ni inventario, así que no toca la de producción. Para empezar de nuevo: `npx prisma migrate reset` y otra vez `npm run db:demo`.
+Crea los usuarios `laura` (ventas), `carlos` y `andres` (repartidores) y `diana` (ventas y repartidor), con la clave de `DEMO_PASSWORD` (si no está, la de `SEED_ADMIN_PASSWORD`). Solo corre en una base sin clientes, galpones, proveedores, caja ni inventario, así que no toca la de producción. Para empezar de nuevo: `npx prisma migrate reset` y otra vez `npm run db:demo`.
 
 Con Docker: `docker compose --env-file pruebas.env run --rm migrar npm run db:demo`.
 

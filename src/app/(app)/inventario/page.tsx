@@ -1,24 +1,34 @@
 import { Formulario } from "@/components/formulario";
-import { Boton, Campo, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { leerPagina, Paginacion, rango } from "@/components/paginacion";
+import { Boton, Campo, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { existencias } from "@/lib/existencias";
 import { formatoCantidad, formatoFechaHora, formatoHuevos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 import { registrarAjuste } from "./acciones";
+import { PestanasInventario } from "./pestanas";
 
 const TIPO = { PRODUCCION: "Clasificación", VENTA: "Venta", AJUSTE: "Ajuste", ROTURA: "Rotura", ANULACION: "Anulación", COMPRA: "Compra" } as const;
 
-export default async function InventarioPage() {
+export default async function InventarioPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
   const sesion = await requerir("inventario.ver");
-  const [productos, stock, movimientos, porClasificar] = await Promise.all([
+  const pagina = leerPagina((await searchParams).pagina);
+  const ajustar = puede(sesion.operacion, "inventario.ajustar");
+  const [productos, stock, movimientos, totalMovimientos, porClasificar] = await Promise.all([
     db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
     existencias(),
     db.movimientoInventario.findMany({
       orderBy: { id: "desc" },
-      take: 50,
-      include: { producto: true, usuario: true, venta: { include: { cliente: true } }, compra: { include: { proveedor: true } } },
+      ...rango(pagina),
+      include: {
+        producto: true,
+        usuario: { select: { nombre: true } },
+        venta: { select: { cliente: { select: { nombre: true } } } },
+        compra: { select: { id: true, proveedor: { select: { nombre: true } } } },
+      },
     }),
+    db.movimientoInventario.count(),
     db.compra.aggregate({ where: { anulada: false }, _sum: { porClasificar: true } }),
   ]);
   const sinClasificar = porClasificar._sum.porClasificar ?? 0;
@@ -26,7 +36,15 @@ export default async function InventarioPage() {
   return (
     <>
       <Titulo>Inventario</Titulo>
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <PestanasInventario actual="/inventario" operacion={sesion.operacion} />
+      <Subnav
+        enlaces={[
+          { id: "existencias", texto: "Existencias" },
+          { id: "movimientos", texto: "Movimientos" },
+          ajustar && { id: "ajuste", texto: "Ajuste" },
+        ]}
+      />
+      <div id="existencias" className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {productos.map((p) => {
           const cantidad = stock.get(p.id) ?? 0;
           return (
@@ -46,7 +64,9 @@ export default async function InventarioPage() {
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <div>
-          <h2 className="mb-2 font-semibold">Últimos movimientos</h2>
+          <h2 id="movimientos" className="mb-2 font-semibold">
+            Movimientos
+          </h2>
           <Tabla>
             <thead>
               <tr>
@@ -75,10 +95,11 @@ export default async function InventarioPage() {
               ))}
             </tbody>
           </Tabla>
+          <Paginacion ruta="/inventario" pagina={pagina} total={totalMovimientos} ancla="movimientos" />
         </div>
 
-        {puede(sesion.operacion, "inventario.ajustar") && (
-          <Tarjeta titulo="Ajuste de inventario">
+        {ajustar && (
+          <Tarjeta id="ajuste" titulo="Ajuste de inventario" className="self-start">
             <Formulario accion={registrarAjuste}>
               <Campo etiqueta="Producto">
                 <select name="productoId" required>

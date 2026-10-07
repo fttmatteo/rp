@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
+import { leerPagina } from "@/components/paginacion";
 import { ListaDinero, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
 import { Alerta, Boton, BotonLink, Campo, Subnav, Tarjeta, Titulo } from "@/components/ui";
 import { obtenerCaja } from "@/lib/caja-db";
@@ -13,10 +14,11 @@ import { FormularioMovimiento } from "../caja/formulario-movimiento";
 import { FormularioCompra } from "../compras/formulario-compra";
 import { registrarPagoProveedor } from "./acciones";
 
-export default async function EgresosPage({ searchParams }: { searchParams: Promise<{ dia?: string }> }) {
+export default async function EgresosPage({ searchParams }: { searchParams: Promise<{ dia?: string; pagina?: string }> }) {
   const sesion = await requerir("caja");
   const hoy = hoyISO();
-  const { dia: diaParam } = await searchParams;
+  const { dia: diaParam, pagina: paginaParam } = await searchParams;
+  const pagina = leerPagina(paginaParam);
   const diaISO = diaParam && /^\d{4}-\d{2}-\d{2}$/.test(diaParam) && diaParam <= hoy ? diaParam : hoy;
   const dia = diaUTC(diaISO);
   const esHoy = diaISO === hoy;
@@ -151,7 +153,7 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
           )}
         </div>
 
-        <ListaDinero id="lista" titulo="Salidas del día" filas={filas} vacio="Sin egresos." />
+        <ListaDinero id="lista" titulo="Salidas del día" filas={filas} ruta="/egresos" diaISO={diaISO} pagina={pagina} vacio="Sin egresos." />
       </div>
     </>
   );

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { EstadoPedido, Prisma } from "@prisma/client";
+import { leerPagina, Paginacion, rango } from "@/components/paginacion";
 import { BotonLink, Etiqueta, Tabla, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
@@ -10,31 +11,41 @@ import { totalPedido } from "@/modules/precios";
 
 const ESTADOS = ESTADO_PEDIDO;
 
-export default async function PedidosPage({ searchParams }: { searchParams: Promise<{ estado?: string; fecha?: string }> }) {
+export default async function PedidosPage({ searchParams }: { searchParams: Promise<{ estado?: string; fecha?: string; pagina?: string }> }) {
   const sesion = await requerir("pedidos.ver");
-  const { estado = "PENDIENTE", fecha = "" } = await searchParams;
+  const params = await searchParams;
+  const { estado = "PENDIENTE", fecha = "" } = params;
+  const pagina = leerPagina(params.pagina);
   const conFecha = /^\d{4}-\d{2}-\d{2}$/.test(fecha);
   const where: Prisma.PedidoWhereInput = {
     ...(estado in ESTADOS ? { estado: estado as EstadoPedido } : {}),
     ...(conFecha ? { fechaEntrega: diaUTC(fecha) } : {}),
   };
-  const pedidos = await db.pedido.findMany({
-    where,
-    orderBy: [{ fechaEntrega: estado === "PENDIENTE" ? "asc" : "desc" }, { id: "desc" }],
-    take: 200,
-    include: { cliente: true, detalles: { include: { producto: true } } },
-  });
+  const [pedidos, total, delDia] = await Promise.all([
+    db.pedido.findMany({
+      where,
+      orderBy: [{ fechaEntrega: estado === "PENDIENTE" ? "asc" : "desc" }, { id: "desc" }],
+      ...rango(pagina),
+      include: { cliente: { select: { nombre: true } }, detalles: { include: { producto: true } } },
+    }),
+    db.pedido.count({ where }),
+    // Con fecha elegida se suman las cantidades por clasificación y el valor de todo el día, no solo de esta página.
+    conFecha
+      ? db.detallePedido.findMany({
+          where: { pedido: where },
+          select: { cantidad: true, precioUnitario: true, producto: { select: { nombre: true, orden: true } } },
+        })
+      : [],
+  ]);
 
-  // Con fecha elegida se suman las cantidades por clasificación y el valor del día.
   const totales = new Map<string, { orden: number; cantidad: number }>();
-  for (const p of pedidos)
-    for (const d of p.detalles) {
-      const t = totales.get(d.producto.nombre) ?? { orden: d.producto.orden, cantidad: 0 };
-      t.cantidad += d.cantidad;
-      totales.set(d.producto.nombre, t);
-    }
+  for (const d of delDia) {
+    const t = totales.get(d.producto.nombre) ?? { orden: d.producto.orden, cantidad: 0 };
+    t.cantidad += d.cantidad;
+    totales.set(d.producto.nombre, t);
+  }
   const resumen = [...totales].sort((a, b) => a[1].orden - b[1].orden).map(([nombre, t]) => `${t.cantidad} ${nombre}`);
-  const valorTotal = pedidos.reduce((s, p) => s + totalPedido(p.detalles), 0);
+  const valorTotal = totalPedido(delDia);
 
   return (
     <>
@@ -109,6 +120,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
           )}
         </Tabla>
       )}
+      <Paginacion ruta="/pedidos" params={params} pagina={pagina} total={total} />
     </>
   );
 }

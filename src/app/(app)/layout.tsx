@@ -14,10 +14,9 @@ const MENU: { href: string; texto: string; permiso?: Permiso }[] = [
   { href: "/ingresos", texto: "Ingresos", permiso: "caja" },
   { href: "/egresos", texto: "Egresos", permiso: "caja" },
   { href: "/caja", texto: "Caja", permiso: "caja" },
+  // Inventario reúne existencias, clasificación y aves (pestañas dentro de la página).
   { href: "/inventario", texto: "Inventario", permiso: "inventario.ver" },
   { href: "/proveedores", texto: "Proveedores", permiso: "compras" },
-  { href: "/clasificacion", texto: "Clasificación", permiso: "clasificacion" },
-  { href: "/aves", texto: "Aves", permiso: "aves" },
   { href: "/reportes", texto: "Reportes", permiso: "reportes" },
   { href: "/precios", texto: "Precios", permiso: "precios" },
   { href: "/usuarios", texto: "Usuarios", permiso: "usuarios" },

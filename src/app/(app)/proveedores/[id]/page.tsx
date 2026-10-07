@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
+import { leerPagina, Paginacion } from "@/components/paginacion";
 import { Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoFecha, formatoHuevos, formatoPesos, hoyISO } from "@/lib/formato";
@@ -9,15 +10,35 @@ import { requerir } from "@/lib/sesion";
 import { actualizarProveedor, anularPagoProveedor, registrarAbonoProveedor } from "../acciones";
 import { CamposProveedor } from "../campos";
 
-export default async function ProveedorPage({ params }: { params: Promise<{ id: string }> }) {
+const MOVIMIENTOS = 20;
+
+export default async function ProveedorPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ pagina?: string }>;
+}) {
   const sesion = await requerir("compras");
+  const pagina = leerPagina((await searchParams).pagina);
+  // Compras y abonos van juntos por fecha: para la página N basta con las N páginas más recientes de cada uno.
+  const hastaAqui = pagina * MOVIMIENTOS;
   const id = Number((await params).id);
   const proveedor = Number.isInteger(id) ? await db.proveedor.findUnique({ where: { id } }) : null;
   if (!proveedor) notFound();
   const [deudas, compras, pagos] = await Promise.all([
     comprasPorPagar(id),
-    db.compra.findMany({ where: { proveedorId: id }, orderBy: { fecha: "desc" }, take: 30 }),
-    db.pagoProveedor.findMany({ where: { proveedorId: id }, orderBy: { fecha: "desc" }, take: 30, include: { usuario: true } }),
+    db.compra.findMany({ where: { proveedorId: id }, orderBy: [{ fecha: "desc" }, { id: "desc" }], take: hastaAqui }),
+    db.pagoProveedor.findMany({
+      where: { proveedorId: id },
+      orderBy: [{ fecha: "desc" }, { id: "desc" }],
+      take: hastaAqui,
+      include: { usuario: { select: { nombre: true } } },
+    }),
+  ]);
+  const [totalCompras, totalPagos] = await Promise.all([
+    db.compra.count({ where: { proveedorId: id } }),
+    db.pagoProveedor.count({ where: { proveedorId: id } }),
   ]);
   const saldo = deudas.reduce((s, d) => s + d.saldo, 0);
   const hoy = diaUTC(hoyISO());
@@ -109,6 +130,7 @@ export default async function ProveedorPage({ params }: { params: Promise<{ id: 
           <ul className="divide-y divide-stone-100 text-sm">
             {[...compras.map((c) => ({ fecha: c.fecha, c })), ...pagos.map((p) => ({ fecha: p.fecha, p }))]
               .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
+              .slice(hastaAqui - MOVIMIENTOS, hastaAqui)
               .map((m) =>
                 "c" in m ? (
                   <li key={`c${m.c.id}`} className="flex justify-between gap-2 py-2">
@@ -142,6 +164,7 @@ export default async function ProveedorPage({ params }: { params: Promise<{ id: 
                 ),
               )}
           </ul>
+          <Paginacion ruta={`/proveedores/${id}`} pagina={pagina} total={totalCompras + totalPagos} porPagina={MOVIMIENTOS} ancla="movimientos" />
         </Tarjeta>
 
         <Tarjeta id="datos" titulo="Datos del proveedor">
