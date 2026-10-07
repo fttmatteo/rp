@@ -123,17 +123,21 @@ export function Pestanas({ actual, pestanas }: { actual: string; pestanas: { hre
   return (
     <nav aria-label="Pestañas" className="mb-4 overflow-x-auto border-b border-stone-200">
       <ul className="flex gap-1 whitespace-nowrap text-sm">
-        {pestanas.map((p) => (
-          <li key={p.href}>
-            <Link
-              href={p.href}
-              aria-current={p.href === actual ? "page" : undefined}
-              className={`-mb-px block border-b-2 px-3 py-2 ${p.href === actual ? "border-amber-600 font-semibold" : "border-transparent text-stone-600 hover:text-stone-900"}`}
-            >
-              {p.texto}
-            </Link>
-          </li>
-        ))}
+        {pestanas.map((p) => {
+          // Se compara solo la ruta: los enlaces pueden llevar filtros (?fecha=...).
+          const activa = p.href.split("?")[0] === actual;
+          return (
+            <li key={p.href}>
+              <Link
+                href={p.href}
+                aria-current={activa ? "page" : undefined}
+                className={`-mb-px block border-b-2 px-3 py-2 ${activa ? "border-amber-600 font-semibold" : "border-transparent text-stone-600 hover:text-stone-900"}`}
+              >
+                {p.texto}
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );

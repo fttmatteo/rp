@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 import { diaUTC, formatoConsecutivo, formatoDia, formatoPesos, hoyISO, nombreProducto } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
+import { PestanasIngresos } from "@/components/secciones";
 import { anularMovimientoCaja } from "../caja/acciones";
 import { FormularioMovimiento } from "../caja/formulario-movimiento";
 import { registrarAbonoCliente, registrarVentaDirecta } from "./acciones";
@@ -107,6 +108,7 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
       <Titulo accion={<BotonLink href={`/caja?dia=${diaISO}`} variante="secundario">Caja y cierre</BotonLink>}>
         Ingresos del {formatoDia(dia)}
       </Titulo>
+      <PestanasIngresos actual="/ingresos" operacion={op} />
       <p className="mb-4 text-sm text-stone-600">
         Todo el dinero que entra se registra aquí: ventas, abonos de clientes y otros ingresos. Los cobros de los repartidores llegan solos desde{" "}
         <Link href="/rutas" className="underline">

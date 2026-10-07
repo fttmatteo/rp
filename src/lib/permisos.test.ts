@@ -17,6 +17,9 @@ describe("permisos", () => {
     expect(puede("REPARTIDOR", "rutas.aprobar")).toBe(false);
     expect(puede("VENTAS", "rutas.aprobar")).toBe(false);
     expect(puede("ADMIN", "rutas.aprobar")).toBe(true);
+    // Mi ruta es solo del repartidor.
+    expect(puede("ADMIN", "ruta.propia")).toBe(false);
+    expect(puede("VENTAS", "ruta.propia")).toBe(false);
     // Todo lo del inventario (clasificación, aves y ajustes) es del administrador; ventas solo lo consulta.
     expect(puede("VENTAS", "clasificacion")).toBe(false);
     expect(puede("VENTAS", "aves")).toBe(false);
