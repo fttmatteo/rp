@@ -6,10 +6,11 @@ import { db } from "@/lib/db";
 import { esParcial } from "@/lib/estados";
 import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
+import { PestanasRutas } from "@/components/secciones";
 import { cierreReparto, valoresPedido, type PedidoReparto } from "@/modules/reparto";
 
 export default async function RepartoPage({ searchParams }: { searchParams: Promise<{ fecha?: string; ruta?: string; pagina?: string }> }) {
-  await requerir("pedidos.ver");
+  const sesion = await requerir("pedidos.ver");
   const { fecha: f, ruta: rutaParam = "", pagina: paginaParam } = await searchParams;
   const pagina = leerPagina(paginaParam);
   const fecha = leerFecha(f);
@@ -57,10 +58,11 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <Titulo>
-        Reparto del {formatoDia(diaUTC(fecha))}
+        Resumen del reparto del {formatoDia(diaUTC(fecha))}
         {rutaElegida && ` · ruta de ${rutaElegida.repartidor.nombre}`}
         {rutaParam === "sin" && " · sin ruta"}
       </Titulo>
+      <PestanasRutas actual="/reparto" operacion={sesion.operacion} fecha={fecha} />
       <SelectorDia ruta="/reparto" fecha={fecha} etiqueta="Fecha de entrega">
         {rutas.length > 0 && (
           <label>

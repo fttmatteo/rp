@@ -2,7 +2,7 @@ import type { Producto, Proveedor } from "@prisma/client";
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { Boton, Campo, Tabla } from "@/components/ui";
-import { registrarCompra } from "./acciones";
+import { registrarCompra } from "./compras";
 
 /** Formulario de compra de huevo a un proveedor (se usa en Egresos). */
 export function FormularioCompra({ proveedores, tipos }: { proveedores: Proveedor[]; tipos: Producto[] }) {

@@ -6,14 +6,11 @@ import { salir } from "../login/acciones";
 const MENU: { href: string; texto: string; permiso?: Permiso }[] = [
   { href: "/", texto: "Inicio" },
   { href: "/mi-ruta", texto: "Mi ruta", permiso: "ruta.propia" },
-  { href: "/pedidos", texto: "Pedidos", permiso: "pedidos.ver" },
   { href: "/rutas", texto: "Rutas", permiso: "rutas" },
-  { href: "/reparto", texto: "Reparto", permiso: "pedidos.ver" },
   { href: "/clientes", texto: "Clientes", permiso: "clientes.ver" },
   { href: "/cartera", texto: "Cartera", permiso: "cartera.ver" },
-  { href: "/ingresos", texto: "Ingresos", permiso: "caja" },
-  { href: "/egresos", texto: "Egresos", permiso: "caja" },
-  { href: "/caja", texto: "Caja", permiso: "caja" },
+  // Dinero reúne Ingresos, Pedidos, Egresos y Caja; Rutas incluye el resumen del reparto (pestañas dentro de la página).
+  { href: "/ingresos", texto: "Dinero", permiso: "caja" },
   // Inventario reúne existencias, clasificación y aves (pestañas dentro de la página).
   { href: "/inventario", texto: "Inventario", permiso: "inventario.ver" },
   { href: "/proveedores", texto: "Proveedores", permiso: "compras" },

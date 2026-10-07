@@ -5,10 +5,11 @@ import { db } from "@/lib/db";
 import { ESTADO_RUTA } from "@/lib/estados";
 import { diaUTC, formatoDia, formatoPesos } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
+import { PestanasRutas } from "@/components/secciones";
 import { totalPedido } from "@/modules/precios";
 
 export default async function RutasPage({ searchParams }: { searchParams: Promise<{ fecha?: string }> }) {
-  await requerir("rutas");
+  const sesion = await requerir("rutas");
   const fecha = leerFecha((await searchParams).fecha);
   const dia = diaUTC(fecha);
 
@@ -28,6 +29,7 @@ export default async function RutasPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <Titulo>Rutas del {formatoDia(dia)}</Titulo>
+      <PestanasRutas actual="/rutas" operacion={sesion.operacion} fecha={fecha} />
       <SelectorDia ruta="/rutas" fecha={fecha} etiqueta="Fecha de entrega" />
       <Subnav
         enlaces={[

@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { diaUTC, formatoConsecutivo, formatoDia, formatoFechaHora, formatoPesos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
+import { PestanasDinero } from "@/components/secciones";
 import { efectivoEsperado, totalTransferencias } from "@/modules/caja";
 import { actualizarBase, anularMovimientoCaja, cerrarCaja, reabrirCaja, verificarTransferencia } from "./acciones";
 
@@ -83,22 +84,15 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
     <>
       <Titulo
         accion={
-          <span className="flex flex-wrap gap-2">
-            <BotonLink href={`/ingresos?dia=${diaISO}`} variante="secundario">
-              Ingresos
-            </BotonLink>
-            <BotonLink href={`/egresos?dia=${diaISO}`} variante="secundario">
-              Egresos
-            </BotonLink>
-            <BotonLink href="/caja/reporte" variante="secundario">
-              Reporte quincenal
-            </BotonLink>
-          </span>
+          <BotonLink href="/caja/reporte" variante="secundario">
+            Reporte quincenal
+          </BotonLink>
         }
       >
         Caja del {formatoDia(dia)}{" "}
         <Etiqueta color={abierta ? "ambar" : "verde"}>{abierta ? "Abierta" : "Cerrada"}</Etiqueta>
       </Titulo>
+      <PestanasDinero actual="/caja" operacion={sesion.operacion} dia={diaISO} />
       <Subnav
         enlaces={[
           { id: "efectivo", texto: "Efectivo" },

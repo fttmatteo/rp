@@ -2,13 +2,14 @@ import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { leerPagina } from "@/components/paginacion";
 import { ListaDinero, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
-import { Alerta, Boton, BotonLink, Campo, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, Campo, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { obtenerCaja } from "@/lib/caja-db";
 import { saldosPorCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoConsecutivo, formatoDia, formatoPesos, hoyISO, nombreProducto } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
+import { PestanasDinero } from "@/components/secciones";
 import { anularMovimientoCaja } from "../caja/acciones";
 import { FormularioMovimiento } from "../caja/formulario-movimiento";
 import { registrarAbonoCliente, registrarVentaDirecta } from "./acciones";
@@ -104,9 +105,10 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <Titulo accion={<BotonLink href={`/caja?dia=${diaISO}`} variante="secundario">Caja y cierre</BotonLink>}>
+      <Titulo>
         Ingresos del {formatoDia(dia)}
       </Titulo>
+      <PestanasDinero actual="/ingresos" operacion={op} dia={diaISO} />
       <p className="mb-4 text-sm text-stone-600">
         Todo el dinero que entra se registra aquí: ventas, abonos de clientes y otros ingresos. Los cobros de los repartidores llegan solos desde{" "}
         <Link href="/rutas" className="underline">

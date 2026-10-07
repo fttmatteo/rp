@@ -51,8 +51,11 @@ const PERMISOS: Record<Exclude<Operacion, "ADMIN">, readonly Permiso[]> = {
   REPARTIDOR: ["pedidos.entregar", "pagos.registrar", "ruta.propia"],
 };
 
+/** Solo el repartidor tiene una ruta propia; al administrador no se le muestra Mi ruta. */
+const SOLO_REPARTIDOR: readonly Permiso[] = ["ruta.propia"];
+
 export function puede(operacion: Operacion, permiso: Permiso): boolean {
-  if (operacion === "ADMIN") return true;
+  if (operacion === "ADMIN") return !SOLO_REPARTIDOR.includes(permiso);
   return PERMISOS[operacion].includes(permiso);
 }
 

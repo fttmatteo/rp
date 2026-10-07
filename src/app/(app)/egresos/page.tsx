@@ -2,22 +2,24 @@ import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { leerPagina } from "@/components/paginacion";
 import { ListaDinero, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
-import { Alerta, Boton, BotonLink, Campo, Subnav, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, Campo, Subnav, Tarjeta, Titulo } from "@/components/ui";
 import { obtenerCaja } from "@/lib/caja-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { saldosProveedores } from "@/lib/proveedores-db";
 import { requerir } from "@/lib/sesion";
+import { PestanasDinero } from "@/components/secciones";
 import { anularMovimientoCaja } from "../caja/acciones";
 import { FormularioMovimiento } from "../caja/formulario-movimiento";
-import { FormularioCompra } from "../compras/formulario-compra";
 import { registrarPagoProveedor } from "./acciones";
+import { FormularioCompra } from "./formulario-compra";
+import { HistorialCompras } from "./historial-compras";
 
-export default async function EgresosPage({ searchParams }: { searchParams: Promise<{ dia?: string; pagina?: string }> }) {
+export default async function EgresosPage({ searchParams }: { searchParams: Promise<{ dia?: string; pagina?: string; compras?: string }> }) {
   const sesion = await requerir("caja");
   const hoy = hoyISO();
-  const { dia: diaParam, pagina: paginaParam } = await searchParams;
+  const { dia: diaParam, pagina: paginaParam, compras: paginaCompras } = await searchParams;
   const pagina = leerPagina(paginaParam);
   const diaISO = diaParam && /^\d{4}-\d{2}-\d{2}$/.test(diaParam) && diaParam <= hoy ? diaParam : hoy;
   const dia = diaUTC(diaISO);
@@ -37,7 +39,8 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
   ]);
   const abierta = caja.estado === "ABIERTA";
   // Compras y pagos a proveedores siempre salen de la caja de hoy.
-  const comprar = esHoy && abierta && puede(sesion.operacion, "compras");
+  const verCompras = puede(sesion.operacion, "compras");
+  const comprar = esHoy && abierta && verCompras;
   const [proveedores, tipos, saldos] = await Promise.all([
     comprar ? db.proveedor.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }) : [],
     comprar ? db.producto.findMany({ where: { tipo: "CUBETA" }, orderBy: { orden: "asc" } }) : [],
@@ -75,15 +78,13 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <Titulo accion={<BotonLink href={`/caja?dia=${diaISO}`} variante="secundario">Caja y cierre</BotonLink>}>
+      <Titulo>
         Egresos del {formatoDia(dia)}
       </Titulo>
+      <PestanasDinero actual="/egresos" operacion={sesion.operacion} dia={diaISO} />
       <p className="mb-4 text-sm text-stone-600">
-        Todo el dinero que sale se registra aquí: compras de huevo, pagos a proveedores y gastos. Las compras anteriores están en{" "}
-        <Link href="/compras" className="underline">
-          Compras
-        </Link>
-        .
+        Todo el dinero que sale se registra aquí: compras de huevo, pagos a proveedores y gastos. Al final está el historial de todas las
+        compras, también las de crédito.
       </p>
       <SelectorDiaCaja ruta="/egresos" diaISO={diaISO} />
       <Subnav
@@ -92,6 +93,7 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
           comprar && { id: "pago", texto: "Pago a proveedor" },
           abierta && { id: "gasto", texto: "Gasto" },
           { id: "lista", texto: `Salidas del día (${filas.filter((f) => !f.anulado).length})` },
+          verCompras && { id: "historial", texto: "Historial de compras" },
         ]}
       />
       {!abierta && (
@@ -155,6 +157,7 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
 
         <ListaDinero id="lista" titulo="Salidas del día" filas={filas} ruta="/egresos" diaISO={diaISO} pagina={pagina} vacio="Sin egresos." />
       </div>
+      {verCompras && <HistorialCompras operacion={sesion.operacion} pagina={leerPagina(paginaCompras)} diaISO={diaISO} />}
     </>
   );
 }
