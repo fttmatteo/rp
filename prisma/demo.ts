@@ -1,5 +1,10 @@
 // Datos de ejemplo: varios meses de operación simulada (clientes, pedidos, rutas, cartera, caja,
 // producción por lote, compras a proveedores) para ver la app como si ya estuviera en uso.
+// Cubre cada caso que la app muestra: rutas abiertas, con precierre por aprobar, devueltas y
+// liquidadas (y una reabierta); la caja de ayer sin cerrar y la de hoy abierta con movimientos;
+// pedidos de hoy sin tomar y atrasados; ventas en la granja; abonos a un recibo; compras vencidas,
+// anuladas y por clasificar; abonos a proveedores parciales y anulados; lotes en cría, levante,
+// postura y cerrados; precios especiales que cambian o se quitan; existencias bajas.
 // Solo se cargan en una base sin clientes, galpones, proveedores ni caja: nunca en producción.
 // Uso: npm run db:seed && npm run db:demo   (DEMO_DIAS cambia cuántos días se simulan; 90 por defecto)
 import { PrismaClient, type Prisma } from "@prisma/client";
@@ -70,11 +75,11 @@ const MOTIVOS_NO_ENTREGA = ["Tienda cerrada", "El cliente no estaba", "No tenía
 
 /** Lo que pide cada tipo de negocio: [código, probabilidad de pedirlo, mínimo, máximo] en cubetas o unidades. */
 const CANASTA: Record<Tamano, [string, number, number, number][]> = {
-  TIENDA: [["AA", 0.85, 1, 3], ["A", 0.65, 1, 3], ["B", 0.3, 1, 2], ["AAA", 0.25, 1, 2], ["JUMBO", 0.07, 1, 1]],
-  SUPER: [["AA", 1, 6, 12], ["A", 0.9, 4, 10], ["AAA", 0.8, 3, 6], ["B", 0.6, 2, 5], ["JUMBO", 0.5, 1, 3]],
+  TIENDA: [["AA", 0.85, 1, 3], ["A", 0.65, 1, 3], ["B", 0.3, 1, 2], ["AAA", 0.25, 1, 2], ["JUMBO", 0.04, 1, 1]],
+  SUPER: [["AA", 1, 6, 12], ["A", 0.9, 4, 10], ["AAA", 0.8, 3, 6], ["B", 0.6, 2, 5], ["JUMBO", 0.35, 1, 2]],
   RESTAURANTE: [["A", 0.8, 2, 5], ["B", 0.6, 1, 4], ["AA", 0.4, 1, 3]],
-  ASADERO: [["GALLINA", 0.95, 6, 15], ["A", 0.4, 1, 3]],
-  FINCA: [["GALLINAZA", 1, 5, 15]],
+  ASADERO: [["GALLINA", 0.95, 4, 10], ["A", 0.4, 1, 3]],
+  FINCA: [["GALLINAZA", 1, 3, 8]],
 };
 /** Probabilidad de que el cliente pida en un día de reparto. */
 const FRECUENCIA: Record<Tamano, [number, number]> = {
@@ -106,7 +111,7 @@ async function enLotes<T>(filas: T[], crear: (data: T[]) => Promise<unknown>) {
 
 const TABLAS_CON_ID = [
   "Usuario", "Cliente", "HistorialPrecio", "Galpon", "Lote", "NovedadLote", "Proveedor", "Compra", "PagoProveedor", "Ruta", "Pedido",
-  "DetallePedido", "Venta", "Pago", "MovimientoCaja", "RegistroClasificacion", "MovimientoInventario",
+  "DetallePedido", "Venta", "Pago", "MovimientoCaja", "RegistroClasificacion", "MovimientoInventario", "Auditoria",
 ];
 
 async function main() {
@@ -134,6 +139,24 @@ async function main() {
 
   const inicio = sumar(hoy, -dias);
   const diaAlza = sumar(inicio, Math.floor(dias / 2));
+  // Último día de reparto antes de hoy: su caja queda sin cerrar y una ruta sin liquidar.
+  const ayer = domingo(sumar(hoy, -1)) ? sumar(hoy, -2) : sumar(hoy, -1);
+  const mismoDia = (a: Date, b: Date) => a.getTime() === b.getTime();
+  /** El día de reparto más cercano a `inicio + n` (si cae domingo, el lunes). */
+  const diaHabil = (n: number) => (domingo(sumar(inicio, n)) ? sumar(inicio, n + 1) : sumar(inicio, n));
+  // Días con casos puntuales.
+  const diaClasifAnulada = diaHabil(Math.floor(dias * 0.15));
+  const diaRutaReabierta = diaHabil(Math.floor(dias * 0.2));
+  const diaCompraAnulada = diaHabil(Math.floor(dias * 0.25));
+  const diaPagoProvAnulado = diaHabil(Math.floor(dias * 0.4));
+  const diaCambioPrecios = diaHabil(Math.floor(dias / 2) + 5);
+  // Una semana de vacaciones de Andrés: Diana hace su ruta.
+  const inicioVacaciones = sumar(inicio, Math.floor(dias * 0.3));
+  const deVacaciones = (d: Date) => d >= inicioVacaciones && d < sumar(inicioVacaciones, 7);
+  // Huevos La Pradera: la última compra a crédito no se le paga y queda vencida.
+  const diaPraderaVencida = sumar(hoy, -20 - ((sumar(hoy, -20).getUTCDay() + 4) % 7)); // miércoles
+  // Avícola El Llano vendió las primeras semanas y luego se dejó de usar.
+  const finLlano = sumar(inicio, Math.min(21, Math.floor(dias / 2)));
 
   // ---------- Usuarios (se guardan junto con todo lo demás, al final) ----------
   const claveHash = await bcrypt.hash(clave, 10);
@@ -149,7 +172,8 @@ async function main() {
   const repartidores = [nuevoUsuario("Carlos Rivera", "carlos", ["REPARTIDOR"]), nuevoUsuario("Andrés Muñoz", "andres", ["REPARTIDOR"])];
   // La clasificación y las aves las registra el administrador.
   const galponero = admin;
-  nuevoUsuario("Diana Ruiz", "diana", ["VENTAS", "REPARTIDOR"]);
+  // Diana hace caja y reemplaza a un repartidor cuando falta.
+  const diana = nuevoUsuario("Diana Ruiz", "diana", ["VENTAS", "REPARTIDOR"]);
   nuevoUsuario("Pedro Gil", "pedro", ["REPARTIDOR"], false);
   if (await db.usuario.count({ where: { usuario: { in: usuarios.map((u) => u.usuario) } } }))
     throw new Error("Ya existen usuarios con los nombres de los de ejemplo (laura, carlos, andres, diana, pedro).");
@@ -184,7 +208,11 @@ async function main() {
     ventas: [] as (Prisma.VentaCreateManyInput & { id: number; saldo: number; fecha: Date })[],
     pagos: [] as Prisma.PagoCreateManyInput[],
     aplicaciones: [] as Prisma.AplicacionPagoCreateManyInput[],
+    auditoria: [] as Prisma.AuditoriaCreateManyInput[],
   };
+  /** Rastro de las acciones que no dejan otra huella (precierre devuelto, liquidación reabierta). */
+  const auditoria = (fecha: Date, usuarioId: number, entidad: string, entidadId: number, accion: string, detalle: Prisma.InputJsonValue) =>
+    filas.auditoria.push({ id: nuevoId("Auditoria"), fecha, usuarioId, entidad, entidadId: String(entidadId), accion, detalle });
   let consecutivoVenta = 0;
   let consecutivoPago = 0;
 
@@ -230,7 +258,8 @@ async function main() {
       latitud: conGps ? 4.8133 + (azar() - 0.5) * 0.06 : null,
       longitud: conGps ? -75.6961 + (azar() - 0.5) * 0.06 : null,
       notas: prob(0.15) ? elegir(["Entregar por la puerta de atrás", "Llamar antes de llegar", "Recibe solo en la mañana", "Paga los viernes"]) : null,
-      cupoCredito: perfil === "FIADO" ? elegir([300000, 500000, 800000, 1000000, 1500000]) : null,
+      // Los morosos también tienen cupo: varios lo pasan y la app lo advierte al tomar el pedido.
+      cupoCredito: perfil === "FIADO" ? elegir([300000, 500000, 800000, 1000000, 1500000]) : perfil === "MOROSO" ? elegir([200000, 300000]) : null,
       diasCredito,
       activo,
       creadoEn: hora(sumar(inicio, -entre(1, 20)), entre(8, 16)),
@@ -279,6 +308,9 @@ async function main() {
   }
 
   // ---------- Cartera: ventas, pagos y su aplicación ----------
+  /** Las transferencias viejas ya se confirmaron en el banco; las de ayer, algunas; las de hoy, ninguna. */
+  const verificacion = (dia: Date, fecha: Date) =>
+    dia < sumar(hoy, -2) || (dia < hoy && prob(0.5)) ? new Date(Math.min(fecha.getTime() + entre(1, 20) * 3_600_000, Date.now())) : null;
   const crearVenta = (c: ClienteDemo, datos: { fecha: Date; total: number; usuarioId: number; pedidoId?: number; tipo?: "SALDO_INICIAL"; nota?: string }) => {
     const dia = new Date(Date.UTC(datos.fecha.getUTCFullYear(), datos.fecha.getUTCMonth(), datos.fecha.getUTCDate()));
     const venta = {
@@ -329,7 +361,7 @@ async function main() {
       referencia: transferencia ? referencia() : null,
       usuarioId: d.usuarioId,
       rutaId: d.rutaId ?? null,
-      verificadoEn: transferencia && (d.dia < sumar(hoy, -2) || prob(0.5)) ? new Date(d.fecha.getTime() + entre(1, 26) * 3_600_000) : null,
+      verificadoEn: transferencia ? verificacion(d.dia, d.fecha) : null,
     });
     return { valor, medio: d.medio, pagoId };
   };
@@ -370,12 +402,12 @@ async function main() {
     paraVenta: boolean; // lote viejo que se va vendiendo como gallina
   }
   const lotes: LoteDemo[] = [];
-  const agregarGalpon = (nombre: string, capacidad: number) => {
+  const agregarGalpon = (nombre: string, capacidad: number, activo = true) => {
     const id = nuevoId("Galpon");
-    filas.galpones.push({ id, nombre, capacidad, creadoEn: sumar(inicio, -600) });
+    filas.galpones.push({ id, nombre, capacidad, activo, creadoEn: sumar(inicio, -600) });
     return id;
   };
-  const agregarLote = (galponId: number, nombre: string, raza: string, ingreso: Date, edadIngreso: number, cantidad: number, estado: "CRIA" | "POSTURA", paraVenta = false) => {
+  const agregarLote = (galponId: number, nombre: string, raza: string, ingreso: Date, edadIngreso: number, cantidad: number, estado: "CRIA" | "LEVANTE" | "POSTURA", paraVenta = false) => {
     const id = nuevoId("Lote");
     filas.lotes.push({ id, galponId, nombre, raza, fechaIngreso: ingreso, edadIngresoSemanas: edadIngreso, cantidadInicial: cantidad, estado, creadoEn: hora(ingreso, 9) });
     const lote = { id, nombre, ingreso, edadIngreso, vivas: cantidad, postura: estado === "POSTURA", paraVenta };
@@ -386,19 +418,23 @@ async function main() {
   agregarLote(agregarGalpon("Galpón 2", 4000), "L-2 Lohmann", "Lohmann Brown", sumar(inicio, -170), 16, 3500, "POSTURA");
   agregarLote(agregarGalpon("Galpón 3", 4000), "L-3 Hy-Line", "Hy-Line Brown", sumar(inicio, -45), 17, 3300, "POSTURA");
   const loteViejo = agregarLote(agregarGalpon("Galpón 4", 3000), "L-0 Isa Brown", "Isa Brown", sumar(inicio, -520), 18, 2700, "POSTURA", true);
-  const galponLevante = agregarGalpon("Galpón 5 (levante)", 3500);
+  // Pollitas que llegaron hace diez semanas: en levante, todavía sin postura.
+  agregarLote(agregarGalpon("Galpón 5 (levante)", 3500), "L-5 Lohmann", "Lohmann Brown", sumar(hoy, -70), 1, 3000, "LEVANTE");
+  const galponCria = agregarGalpon("Galpón 6 (cría)", 3500);
+  agregarGalpon("Galpón viejo (fuera de uso)", 2000, false);
   const diaPollitas = sumar(inicio, Math.floor(dias * 0.6));
   const edadSemanas = (l: LoteDemo, d: Date) => l.edadIngreso + Math.floor((d.getTime() - l.ingreso.getTime()) / DIA / 7);
 
   // ---------- Proveedores ----------
-  const proveedor = (nombre: string, telefono: string, diasCredito: number, notas: string | null) => {
+  const proveedor = (nombre: string, telefono: string, diasCredito: number, notas: string | null, activo = true) => {
     const id = nuevoId("Proveedor");
-    filas.proveedores.push({ id, nombre, telefono, diasCredito, notas, creadoEn: sumar(inicio, -30) });
+    filas.proveedores.push({ id, nombre, telefono, diasCredito, notas, activo, creadoEn: sumar(inicio, -30) });
     return { id, nombre, diasCredito };
   };
   const sanLuis = proveedor("Avícola San Luis", "3104567890", 15, "Entrega clasificado, a crédito");
   const elEden = proveedor("Granja El Edén", "3127654321", 0, "Huevo sin clasificar, se paga de contado");
   const pradera = proveedor("Huevos La Pradera", "3159876543", 8, null);
+  const llano = proveedor("Avícola El Llano", "3201112233", 0, "Ya no se le compra: el huevo llegaba muy sucio", false);
 
   // ---------- Inventario inicial ----------
   const INICIAL: Record<string, number> = { JUMBO: 15, AAA: 40, AA: 120, A: 100, B: 40 };
@@ -412,11 +448,35 @@ async function main() {
   const pendientesClasificar: (typeof filas.compras)[number][] = [];
   let pedidosEntregados = 0;
   let pedidosParciales = 0;
+  let ventasGranja = 0;
   const pedidoDe = new Map<number, (typeof filas.pedidos)[number]>();
   const reprogramados = new Map<number, { pedidoId: number; lineas: (typeof filas.detallesPedido)[number][] }>();
+  const repartidoresDel = (d: Date) => [repartidores[0], deVacaciones(d) ? diana : repartidores[1]];
 
   for (let d = inicio; d <= hoy; d = sumar(d, 1)) {
     const esHoy = d.getTime() === hoy.getTime();
+    // Cambios de precios especiales: a uno se le quitan, a otro se le baja y a una tienda se le da.
+    if (mismoDia(d, diaCambioPrecios)) {
+      const conEspecial = lista.filter((c) => c.activo && c.precios.has("AA"));
+      const nuevo = lista.find((c) => c.activo && c.tamano === "TIENDA" && c.precios.size === 0);
+      const cambios: [ClienteDemo | undefined, string, number | null][] = [
+        [conEspecial[0], "AA", null],
+        [conEspecial[0], "A", null],
+        [conEspecial[1], "AA", 16500],
+        [nuevo, "AA", 17000],
+      ];
+      for (const [c, codigo, precio] of cambios) {
+        if (!c) continue;
+        const productoId = prod(codigo).id;
+        filas.historial.push({ id: nuevoId("HistorialPrecio"), fecha: hora(d, 7, 15), productoId, clienteId: c.id, precioAnterior: c.precios.get(codigo) ?? null, precioNuevo: precio, usuarioId: admin.id });
+        filas.preciosCliente = filas.preciosCliente.filter((x) => !(x.clienteId === c.id && x.productoId === productoId));
+        if (precio === null) c.precios.delete(codigo);
+        else {
+          c.precios.set(codigo, precio);
+          filas.preciosCliente.push({ clienteId: c.id, productoId, precio });
+        }
+      }
+    }
     const reparto = !domingo(d);
     const caja = { ingresosEf: 0, egresosEf: 0, cobrosEf: 0 };
     const movCaja = (m: { tipo: "INGRESO" | "EGRESO"; concepto: string; valor: number; medio: "EFECTIVO" | "TRANSFERENCIA"; fecha: Date; usuarioId: number; rutaId?: number; compraId?: number; pagoProveedorId?: number }) => {
@@ -425,7 +485,7 @@ async function main() {
         id: nuevoId("MovimientoCaja"),
         dia: d,
         ...m,
-        verificadoEn: transferencia && (d < sumar(hoy, -2) || prob(0.5)) ? new Date(m.fecha.getTime() + entre(1, 20) * 3_600_000) : null,
+        verificadoEn: transferencia ? verificacion(d, m.fecha) : null,
       });
       if (m.medio === "EFECTIVO") {
         if (m.tipo === "INGRESO") caja.ingresosEf += m.valor;
@@ -441,9 +501,11 @@ async function main() {
       }
     };
 
-    // Hoy solo hay lo que pasa temprano: la caja abierta y las rutas por entregar.
-    if (!esHoy) {
+    // Aves e inventario: pasa temprano, también hoy.
+    {
       // Novedades de los lotes: mortalidad diaria y, en el lote viejo, gallinas que pasan a la venta.
+      // Cuando se acaba el lote viejo, se empieza a vender el que le sigue en edad.
+      if (loteViejo.vivas <= 0) lotes[0].paraVenta = true;
       for (const l of lotes) {
         if (l.vivas <= 0 || d < l.ingreso) continue;
         const muertes = entre(0, l.vivas > 3000 ? 3 : 2);
@@ -473,7 +535,7 @@ async function main() {
       if (d.getTime() === sumar(inicio, 10).getTime())
         filas.novedades.push({ id: nuevoId("NovedadLote"), loteId: lotes[0].id, fecha: d, tipo: "MUERTE", cantidad: 25, usuarioId: galponero.id, creadoEn: hora(d, 8), nota: "Se escribió en el lote equivocado", anulada: true });
       if (d.getTime() === diaPollitas.getTime()) {
-        const pollitas = agregarLote(galponLevante, "L-4 Hy-Line", "Hy-Line Brown", d, 1, 3200, "CRIA");
+        const pollitas = agregarLote(galponCria, "L-4 Hy-Line", "Hy-Line Brown", d, 1, 3200, "CRIA");
         pollitas.postura = false;
       }
 
@@ -498,10 +560,20 @@ async function main() {
           mover({ fecha: hora(d, 6), productoId: prod(codigo).id, cantidad, tipo: "PRODUCCION", clasificacionId: registroId, usuarioId: galponero.id });
         });
       }
+      // Una clasificación registrada dos veces: la repetida se anula y su producción sale del inventario.
+      if (mismoDia(d, diaClasifAnulada)) {
+        const registroId = nuevoId("RegistroClasificacion");
+        filas.registros.push({ id: registroId, fecha: d, creadoEn: hora(d, 6, 40), usuarioId: galponero.id, loteId: lotes[0].id, nota: "Repetida" });
+        for (const [codigo, cubetas] of [["AA", 40], ["A", 45]] as const) {
+          filas.detallesClasif.push({ registroId, productoId: prod(codigo).id, cantidad: cubetas * HUEVOS });
+          mover({ fecha: hora(d, 6, 40), productoId: prod(codigo).id, cantidad: cubetas * HUEVOS, tipo: "PRODUCCION", clasificacionId: registroId, usuarioId: galponero.id });
+          mover({ fecha: hora(d, 6, 55), productoId: prod(codigo).id, cantidad: -cubetas * HUEVOS, tipo: "ANULACION", clasificacionId: registroId, nota: `Anulación de clasificación #${registroId}`, usuarioId: admin.id });
+        }
+      }
       // Gallinaza recogida de los galpones, los sábados.
       if (d.getUTCDay() === 6) {
         const registroId = nuevoId("RegistroClasificacion");
-        const bultos = entre(30, 45);
+        const bultos = entre(40, 60);
         filas.registros.push({ id: registroId, fecha: d, creadoEn: hora(d, 6, 5), usuarioId: galponero.id, nota: "Gallinaza de los galpones" });
         filas.detallesClasif.push({ registroId, productoId: prod("GALLINAZA").id, cantidad: bultos });
         mover({ fecha: hora(d, 6, 5), productoId: prod("GALLINAZA").id, cantidad: bultos, tipo: "PRODUCCION", clasificacionId: registroId, usuarioId: galponero.id });
@@ -540,7 +612,7 @@ async function main() {
         // ---------- Compras de huevo (martes y viernes) ----------
         if (d.getUTCDay() === 2 || d.getUTCDay() === 5) {
           const compraId = nuevoId("Compra");
-          const detalles = [["AA", entre(15, 30)], ["A", entre(25, 45)], ["B", entre(5, 12)]] as const;
+          const detalles = [["AA", entre(30, 50)], ["A", entre(35, 60)], ["B", entre(5, 12)]] as const;
           const huevos = detalles.reduce((s, [, cubetas]) => s + cubetas * HUEVOS, 0);
           const total = detalles.reduce((s, [codigo, cubetas]) => s + cubetas * (codigo === "AA" ? 14500 : codigo === "A" ? 12000 : 9500), 0);
           filas.compras.push({ id: compraId, proveedorId: sanLuis.id, fecha: hora(d, 7), dia: d, usuarioId: ventas.id, clasificada: true, huevos, porClasificar: 0, total, saldo: total, formaPago: "CREDITO", vence: sumar(d, sanLuis.diasCredito) });
@@ -566,12 +638,31 @@ async function main() {
           const medioEden = efectivo.dia - caja.egresosEf > totalEden + 100000 ? "EFECTIVO" : "TRANSFERENCIA";
           movCaja({ tipo: "EGRESO", concepto: `Compra de huevo a ${elEden.nombre}`, valor: totalEden, medio: medioEden, fecha: hora(d, 7, 30), usuarioId: ventas.id, compraId: edenId });
         }
-        // Huevos La Pradera, cada quince días, a veces de contado.
-        if (d.getUTCDay() === 3 && d.getUTCDate() % 14 < 7) {
+        // Una compra de contado que se registró dos veces: se anula y su salida de la caja también.
+        if (mismoDia(d, diaCompraAnulada)) {
+          const compraId = nuevoId("Compra");
+          const cubetas = 40;
+          filas.compras.push({ id: compraId, proveedorId: elEden.id, fecha: hora(d, 7, 35), dia: d, usuarioId: ventas.id, clasificada: false, huevos: cubetas * HUEVOS, porClasificar: cubetas * HUEVOS, total: cubetas * 12500, saldo: 0, formaPago: "CONTADO", vence: null, anulada: true, nota: "Se registró dos veces" });
+          filas.movimientosCaja.push({ id: nuevoId("MovimientoCaja"), dia: d, tipo: "EGRESO", concepto: `Compra de huevo a ${elEden.nombre}`, valor: cubetas * 12500, medio: "TRANSFERENCIA", fecha: hora(d, 7, 35), usuarioId: ventas.id, compraId, anulado: true });
+        }
+        // Avícola El Llano: compras de contado las primeras semanas; después se dejó de usar.
+        if (d < finLlano && d.getUTCDay() === 4) {
+          const compraId = nuevoId("Compra");
+          const detalles = [["A", entre(20, 30)], ["B", entre(10, 20)]] as const;
+          const total = detalles.reduce((s, [codigo, cubetas]) => s + cubetas * (codigo === "A" ? 11500 : 9000), 0);
+          filas.compras.push({ id: compraId, proveedorId: llano.id, fecha: hora(d, 7, 15), dia: d, usuarioId: ventas.id, clasificada: true, huevos: detalles.reduce((s, [, c]) => s + c * HUEVOS, 0), porClasificar: 0, total, saldo: 0, formaPago: "CONTADO", vence: null });
+          for (const [codigo, cubetas] of detalles) {
+            filas.detallesCompra.push({ compraId, productoId: prod(codigo).id, cantidad: cubetas * HUEVOS });
+            mover({ fecha: hora(d, 7, 15), productoId: prod(codigo).id, cantidad: cubetas * HUEVOS, tipo: "COMPRA", compraId, usuarioId: ventas.id });
+          }
+          movCaja({ tipo: "EGRESO", concepto: `Compra de huevo a ${llano.nombre}`, valor: total, medio: "TRANSFERENCIA", fecha: hora(d, 7, 15), usuarioId: ventas.id, compraId });
+        }
+        // Huevos La Pradera, cada quince días, a veces de contado (las últimas, a crédito).
+        if ((d.getUTCDay() === 3 && d.getUTCDate() % 14 < 7) || mismoDia(d, diaPraderaVencida)) {
           const compraId = nuevoId("Compra");
           const cubetas = entre(20, 40);
           const total = cubetas * 14000;
-          const credito = prob(0.5);
+          const credito = d >= sumar(diaPraderaVencida, -7) || prob(0.5);
           filas.compras.push({ id: compraId, proveedorId: pradera.id, fecha: hora(d, 6, 45), dia: d, usuarioId: ventas.id, clasificada: true, huevos: cubetas * HUEVOS, porClasificar: 0, total, saldo: credito ? total : 0, formaPago: credito ? "CREDITO" : "CONTADO", vence: credito ? sumar(d, pradera.diasCredito) : null });
           filas.detallesCompra.push({ compraId, productoId: prod("AA").id, cantidad: cubetas * HUEVOS });
           mover({ fecha: hora(d, 6, 45), productoId: prod("AA").id, cantidad: cubetas * HUEVOS, tipo: "COMPRA", compraId, usuarioId: ventas.id });
@@ -579,7 +670,8 @@ async function main() {
         }
         // Abonos a proveedores los lunes: se paga lo que vence esta semana, por transferencia.
         if (d.getUTCDay() === 1) {
-          for (const p of [sanLuis, pradera]) {
+          // A La Pradera no se le paga desde su compra vencida: queda en las alertas.
+          for (const p of d > diaPraderaVencida ? [sanLuis] : [sanLuis, pradera]) {
             const porPagar = filas.compras.filter((c) => c.proveedorId === p.id && c.saldo > 0 && c.vence && c.vence <= sumar(d, 4));
             const valor = porPagar.reduce((s, c) => s + c.saldo, 0);
             if (valor === 0) continue;
@@ -592,8 +684,30 @@ async function main() {
             movCaja({ tipo: "EGRESO", concepto: `Abono a proveedor ${p.nombre}`, valor, medio: "TRANSFERENCIA", fecha: hora(d, 9), usuarioId: admin.id, pagoProveedorId: pagoId });
           }
         }
+        // Los jueves, a veces un abono parcial en efectivo a la compra más reciente de San Luis (no a la más antigua).
+        if (d.getUTCDay() === 4 && prob(0.5)) {
+          const compra = filas.compras.filter((c) => c.proveedorId === sanLuis.id && !c.anulada && c.saldo > 0).at(-1);
+          const valor = compra ? miles(Math.min(compra.saldo * 0.4, efectivo.dia - caja.egresosEf + caja.ingresosEf - 250000)) : 0;
+          if (compra && valor >= 100000) {
+            const pagoId = nuevoId("PagoProveedor");
+            filas.pagosProveedor.push({ id: pagoId, proveedorId: sanLuis.id, fecha: hora(d, 8, 30), dia: d, valor, medio: "EFECTIVO", usuarioId: ventas.id });
+            filas.aplicacionesProveedor.push({ pagoId, compraId: compra.id, valor });
+            compra.saldo -= valor;
+            movCaja({ tipo: "EGRESO", concepto: `Abono a proveedor ${sanLuis.nombre}`, valor, medio: "EFECTIVO", fecha: hora(d, 8, 30), usuarioId: ventas.id, pagoProveedorId: pagoId });
+          }
+        }
+        // Un abono a proveedor con el valor equivocado: se anula y la deuda y la caja vuelven a como estaban.
+        if (mismoDia(d, diaPagoProvAnulado)) {
+          const compra = filas.compras.find((c) => c.proveedorId === sanLuis.id && !c.anulada && c.saldo > 0);
+          if (compra) {
+            const pagoId = nuevoId("PagoProveedor");
+            filas.pagosProveedor.push({ id: pagoId, proveedorId: sanLuis.id, fecha: hora(d, 9, 15), dia: d, valor: compra.saldo, medio: "TRANSFERENCIA", referencia: referencia(), usuarioId: ventas.id, anulado: true });
+            filas.aplicacionesProveedor.push({ pagoId, compraId: compra.id, valor: compra.saldo });
+            filas.movimientosCaja.push({ id: nuevoId("MovimientoCaja"), dia: d, tipo: "EGRESO", concepto: `Abono a proveedor ${sanLuis.nombre}`, valor: compra.saldo, medio: "TRANSFERENCIA", fecha: hora(d, 9, 15), usuarioId: ventas.id, pagoProveedorId: pagoId, anulado: true });
+          }
+        }
         // ---------- Gastos del día ----------
-        for (const r of repartidores) gasto({ tipo: "EGRESO", concepto: `Gasolina moto ${r.nombre}`, valor: entre(15, 30) * 1000, medio: "EFECTIVO", fecha: hora(d, 6, 45), usuarioId: ventas.id });
+        for (const r of repartidoresDel(d)) gasto({ tipo: "EGRESO", concepto: `Gasolina moto ${r.nombre}`, valor: entre(15, 30) * 1000, medio: "EFECTIVO", fecha: hora(d, 6, 45), usuarioId: ventas.id });
         if (d.getUTCDay() === 1 || d.getUTCDay() === 4)
           movCaja({ tipo: "EGRESO", concepto: `Concentrado para gallinas (${entre(95, 110)} bultos)`, valor: entre(95, 110) * 104000, medio: "TRANSFERENCIA", fecha: hora(d, 9, 30), usuarioId: admin.id });
         if (d.getUTCDate() === 15 || ultimoDelMes(d) || (domingo(sumar(d, 1)) && (sumar(d, 1).getUTCDate() === 15 || ultimoDelMes(sumar(d, 1)))))
@@ -602,20 +716,28 @@ async function main() {
         if (d.getUTCDate() === 6) movCaja({ tipo: "EGRESO", concepto: "Servicios públicos (energía y agua)", valor: entre(650, 900) * 1000, medio: "TRANSFERENCIA", fecha: hora(d, 10), usuarioId: admin.id });
         if (prob(0.12)) gasto({ tipo: "EGRESO", concepto: elegir(["Cubetas de cartón (500 unidades)", "Mantenimiento moto", "Bombillos y cables para galpón", "Desinfectante para galpones"]), valor: entre(60, 220) * 1000, medio: "EFECTIVO", fecha: hora(d, 11), usuarioId: ventas.id });
         if (prob(0.05)) movCaja({ tipo: "INGRESO", concepto: "Venta de costales vacíos", valor: entre(15, 40) * 1000, medio: "EFECTIVO", fecha: hora(d, 12), usuarioId: ventas.id });
+      } else {
+        // Hoy, temprano: huevo comprado que sigue sin clasificar, la gasolina y otro ingreso por transferencia.
+        const compraId = nuevoId("Compra");
+        const cubetas = entre(30, 45);
+        filas.compras.push({ id: compraId, proveedorId: elEden.id, fecha: hora(d, 7, 30), dia: d, usuarioId: ventas.id, clasificada: false, huevos: cubetas * HUEVOS, porClasificar: cubetas * HUEVOS, total: cubetas * 12500, saldo: 0, formaPago: "CONTADO", vence: null });
+        movCaja({ tipo: "EGRESO", concepto: `Compra de huevo a ${elEden.nombre}`, valor: cubetas * 12500, medio: "TRANSFERENCIA", fecha: hora(d, 7, 30), usuarioId: ventas.id, compraId });
+        for (const r of [repartidores[0], diana]) movCaja({ tipo: "EGRESO", concepto: `Gasolina moto ${r.nombre}`, valor: entre(15, 30) * 1000, medio: "EFECTIVO", fecha: hora(d, 6, 45), usuarioId: ventas.id });
+        movCaja({ tipo: "INGRESO", concepto: "Arriendo del potrero a un vecino", valor: 350000, medio: "TRANSFERENCIA", fecha: hora(d, 8, 10), usuarioId: admin.id });
       }
 
       // ---------- Pedidos y rutas ----------
-      const rutas = repartidores.map((r, i) => {
-        const id = nuevoId("Ruta");
-        const ruta = { id, fecha: d, repartidorId: r.id, creadaEn: hora(d, 6, 30), indice: i };
-        return ruta;
-      });
+      // Cada repartidor toma en Mi ruta los pedidos de su zona. Hoy Carlos tomó los suyos y va entregando;
+      // Diana tomó unos pocos de la otra zona, ya terminó y mandó el precierre; los demás siguen sin tomar.
+      const rutas = repartidoresDel(d).map((r, i) => ({ id: nuevoId("Ruta"), fecha: d, repartidorId: r.id, nombre: r.nombre, creadaEn: hora(d, 6, 30), indice: i }));
+      if (esHoy) rutas[1] = { ...rutas[1], repartidorId: diana.id, nombre: diana.nombre };
       const paradas: { cliente: ClienteDemo; pedidoId: number; ruta: (typeof rutas)[number]; orden: number; lineas: (typeof filas.detallesPedido)[number][]; instante: Date }[] = [];
       for (const ruta of rutas) {
         const clientesRuta = lista
           .filter((c) => c.activo && c.ruta === ruta.indice && (reprogramados.has(c.id) || prob(c.frecuencia)))
           .sort((a, b) => ZONAS_RUTA[ruta.indice].indexOf(a.zona as never) - ZONAS_RUTA[ruta.indice].indexOf(b.zona as never));
-        clientesRuta.forEach((c) => {
+        let tomados = 0;
+        clientesRuta.forEach((c, i) => {
           const pedidoId = nuevoId("Pedido");
           const previo = reprogramados.get(c.id);
           reprogramados.delete(c.id);
@@ -638,25 +760,30 @@ async function main() {
           filas.detallesPedido.push(...lineas);
           // Algunos se cancelan antes de salir: quedan sin ruta.
           const cancelado = !esHoy && prob(0.02);
+          // Sin tomar: hoy, los de la zona de Andrés (Diana solo tomó cuatro); ayer, dos que nadie entregó (quedan atrasados).
+          const sinTomar =
+            (esHoy && ruta.indice === 1 && (tomados >= 4 || c.tamano === "FINCA")) || (mismoDia(d, ayer) && ruta.indice === 0 && i >= clientesRuta.length - 2);
+          if (!cancelado && !sinTomar) tomados++;
           filas.pedidos.push({
             id: pedidoId,
             clienteId: c.id,
             fechaEntrega: d,
             estado: cancelado ? "CANCELADO" : "PENDIENTE",
             creadoEn: hora(sumar(d, -1), entre(13, 18), entre(0, 59)),
-            creadoPorId: prob(0.8) ? ventas.id : admin.id,
-            rutaId: cancelado ? null : ruta.id,
+            creadoPorId: prob(0.8) ? ventas.id : prob(0.5) ? diana.id : admin.id,
+            rutaId: cancelado || sinTomar ? null : ruta.id,
             nota: previo ? `Reprogramado del pedido #${previo.pedidoId}` : prob(0.05) ? elegir(["Traer cambio de 50 mil", "Dejar con la vecina si no está", "Entregar antes de las 10"]) : null,
           });
           pedidoDe.set(pedidoId, filas.pedidos[filas.pedidos.length - 1]);
-          if (!cancelado) paradas.push({ cliente: c, pedidoId, ruta, orden: 0, lineas, instante: d });
+          if (!cancelado && !sinTomar) paradas.push({ cliente: c, pedidoId, ruta, orden: 0, lineas, instante: d });
         });
       }
       for (const ruta of rutas) {
         const suyas = paradas.filter((p) => p.ruta === ruta);
         suyas.forEach((p, i) => {
           p.orden = i + 1;
-          p.instante = hora(d, 7, 30 + Math.round((i * 540) / Math.max(1, suyas.length)) + entre(0, 4));
+          // Hoy Diana sale temprano con su ruta corta.
+          p.instante = esHoy && ruta.indice === 1 ? hora(d, 6, 50 + i * 25) : hora(d, 7, 30 + Math.round((i * 540) / Math.max(1, suyas.length)) + entre(0, 4));
         });
       }
       for (const p of paradas) {
@@ -664,111 +791,166 @@ async function main() {
         pedido.ordenEnRuta = p.orden;
       }
 
-      if (!esHoy) {
-        // Abonos en la oficina de clientes con deuda, por la mañana.
-        const eventos: { instante: Date; hacer: () => void }[] = [];
-        for (const c of lista) {
-          if (c.deudas.length === 0 || !prob(c.perfil === "FIADO" ? 0.08 : c.perfil === "MOROSO" ? 0.02 : 0.01)) continue;
-          const instante = hora(d, entre(8, 16), entre(0, 59));
-          eventos.push({
-            instante,
-            hacer: () => {
-              const deuda = deudaDe(c);
-              const valor = c.perfil === "MOROSO" ? miles(deuda * (0.2 + azar() * 0.3)) : prob(0.6) ? deuda : miles(deuda * (0.4 + azar() * 0.4));
-              const medio = prob(0.5) ? "TRANSFERENCIA" : "EFECTIVO";
-              if (prob(0.05)) {
-                const errado = pagar(c, { dia: d, fecha: instante, valor: valor * 10, medio, usuarioId: ventas.id });
-                if (errado) anularPago(c, errado.pagoId);
+      // Abonos en la oficina de clientes con deuda: a la deuda más antigua o, a veces, a un recibo elegido.
+      const eventos: { instante: Date; hacer: () => void }[] = [];
+      for (const c of lista) {
+        if (c.deudas.length === 0 || !prob(c.perfil === "FIADO" ? 0.08 : c.perfil === "MOROSO" ? 0.02 : 0.01)) continue;
+        const instante = hora(d, entre(8, 16), entre(0, 59));
+        eventos.push({
+          instante,
+          hacer: () => {
+            const deuda = deudaDe(c);
+            const valor = c.perfil === "MOROSO" ? miles(deuda * (0.2 + azar() * 0.3)) : prob(0.6) ? deuda : miles(deuda * (0.4 + azar() * 0.4));
+            const medio = prob(0.5) ? "TRANSFERENCIA" : "EFECTIVO";
+            const ventaId = c.deudas.length > 1 && prob(0.3) ? elegir(c.deudas.slice(1)).id : undefined;
+            if (prob(0.05)) {
+              const errado = pagar(c, { dia: d, fecha: instante, valor: valor * 10, medio, usuarioId: ventas.id });
+              if (errado) anularPago(c, errado.pagoId);
+            }
+            const pago = pagar(c, { dia: d, fecha: new Date(instante.getTime() + 120_000), valor, medio, usuarioId: ventas.id, ventaId });
+            if (pago?.medio === "EFECTIVO") caja.cobrosEf += pago.valor;
+          },
+        });
+      }
+      // Ventas en la granja: el cliente viene por gallinaza o gallinas y se le vende en un solo paso, sin ruta.
+      if (esHoy || prob(0.35)) {
+        const c = elegir(lista.filter((x) => x.activo && (x.tamano === "FINCA" || x.tamano === "ASADERO")));
+        const instante = esHoy ? hora(d, 8, 15) : hora(d, entre(9, 15), entre(0, 59));
+        eventos.push({
+          instante,
+          hacer: () => {
+            const codigo = c.tamano === "FINCA" ? "GALLINAZA" : "GALLINA";
+            const p = prod(codigo);
+            const cantidad = Math.min(codigo === "GALLINA" ? entre(4, 12) : entre(3, 10), stock.get(p.id) ?? 0);
+            if (cantidad <= 0) return;
+            const precio = c.precios.get(codigo) ?? precioGeneral(codigo, d);
+            const pedidoId = nuevoId("Pedido");
+            filas.pedidos.push({ id: pedidoId, clienteId: c.id, fechaEntrega: d, estado: "ENTREGADO", nota: "Venta en la granja", creadoEn: instante, creadoPorId: ventas.id });
+            filas.detallesPedido.push({ id: nuevoId("DetallePedido"), pedidoId, productoId: p.id, cantidad, precioUnitario: precio, cantidadEntregada: cantidad });
+            const venta = crearVenta(c, { fecha: instante, total: cantidad * precio, usuarioId: ventas.id, pedidoId });
+            mover({ fecha: instante, productoId: p.id, cantidad: -cantidad, tipo: "VENTA", ventaId: venta.id, usuarioId: ventas.id });
+            pedidosEntregados++;
+            ventasGranja++;
+            // Casi siempre paga todo; a veces aprovecha para pagar lo que debía, o deja una parte fiada.
+            const valor = elegir([venta.total, venta.total, venta.total, venta.total, deudaDe(c), miles(venta.total / 2)]);
+            const pago = pagar(c, { dia: d, fecha: new Date(instante.getTime() + 60_000), valor, medio: prob(0.8) ? "EFECTIVO" : "TRANSFERENCIA", usuarioId: ventas.id, ventaId: venta.id });
+            if (pago?.medio === "EFECTIVO") caja.cobrosEf += pago.valor;
+          },
+        });
+      }
+      // Entregas en orden de hora, para que los recibos queden numerados en orden.
+      for (const p of paradas) {
+        eventos.push({
+          instante: p.instante,
+          hacer: () => {
+            const pedido = pedidoDe.get(p.pedidoId)!;
+            const c = p.cliente;
+            const repartidorId = p.ruta.repartidorId;
+            if (prob(0.03)) {
+              pedido.estado = "NO_ENTREGADO";
+              pedido.motivoNoEntrega = elegir(MOTIVOS_NO_ENTREGA);
+              if (pedido.motivoNoEntrega === MOTIVOS_NO_ENTREGA[3]) reprogramados.set(c.id, { pedidoId: p.pedidoId, lineas: p.lineas });
+              // Aunque no recibió, a veces abona lo que debía al repartidor (abono en la parada).
+              if (pedido.motivoNoEntrega !== MOTIVOS_NO_ENTREGA[2] && deudaDe(c) > 0 && prob(0.5)) {
+                const pago = pagar(c, { dia: d, fecha: new Date(p.instante.getTime() + 60_000), valor: Math.max(1000, miles(deudaDe(c) / 2)), medio: "EFECTIVO", usuarioId: repartidorId, rutaId: p.ruta.id });
+                if (pago) caja.cobrosEf += pago.valor;
               }
-              const pago = pagar(c, { dia: d, fecha: new Date(instante.getTime() + 120_000), valor, medio, usuarioId: ventas.id });
-              if (pago?.medio === "EFECTIVO") caja.cobrosEf += pago.valor;
-            },
-          });
-        }
-        // Entregas en orden de hora, para que los recibos queden numerados en orden.
-        for (const p of paradas) {
-          eventos.push({
-            instante: p.instante,
-            hacer: () => {
-              const pedido = pedidoDe.get(p.pedidoId)!;
-              if (prob(0.03)) {
-                pedido.estado = "NO_ENTREGADO";
-                pedido.motivoNoEntrega = elegir(MOTIVOS_NO_ENTREGA);
-                if (pedido.motivoNoEntrega === MOTIVOS_NO_ENTREGA[3]) reprogramados.set(p.cliente.id, { pedidoId: p.pedidoId, lineas: p.lineas });
-                return;
-              }
-              let parcial = false;
-              for (const l of p.lineas) {
-                const producto = [...productos.values()].find((x) => x.id === l.productoId)!;
-                const porUnidad = producto.tipo === "CUBETA" ? HUEVOS : 1;
-                const disponible = Math.floor((stock.get(l.productoId) ?? 0) / porUnidad);
-                // A veces el cliente recibe menos de lo pedido; otras veces no alcanza el inventario.
-                const quiere = prob(0.03) && l.cantidad > 1 ? l.cantidad - 1 : l.cantidad;
-                l.cantidadEntregada = Math.min(quiere, disponible);
-                if (l.cantidadEntregada < l.cantidad) parcial = true;
-              }
-              const total = p.lineas.reduce((s, l) => s + l.cantidadEntregada! * l.precioUnitario, 0);
-              if (total === 0) {
-                for (const l of p.lineas) l.cantidadEntregada = null;
-                pedido.estado = "NO_ENTREGADO";
-                pedido.motivoNoEntrega = "No había inventario suficiente";
-                return;
-              }
-              pedido.estado = "ENTREGADO";
-              pedidosEntregados++;
-              if (parcial) pedidosParciales++;
-              const repartidorId = p.ruta.repartidorId;
-              const venta = crearVenta(p.cliente, { fecha: p.instante, total, usuarioId: repartidorId, pedidoId: p.pedidoId });
-              for (const l of p.lineas) {
-                if (!l.cantidadEntregada) continue;
-                const producto = [...productos.values()].find((x) => x.id === l.productoId)!;
-                mover({ fecha: p.instante, productoId: l.productoId, cantidad: -l.cantidadEntregada * (producto.tipo === "CUBETA" ? HUEVOS : 1), tipo: "VENTA", ventaId: venta.id, usuarioId: repartidorId });
-              }
-              // Pocas veces la venta se anula el mismo día (se cargó al cliente equivocado).
-              if (prob(0.006)) {
-                Object.assign(venta, { anulada: true, saldo: 0, nota: "Se registró al cliente equivocado" });
-                p.cliente.deudas = p.cliente.deudas.filter((v) => v.id !== venta.id);
-                pedido.estado = "CANCELADO";
-                for (const m of filas.movimientos.filter((m) => m.ventaId === venta.id))
-                  mover({ fecha: new Date(p.instante.getTime() + 30_000), productoId: m.productoId, cantidad: -m.cantidad, tipo: "ANULACION", ventaId: venta.id, nota: "Anulación de venta", usuarioId: admin.id });
-                return;
-              }
-              // Lo que paga al recibir, según cómo suele pagar el cliente.
-              const c = p.cliente;
-              const deuda = deudaDe(c);
-              let valor = 0;
-              if (c.perfil === "CONTADO" || c.perfil === "TRANSFERENCIA") valor = prob(0.9) ? deuda : 0;
-              else if (c.perfil === "FIADO") {
-                // Paga a ratos, pero no deja que lo vencido se acumule.
-                const vencido = c.deudas.filter((v) => v.vence < d).reduce((s, v) => s + v.saldo, 0);
-                valor = Math.max(vencido, deuda > total * 4 ? miles(deuda * 0.6) : elegir([deuda, deuda, total, miles(total * 0.5), 0]));
-              }
-              // El moroso abona menos de lo que compra; cuando la deuda crece, le cobran un pedazo.
-              else valor = deuda > 600000 && prob(0.4) ? miles(deuda * 0.4) : prob(0.5) ? miles(total * (0.5 + azar() * 0.5)) : 0;
-              if (valor <= 0) return;
-              const medio = c.perfil === "TRANSFERENCIA" ? "TRANSFERENCIA" : prob(0.12) ? "TRANSFERENCIA" : "EFECTIVO";
-              const pago = pagar(c, { dia: d, fecha: new Date(p.instante.getTime() + 60_000), valor, medio, usuarioId: repartidorId, rutaId: p.ruta.id, ventaId: venta.id });
-              if (pago?.medio === "EFECTIVO") caja.cobrosEf += pago.valor;
-            },
-          });
-        }
-        eventos.sort((a, b) => a.instante.getTime() - b.instante.getTime()).forEach((e) => e.hacer());
+              return;
+            }
+            let parcial = false;
+            for (const l of p.lineas) {
+              const producto = [...productos.values()].find((x) => x.id === l.productoId)!;
+              const porUnidad = producto.tipo === "CUBETA" ? HUEVOS : 1;
+              const disponible = Math.floor((stock.get(l.productoId) ?? 0) / porUnidad);
+              // A veces el cliente recibe menos de lo pedido; otras veces no alcanza el inventario.
+              const quiere = prob(0.03) && l.cantidad > 1 ? l.cantidad - 1 : l.cantidad;
+              l.cantidadEntregada = Math.min(quiere, disponible);
+              if (l.cantidadEntregada < l.cantidad) parcial = true;
+            }
+            const total = p.lineas.reduce((s, l) => s + l.cantidadEntregada! * l.precioUnitario, 0);
+            if (total === 0) {
+              for (const l of p.lineas) l.cantidadEntregada = null;
+              pedido.estado = "NO_ENTREGADO";
+              pedido.motivoNoEntrega = "No había inventario suficiente";
+              return;
+            }
+            pedido.estado = "ENTREGADO";
+            pedidosEntregados++;
+            if (parcial) pedidosParciales++;
+            const venta = crearVenta(c, { fecha: p.instante, total, usuarioId: repartidorId, pedidoId: p.pedidoId });
+            for (const l of p.lineas) {
+              if (!l.cantidadEntregada) continue;
+              const producto = [...productos.values()].find((x) => x.id === l.productoId)!;
+              mover({ fecha: p.instante, productoId: l.productoId, cantidad: -l.cantidadEntregada * (producto.tipo === "CUBETA" ? HUEVOS : 1), tipo: "VENTA", ventaId: venta.id, usuarioId: repartidorId });
+            }
+            // Pocas veces la venta se anula el mismo día (se cargó al cliente equivocado).
+            if (!esHoy && prob(0.006)) {
+              Object.assign(venta, { anulada: true, saldo: 0, nota: "Se registró al cliente equivocado" });
+              c.deudas = c.deudas.filter((v) => v.id !== venta.id);
+              pedido.estado = "CANCELADO";
+              for (const m of filas.movimientos.filter((m) => m.ventaId === venta.id))
+                mover({ fecha: new Date(p.instante.getTime() + 30_000), productoId: m.productoId, cantidad: -m.cantidad, tipo: "ANULACION", ventaId: venta.id, nota: "Anulación de venta", usuarioId: admin.id });
+              return;
+            }
+            // Lo que paga al recibir, según cómo suele pagar el cliente.
+            const deuda = deudaDe(c);
+            let valor = 0;
+            if (c.perfil === "CONTADO" || c.perfil === "TRANSFERENCIA") valor = prob(0.9) ? deuda : 0;
+            else if (c.perfil === "FIADO") {
+              // Paga a ratos, pero no deja que lo vencido se acumule.
+              const vencido = c.deudas.filter((v) => v.vence < d).reduce((s, v) => s + v.saldo, 0);
+              valor = Math.max(vencido, deuda > total * 4 ? miles(deuda * 0.6) : elegir([deuda, deuda, total, miles(total * 0.5), 0]));
+            }
+            // El moroso abona menos de lo que compra; cuando la deuda crece, le cobran un pedazo.
+            else valor = deuda > 600000 && prob(0.4) ? miles(deuda * 0.4) : prob(0.5) ? miles(total * (0.5 + azar() * 0.5)) : 0;
+            if (valor <= 0) return;
+            const medio = c.perfil === "TRANSFERENCIA" ? "TRANSFERENCIA" : prob(0.12) ? "TRANSFERENCIA" : "EFECTIVO";
+            const pago = pagar(c, { dia: d, fecha: new Date(p.instante.getTime() + 60_000), valor, medio, usuarioId: repartidorId, rutaId: p.ruta.id, ventaId: venta.id });
+            if (pago?.medio === "EFECTIVO") caja.cobrosEf += pago.valor;
+          },
+        });
+      }
+      // Hoy solo ha pasado la mañana: lo de después del mediodía sigue pendiente.
+      eventos
+        .filter((e) => !esHoy || e.instante < hora(d, 12))
+        .sort((a, b) => a.instante.getTime() - b.instante.getTime())
+        .forEach((e) => e.hacer());
 
-        // ---------- Liquidación de las rutas ----------
+      const efectivoRuta = (rutaId: number) => filas.pagos.filter((p) => p.rutaId === rutaId && !p.anulado && p.medio === "EFECTIVO").reduce((s, p) => s + p.valor, 0);
+      const fechaRuta = `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`;
+      if (!esHoy) {
+        // ---------- Precierre del repartidor y aprobación del administrador ----------
         for (const ruta of rutas) {
-          const esperado = filas.pagos.filter((p) => p.rutaId === ruta.id && p.medio === "EFECTIVO").reduce((s, p) => s + p.valor, 0);
-          const diferencia = prob(0.08) ? elegir([-1, 1]) * entre(1, 20) * 1000 : 0;
-          const repartidor = repartidores[ruta.indice];
+          const esperado = efectivoRuta(ruta.id);
+          let diferencia = prob(0.08) ? elegir([-1, 1]) * entre(1, 20) * 1000 : 0;
+          let observacion = diferencia === 0 ? null : diferencia < 0 ? "Dio mal un cambio" : "Un cliente no recibió las vueltas";
+          // Casi siempre el repartidor manda el precierre; a veces el administrador liquida sin él.
+          const precerradaEn = prob(0.9) ? hora(d, 16, 30 + ruta.indice * 15 + entre(0, 10)) : null;
+          if (mismoDia(d, ayer) && ruta.indice === 1) {
+            // Precierre devuelto: declaró menos efectivo, el administrador se lo devolvió y la ruta sigue abierta.
+            const entregado = Math.max(0, esperado - 30000);
+            filas.rutas.push({ id: ruta.id, fecha: d, repartidorId: ruta.repartidorId, creadaEn: ruta.creadaEn, observacion: "Me faltan 30 mil, no sé en qué parada" });
+            auditoria(hora(d, 16, 50), ruta.repartidorId, "Ruta", ruta.id, "precierre", { esperado, entregado, diferencia: entregado - esperado });
+            auditoria(hora(d, 17, 40), admin.id, "Ruta", ruta.id, "devolver", { entregado, observacion: "Me faltan 30 mil, no sé en qué parada" });
+            continue;
+          }
+          if (mismoDia(d, diaRutaReabierta) && ruta.indice === 0) {
+            // Se liquidó con un faltante; el dinero apareció, el administrador reabrió la liquidación
+            // (el faltante se anula) y la volvió a aprobar sin diferencia.
+            filas.movimientosCaja.push({ id: nuevoId("MovimientoCaja"), dia: d, tipo: "EGRESO", concepto: `Faltante en la liquidación de la ruta de ${ruta.nombre} (${fechaRuta})`, valor: 20000, medio: "EFECTIVO", fecha: hora(d, 17, 45), usuarioId: admin.id, rutaId: ruta.id, anulado: true });
+            auditoria(hora(d, 17, 45), admin.id, "Ruta", ruta.id, "liquidar", { esperado, entregado: esperado - 20000, diferencia: -20000 });
+            auditoria(hora(d, 18, 5), admin.id, "Ruta", ruta.id, "reabrir", { diferencia: -20000 });
+            diferencia = 0;
+            observacion = "Se reabrió: los 20 mil del faltante aparecieron en la maleta";
+          }
           if (diferencia !== 0) {
-            const dd = String(d.getUTCDate()).padStart(2, "0");
-            const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
             movCaja({
               tipo: diferencia < 0 ? "EGRESO" : "INGRESO",
-              concepto: `${diferencia < 0 ? "Faltante" : "Sobrante"} en la liquidación de la ruta de ${repartidor.nombre} (${dd}/${mm}/${d.getUTCFullYear()})`,
+              concepto: `${diferencia < 0 ? "Faltante" : "Sobrante"} en la liquidación de la ruta de ${ruta.nombre} (${fechaRuta})`,
               valor: Math.abs(diferencia),
               medio: "EFECTIVO",
-              fecha: hora(d, 17, 30),
-              usuarioId: ventas.id,
+              fecha: hora(d, 17, 45),
+              usuarioId: admin.id,
               rutaId: ruta.id,
             });
           }
@@ -781,50 +963,77 @@ async function main() {
             efectivoEsperado: esperado,
             efectivoEntregado: esperado + diferencia,
             diferencia,
-            observacion: diferencia === 0 ? null : diferencia < 0 ? "Dio mal un cambio" : "Un cliente no recibió las vueltas",
-            liquidadaEn: hora(d, 17, 30),
-            liquidadaPorId: ventas.id,
+            observacion,
+            precerradaEn,
+            liquidadaEn: hora(d, 17, 45),
+            liquidadaPorId: admin.id,
           });
         }
 
         // ---------- Cierre de caja: lo que sobra de efectivo se consigna ----------
-        let esperado = baseCaja + caja.cobrosEf + caja.ingresosEf - caja.egresosEf;
-        if (esperado > 900000) {
-          const consignacion = Math.floor((esperado - 400000) / 100000) * 100000;
-          movCaja({ tipo: "EGRESO", concepto: "Consignación al banco", valor: consignacion, medio: "EFECTIVO", fecha: hora(d, 18), usuarioId: ventas.id });
-          movCaja({ tipo: "INGRESO", concepto: "Consignación al banco", valor: consignacion, medio: "TRANSFERENCIA", fecha: hora(d, 18), usuarioId: ventas.id });
-          esperado -= consignacion;
+        // La de ayer quedó sin cerrar: la cierra quien entre (y entonces sale el libro del mes).
+        if (!mismoDia(d, ayer)) {
+          let esperado = baseCaja + caja.cobrosEf + caja.ingresosEf - caja.egresosEf;
+          if (esperado > 900000) {
+            const consignacion = Math.floor((esperado - 400000) / 100000) * 100000;
+            movCaja({ tipo: "EGRESO", concepto: "Consignación al banco", valor: consignacion, medio: "EFECTIVO", fecha: hora(d, 18), usuarioId: ventas.id });
+            movCaja({ tipo: "INGRESO", concepto: "Consignación al banco", valor: consignacion, medio: "TRANSFERENCIA", fecha: hora(d, 18), usuarioId: ventas.id });
+            esperado -= consignacion;
+          }
+          const diferencia = prob(0.07) ? elegir([-1, 1]) * entre(1, 10) * 500 : 0;
+          const contado = Math.max(0, esperado + diferencia);
+          const cajaDia = filas.cajas[filas.cajas.length - 1];
+          Object.assign(cajaDia, {
+            estado: "CERRADA",
+            esperado,
+            contado,
+            diferencia: contado - esperado,
+            observacion: contado === esperado ? null : contado < esperado ? "Faltó al contar, se revisará mañana" : "Sobró efectivo, posible cambio mal dado",
+            cerradaEn: hora(d, 18, 30),
+            cerradaPorId: elegir([ventas.id, ventas.id, ventas.id, diana.id, admin.id]),
+          });
+          baseCaja = contado;
         }
-        const diferencia = prob(0.07) ? elegir([-1, 1]) * entre(1, 10) * 500 : 0;
-        const contado = Math.max(0, esperado + diferencia);
-        const cajaDia = filas.cajas[filas.cajas.length - 1];
-        Object.assign(cajaDia, {
-          estado: "CERRADA",
-          esperado,
-          contado,
-          diferencia: contado - esperado,
-          observacion: contado === esperado ? null : contado < esperado ? "Faltó al contar, se revisará mañana" : "Sobró efectivo, posible cambio mal dado",
-          cerradaEn: hora(d, 18, 30),
-          cerradaPorId: ventas.id,
-        });
-        baseCaja = contado;
       } else {
-        // Hoy: rutas abiertas con sus pedidos por entregar.
-        for (const ruta of rutas) filas.rutas.push({ id: ruta.id, fecha: d, repartidorId: ruta.repartidorId, creadaEn: ruta.creadaEn });
+        // Hoy: la ruta de Carlos sigue abierta; la de Diana espera la aprobación de su precierre.
+        const [abierta, precerrada] = rutas;
+        filas.rutas.push({ id: abierta.id, fecha: d, repartidorId: abierta.repartidorId, creadaEn: abierta.creadaEn });
+        const esperado = efectivoRuta(precerrada.id);
+        const entregado = Math.max(0, esperado - 5000);
+        filas.rutas.push({
+          id: precerrada.id,
+          fecha: d,
+          repartidorId: precerrada.repartidorId,
+          creadaEn: precerrada.creadaEn,
+          estado: "PRECERRADA",
+          efectivoEsperado: esperado,
+          efectivoEntregado: entregado,
+          diferencia: entregado - esperado,
+          observacion: entregado === esperado ? null : "Di mal unas vueltas de 5 mil",
+          precerradaEn: hora(d, 9, 50),
+        });
       }
     }
   }
 
-  // Pedidos ya tomados para mañana, todavía sin ruta.
-  const manana = sumar(hoy, 1);
-  if (!domingo(manana)) {
-    for (const c of lista.filter((c) => c.activo && c.tamano !== "FINCA").slice(0, 200)) {
-      if (!prob(0.12)) continue;
-      const pedidoId = nuevoId("Pedido");
-      filas.pedidos.push({ id: pedidoId, clienteId: c.id, fechaEntrega: manana, estado: "PENDIENTE", creadoEn: hora(hoy, 8, entre(0, 59)), creadoPorId: ventas.id });
+  // Pedidos ya tomados para el próximo día de reparto (uno ya se canceló).
+  const manana = domingo(sumar(hoy, 1)) ? sumar(hoy, 2) : sumar(hoy, 1);
+  let cancelados = 0;
+  for (const c of lista.filter((c) => c.activo && c.tamano !== "FINCA").slice(0, 200)) {
+    if (!prob(0.12)) continue;
+    const pedidoId = nuevoId("Pedido");
+    const cancelado = cancelados++ === 0;
+    filas.pedidos.push({
+      id: pedidoId,
+      clienteId: c.id,
+      fechaEntrega: manana,
+      estado: cancelado ? "CANCELADO" : "PENDIENTE",
+      creadoEn: hora(hoy, 8, entre(0, 59)),
+      creadoPorId: ventas.id,
+      nota: cancelado ? "Llamó a cancelar: ya le llegó huevo de otro lado" : null,
+    });
       for (const [codigo, , min, max] of CANASTA[c.tamano].slice(0, 2))
-        filas.detallesPedido.push({ id: nuevoId("DetallePedido"), pedidoId, productoId: prod(codigo).id, cantidad: entre(min, max), precioUnitario: c.precios.get(codigo) ?? precioGeneral(codigo, manana) });
-    }
+      filas.detallesPedido.push({ id: nuevoId("DetallePedido"), pedidoId, productoId: prod(codigo).id, cantidad: entre(min, max), precioUnitario: c.precios.get(codigo) ?? precioGeneral(codigo, manana) });
   }
 
   // ---------- Guardar todo ----------
@@ -832,6 +1041,8 @@ async function main() {
     async (tx) => {
       await tx.usuario.createMany({ data: usuarios });
       await tx.producto.update({ where: { id: prod("GALLINAZA").id }, data: { activo: true, unidad: "bulto", precioGeneral: PRECIO_GALLINAZA } });
+      // El administrador subió el mínimo de Jumbo por encima de lo que hay: sale la alerta de existencias bajas.
+      MINIMOS.JUMBO = Math.max(MINIMOS.JUMBO, Math.floor((stock.get(prod("JUMBO").id) ?? 0) / HUEVOS) + 5);
       for (const [codigo, minimo] of Object.entries(MINIMOS)) await tx.producto.update({ where: { id: prod(codigo).id }, data: { minimo } });
       await enLotes(filas.clientes, (data) => tx.cliente.createMany({ data }));
       await enLotes(filas.preciosCliente, (data) => tx.precioCliente.createMany({ data }));
@@ -855,6 +1066,7 @@ async function main() {
       await enLotes(filas.registros, (data) => tx.registroClasificacion.createMany({ data }));
       await enLotes(filas.detallesClasif, (data) => tx.detalleClasificacion.createMany({ data }));
       await enLotes(filas.movimientos, (data) => tx.movimientoInventario.createMany({ data }));
+      await enLotes(filas.auditoria, (data) => tx.auditoria.createMany({ data }));
       for (const [id, existencias] of stock) await tx.producto.update({ where: { id }, data: { existencias } });
       // El lote viejo ya se vendió completo: queda cerrado.
       if (loteViejo.vivas <= 0) await tx.lote.update({ where: { id: loteViejo.id }, data: { activo: false, estado: "DESCARTE" } });
@@ -869,8 +1081,12 @@ async function main() {
 
   const cartera = filas.ventas.reduce((s, v) => s + v.saldo, 0);
   console.log(`Datos de ejemplo cargados: ${dias} días desde ${inicio.toISOString().slice(0, 10)}.`);
-  console.log(`  ${filas.clientes.length} clientes, ${filas.pedidos.length} pedidos (${pedidosEntregados} entregados, ${pedidosParciales} parciales), ${filas.pagos.length} pagos.`);
-  console.log(`  Cartera pendiente: $${cartera.toLocaleString("es-CO")}. Cajas cerradas hasta ayer; hoy hay rutas abiertas.`);
+  console.log(
+    `  ${filas.clientes.length} clientes, ${filas.pedidos.length} pedidos (${pedidosEntregados} entregados, ${pedidosParciales} parciales, ${ventasGranja} ventas en la granja), ${filas.pagos.length} pagos.`,
+  );
+  console.log(`  Cartera pendiente: $${cartera.toLocaleString("es-CO")}.`);
+  console.log(`  Por revisar: la caja de ayer sin cerrar, una ruta de ayer devuelta sin liquidar, el precierre de Diana de hoy por aprobar,`);
+  console.log(`  pedidos de hoy sin tomar y atrasados, una compra vencida a La Pradera y huevo comprado por clasificar.`);
   console.log(`  Usuarios: laura (ventas), carlos y andres (repartidores), diana (ventas y repartidor), con la clave de DEMO_PASSWORD.`);
 }
 
