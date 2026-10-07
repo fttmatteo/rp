@@ -11,9 +11,11 @@ export async function bloquearRuta(tx: Tx, id: number): Promise<Ruta> {
   return ruta;
 }
 
-/** Bloquea la ruta y exige que siga abierta (sin liquidar). */
+/** Bloquea la ruta y exige que siga abierta (sin precierre ni liquidación). */
 export async function exigirRutaAbierta(tx: Tx, id: number): Promise<Ruta> {
   const ruta = await bloquearRuta(tx, id);
+  if (ruta.estado === "PRECERRADA")
+    throw new ErrorUsuario("Esta ruta ya tiene precierre. El administrador debe devolverla para registrar más entregas o cobros.");
   if (ruta.estado !== "ABIERTA")
     throw new ErrorUsuario("Esta ruta ya se liquidó. El administrador debe reabrirla para registrar más entregas o cobros.");
   return ruta;

@@ -13,7 +13,7 @@ import { enlaceLlamar, enlaceMaps, enlaceWhatsApp } from "@/modules/contacto";
 import { mensajeEnCamino } from "@/modules/mensajes";
 import { totalPedido } from "@/modules/precios";
 import { entregarPedido, marcarNoEntregado } from "../pedidos/acciones";
-import { abonoEnRuta } from "../rutas/acciones";
+import { abonoEnRuta, precerrarRuta, soltarPedido, tomarPedidos } from "../rutas/acciones";
 
 type Datos = NonNullable<Awaited<ReturnType<typeof datosRuta>>>;
 type FilaRuta = Datos["filas"][number];
@@ -149,6 +149,12 @@ function Parada({
       </details>
 
       {deuda && deuda.saldo > 0 && <Abono rutaId={rutaId} clienteId={c.id} saldo={deuda.saldo} />}
+
+      <Formulario accion={soltarPedido.bind(null, p.id)} confirmar={`¿Soltar el pedido de ${c.nombre}? Queda libre para otro repartidor.`}>
+        <button type="submit" className="text-sm text-stone-600 underline">
+          Soltar este pedido (no lo voy a llevar)
+        </button>
+      </Formulario>
     </li>
   );
 }
@@ -177,19 +183,108 @@ function Abono({ rutaId, clienteId, saldo }: { rutaId: number; clienteId: number
   );
 }
 
+type Disponible = Awaited<ReturnType<typeof pedidosSinTomar>>[number];
+
+/** Pedidos pendientes del día que ningún repartidor ha tomado. */
+function pedidosSinTomar(dia: Date) {
+  return db.pedido.findMany({
+    where: { fechaEntrega: dia, estado: "PENDIENTE", rutaId: null },
+    orderBy: [{ cliente: { zona: "asc" } }, { cliente: { nombre: "asc" } }],
+    include: { cliente: true, detalles: { include: { producto: true }, orderBy: { id: "asc" } } },
+  });
+}
+
+function TomarPedidos({ pedidos }: { pedidos: Disponible[] }) {
+  return (
+    <section className="mt-6">
+      <h2 className="mb-2 font-semibold">Pedidos sin tomar ({pedidos.length})</h2>
+      {/* El formulario queda montado aunque ya no haya pedidos, para que se vea la confirmación. */}
+      <Formulario accion={tomarPedidos} className="space-y-3">
+        {pedidos.length === 0 ? (
+          <p className="text-sm text-stone-500">No quedan pedidos de hoy sin tomar.</p>
+        ) : (
+          <>
+            <div className="mb-3">
+              <Buscador objetivo="sin-tomar" placeholder="Buscar cliente, barrio o dirección" />
+            </div>
+            <ul id="sin-tomar" className="divide-y divide-stone-100 rounded border border-stone-200 bg-white">
+              {pedidos.map((p) => (
+                <li
+                  key={p.id}
+                  data-buscar={normalizar([p.cliente.nombre, p.cliente.zona, p.cliente.direccion].filter(Boolean).join(" "))}
+                >
+                  <label className="flex items-start gap-3 px-3 py-3">
+                    <input type="checkbox" name="pedido" value={p.id} className="mt-1 size-5" />
+                    <span className="text-sm">
+                      <strong>{p.cliente.nombre}</strong>
+                      <span className="block text-stone-600">
+                        {[p.cliente.direccion, p.cliente.zona].filter(Boolean).join(" · ") || "Sin dirección"}
+                      </span>
+                      <span className="block">
+                        {p.detalles.map((d) => `${d.cantidad} ${nombreProducto(d.producto)}`).join(", ")} ·{" "}
+                        {formatoPesos(totalPedido(p.detalles))}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <Boton type="submit" className="w-full">
+              Tomar los pedidos marcados
+            </Boton>
+          </>
+        )}
+      </Formulario>
+    </section>
+  );
+}
+
 export default async function MiRutaPage({ searchParams }: { searchParams: Promise<{ fecha?: string }> }) {
   const sesion = await requerir("ruta.propia");
   const fecha = leerFecha((await searchParams).fecha);
   const hoy = diaUTC(hoyISO());
-  const ruta = await db.ruta.findUnique({ where: { fecha_repartidorId: { fecha: diaUTC(fecha), repartidorId: sesion.usuario.id } } });
+  const dia = diaUTC(fecha);
+  const ruta = await db.ruta.findUnique({ where: { fecha_repartidorId: { fecha: dia, repartidorId: sesion.usuario.id } } });
   const datos = ruta ? await datosRuta(ruta.id) : null;
+  // Los pedidos se toman el mismo día de la entrega, mientras la ruta siga abierta.
+  const puedeTomar = dia.getTime() === hoy.getTime() && (!ruta || ruta.estado === "ABIERTA");
+  const disponibles = puedeTomar ? await pedidosSinTomar(dia) : [];
 
   return (
     <>
-      <Titulo>Mi ruta del {formatoDia(diaUTC(fecha))}</Titulo>
+      <Titulo>Mi ruta del {formatoDia(dia)}</Titulo>
       <SelectorDia ruta="/mi-ruta" fecha={fecha} />
-      {!datos ? <Vacio>No tienes ruta asignada para ese día.</Vacio> : <RutaRepartidor datos={datos} hoy={hoy} />}
+      {datos ? (
+        <RutaRepartidor datos={datos} hoy={hoy} />
+      ) : (
+        !puedeTomar && <Vacio>No tuviste ruta ese día.</Vacio>
+      )}
+      {puedeTomar && <TomarPedidos pedidos={disponibles} />}
     </>
+  );
+}
+
+function Precierre({ rutaId, esperado }: { rutaId: number; esperado: number }) {
+  return (
+    <Formulario
+      accion={precerrarRuta.bind(null, rutaId)}
+      confirmar="¿Enviar el precierre? Después ya no puedes registrar entregas ni cobros en esta ruta."
+      className="space-y-3 rounded border border-stone-200 bg-white p-4"
+    >
+      <p className="font-semibold">Precierre de la ruta</p>
+      <p className="text-sm text-stone-600">
+        Terminaste las entregas. Cuenta el efectivo que vas a entregar; el administrador lo revisa y aprueba el cierre.
+      </p>
+      <Campo etiqueta="Efectivo que entregas" ayuda={`Según tus cobros deberías entregar ${formatoPesos(esperado)}.`}>
+        <input name="entregado" inputMode="numeric" defaultValue={esperado} required />
+      </Campo>
+      <Campo etiqueta="Observación" ayuda="Obligatoria si no cuadra.">
+        <textarea name="observacion" rows={2} />
+      </Campo>
+      <Boton type="submit" className="w-full">
+        Enviar precierre
+      </Boton>
+    </Formulario>
   );
 }
 
@@ -216,9 +311,16 @@ async function RutaRepartidor({ datos, hoy }: { datos: Datos; hoy: Date }) {
           efectivo cobrado
         </div>
       </div>
-      {!abierta && (
+      {ruta.estado === "PRECERRADA" && (
         <div className="mb-4">
-          <Alerta tipo="ok">Esta ruta ya se liquidó.</Alerta>
+          <Alerta tipo="aviso">
+            Enviaste el precierre: entregas {formatoPesos(ruta.efectivoEntregado ?? 0)}. Falta la aprobación del administrador.
+          </Alerta>
+        </div>
+      )}
+      {ruta.estado === "LIQUIDADA" && (
+        <div className="mb-4">
+          <Alerta tipo="ok">El administrador aprobó el cierre. Esta ruta ya se liquidó.</Alerta>
         </div>
       )}
 
@@ -234,9 +336,7 @@ async function RutaRepartidor({ datos, hoy }: { datos: Datos; hoy: Date }) {
           </ul>
         </>
       )}
-      {abierta && pendientes.length === 0 && filas.length > 0 && (
-        <Alerta tipo="ok">Terminaste las entregas. Entrega el efectivo para liquidar la ruta.</Alerta>
-      )}
+      {abierta && pendientes.length === 0 && filas.length > 0 && <Precierre rutaId={ruta.id} esperado={liquidacion.efectivoEsperado} />}
 
       {hechas.length > 0 && (
         <>
