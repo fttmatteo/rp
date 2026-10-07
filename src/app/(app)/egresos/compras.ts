@@ -103,7 +103,6 @@ export async function registrarCompra(_: EstadoForm, form: FormData): Promise<Es
   } catch (e) {
     return { error: mensajeError(e) };
   }
-  revalidatePath("/compras");
   revalidatePath("/egresos");
   return { ok: credito ? "Compra registrada como cuenta por pagar." : "Compra registrada y descontada de la caja." };
 }
@@ -159,7 +158,6 @@ export async function anularCompra(id: number, _: EstadoForm, _form: FormData): 
   } catch (e) {
     return { error: mensajeError(e) };
   }
-  revalidatePath("/compras");
   revalidatePath("/egresos");
   return { ok: "Compra anulada." };
 }
