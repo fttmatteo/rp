@@ -2,13 +2,14 @@ import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { leerPagina } from "@/components/paginacion";
 import { ListaDinero, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
-import { Alerta, Boton, BotonLink, Campo, Subnav, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, Campo, Subnav, Tarjeta, Titulo } from "@/components/ui";
 import { obtenerCaja } from "@/lib/caja-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { saldosProveedores } from "@/lib/proveedores-db";
 import { requerir } from "@/lib/sesion";
+import { PestanasDinero } from "@/components/secciones";
 import { anularMovimientoCaja } from "../caja/acciones";
 import { FormularioMovimiento } from "../caja/formulario-movimiento";
 import { registrarPagoProveedor } from "./acciones";
@@ -77,9 +78,10 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <Titulo accion={<BotonLink href={`/caja?dia=${diaISO}`} variante="secundario">Caja y cierre</BotonLink>}>
+      <Titulo>
         Egresos del {formatoDia(dia)}
       </Titulo>
+      <PestanasDinero actual="/egresos" operacion={sesion.operacion} dia={diaISO} />
       <p className="mb-4 text-sm text-stone-600">
         Todo el dinero que sale se registra aquí: compras de huevo, pagos a proveedores y gastos. Al final está el historial de todas las
         compras, también las de crédito.

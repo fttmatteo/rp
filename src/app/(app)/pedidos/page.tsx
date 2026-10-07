@@ -7,7 +7,7 @@ import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
 import { diaUTC, formatoDia, formatoPesos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
-import { PestanasIngresos } from "@/components/secciones";
+import { PestanasDinero } from "@/components/secciones";
 import { totalPedido } from "@/modules/precios";
 
 const ESTADOS = ESTADO_PEDIDO;
@@ -53,7 +53,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
       <Titulo accion={puede(sesion.operacion, "pedidos.crear") && <BotonLink href="/pedidos/nuevo">Nuevo pedido</BotonLink>}>
         Pedidos
       </Titulo>
-      <PestanasIngresos actual="/pedidos" operacion={sesion.operacion} />
+      <PestanasDinero actual="/pedidos" operacion={sesion.operacion} />
       <form className="mb-4 flex flex-wrap items-end gap-2">
         <label>
           Estado

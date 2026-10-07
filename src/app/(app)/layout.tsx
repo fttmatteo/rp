@@ -9,10 +9,8 @@ const MENU: { href: string; texto: string; permiso?: Permiso }[] = [
   { href: "/rutas", texto: "Rutas", permiso: "rutas" },
   { href: "/clientes", texto: "Clientes", permiso: "clientes.ver" },
   { href: "/cartera", texto: "Cartera", permiso: "cartera.ver" },
-  // Ingresos incluye Pedidos y Rutas incluye el resumen del reparto (pestañas dentro de la página).
-  { href: "/ingresos", texto: "Ingresos", permiso: "caja" },
-  { href: "/egresos", texto: "Egresos", permiso: "caja" },
-  { href: "/caja", texto: "Caja", permiso: "caja" },
+  // Dinero reúne Ingresos, Pedidos, Egresos y Caja; Rutas incluye el resumen del reparto (pestañas dentro de la página).
+  { href: "/ingresos", texto: "Dinero", permiso: "caja" },
   // Inventario reúne existencias, clasificación y aves (pestañas dentro de la página).
   { href: "/inventario", texto: "Inventario", permiso: "inventario.ver" },
   { href: "/proveedores", texto: "Proveedores", permiso: "compras" },
