@@ -55,13 +55,11 @@ function Parada({
   rutaId,
   deuda,
   hoy,
-  siguiente,
 }: {
   fila: FilaRuta;
   rutaId: number;
   deuda: DeudaCliente | undefined;
   hoy: Date;
-  siguiente: boolean;
 }) {
   const p = fila.pedido;
   const c = p.cliente;
@@ -72,10 +70,9 @@ function Parada({
   return (
     <li
       data-buscar={normalizar([c.nombre, c.zona, c.direccion, c.telefono].filter(Boolean).join(" "))}
-      className={`space-y-3 rounded border bg-white p-4 ${siguiente ? "border-amber-500 border-2" : "border-stone-200"}`}
+      className="space-y-3 rounded border border-stone-200 bg-white p-4"
     >
       <div>
-        {siguiente && <p className="text-xs font-semibold uppercase text-amber-700">Siguiente parada</p>}
         <p className="text-lg font-semibold">
           {p.ordenEnRuta}. {c.nombre}
         </p>
@@ -231,8 +228,8 @@ async function RutaRepartidor({ datos, hoy }: { datos: Datos; hoy: Date }) {
             <Buscador objetivo="paradas" placeholder="Buscar cliente, barrio o dirección" />
           </div>
           <ul id="paradas" className="space-y-3">
-            {pendientes.map((f, i) => (
-              <Parada key={f.pedido.id} fila={f} rutaId={ruta.id} deuda={deudas.get(f.pedido.clienteId)} hoy={hoy} siguiente={i === 0} />
+            {pendientes.map((f) => (
+              <Parada key={f.pedido.id} fila={f} rutaId={ruta.id} deuda={deudas.get(f.pedido.clienteId)} hoy={hoy} />
             ))}
           </ul>
         </>
