@@ -1,7 +1,7 @@
 import Link from "next/link";
 import paquete from "../../package.json";
 
-export const NOMBRE_SOFTWARE = "RP Huevos Campesinos";
+export const NOMBRE_SOFTWARE = "RP Software";
 export const VERSION = paquete.version;
 export const AUTOR = {
   nombre: "fttmatteo",
