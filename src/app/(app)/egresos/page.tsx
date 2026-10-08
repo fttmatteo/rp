@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { leerPagina } from "@/components/paginacion";
 import { ElegirRegistro, ListaDinero, registroElegido, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
-import { Alerta, Boton, Campo, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, Campo, Tarjeta, Titulo, Vistas, vistaElegida } from "@/components/ui";
 import { obtenerCaja } from "@/lib/caja-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
@@ -16,14 +16,34 @@ import { registrarPagoProveedor } from "./acciones";
 import { FormularioCompra } from "./formulario-compra";
 import { HistorialCompras } from "./historial-compras";
 
-export default async function EgresosPage({ searchParams }: { searchParams: Promise<{ dia?: string; pagina?: string; compras?: string; registrar?: string }> }) {
+export default async function EgresosPage({ searchParams }: { searchParams: Promise<{ dia?: string; pagina?: string; compras?: string; registrar?: string; ver?: string }> }) {
   const sesion = await requerir("caja");
   const hoy = hoyISO();
-  const { dia: diaParam, pagina: paginaParam, compras: paginaCompras, registrar } = await searchParams;
+  const { dia: diaParam, pagina: paginaParam, compras: paginaCompras, registrar, ver: verParam } = await searchParams;
   const pagina = leerPagina(paginaParam);
   const diaISO = diaParam && /^\d{4}-\d{2}-\d{2}$/.test(diaParam) && diaParam <= hoy ? diaParam : hoy;
   const dia = diaUTC(diaISO);
   const esHoy = diaISO === hoy;
+  const verCompras = puede(sesion.operacion, "compras");
+  // El historial de compras va en su propia pestaña para no repetirse debajo de cada formulario.
+  const vistas = [{ clave: "dia", texto: "Egresos del día" }, verCompras && { clave: "historial", texto: "Historial de compras" }];
+  const ver = vistaElegida(verParam, vistas);
+  const pestanas = (
+    <>
+      <PestanasContabilidad actual="/egresos" operacion={sesion.operacion} dia={diaISO} />
+      <Vistas ruta="/egresos" actual={ver ?? ""} vistas={vistas} params={{ dia: diaISO }} />
+    </>
+  );
+
+  if (ver === "historial") {
+    return (
+      <>
+        <Titulo>Historial de compras</Titulo>
+        {pestanas}
+        <HistorialCompras operacion={sesion.operacion} pagina={leerPagina(paginaCompras)} diaISO={diaISO} />
+      </>
+    );
+  }
 
   const [caja, movimientos] = await Promise.all([
     obtenerCaja(dia, db, esHoy),
@@ -39,7 +59,6 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
   ]);
   const abierta = caja.estado === "ABIERTA";
   // Compras y pagos a proveedores siempre salen de la caja de hoy.
-  const verCompras = puede(sesion.operacion, "compras");
   const comprar = esHoy && abierta && verCompras;
   const [proveedores, tipos, saldos] = await Promise.all([
     comprar ? db.proveedor.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }) : [],
@@ -84,19 +103,8 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <Titulo accion={<SelectorDiaCaja ruta="/egresos" diaISO={diaISO} />}>Egresos del {formatoDia(dia)}</Titulo>
-      <PestanasContabilidad actual="/egresos" operacion={sesion.operacion} dia={diaISO} />
-      <p className="mb-4 text-sm text-stone-600">
-        Compras de huevo, pagos a proveedores y gastos.
-        {verCompras && (
-          <>
-            {" "}
-            <a href="#historial" className="underline">
-              Ver el historial de compras
-            </a>
-            .
-          </>
-        )}
-      </p>
+      {pestanas}
+      <p className="mb-4 text-sm text-stone-600">Compras de huevo, pagos a proveedores y gastos.</p>
       {!abierta && (
         <div className="mb-4">
           <Alerta tipo="aviso">La caja de este día está cerrada. Para registrar algo, el administrador debe reabrirla.</Alerta>
@@ -159,7 +167,6 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
 
         <ListaDinero id="lista" titulo="Salidas del día" filas={filas} ruta="/egresos" diaISO={diaISO} pagina={pagina} vacio="Sin egresos." />
       </div>
-      {verCompras && <HistorialCompras operacion={sesion.operacion} pagina={leerPagina(paginaCompras)} diaISO={diaISO} />}
     </>
   );
 }

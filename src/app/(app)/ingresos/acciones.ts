@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auditar } from "@/lib/auditoria";
 import { db } from "@/lib/db";
 import { registrarEntrega } from "@/lib/entregas";
-import { diaUTC, formatoConsecutivo, hoyISO } from "@/lib/formato";
+import { diaUTC, formatoConsecutivo, formatoPesos, hoyISO } from "@/lib/formato";
 import { entero, ErrorUsuario, mensajeError, textoOpcional, type EstadoForm } from "@/lib/form";
 import { abonar, leerMedio } from "@/lib/pagos";
 import { puede } from "@/lib/permisos";
@@ -16,18 +16,38 @@ function refrescar() {
   revalidatePath("/caja");
 }
 
+/** El cliente genérico de quien compra una vez y no está registrado. Se crea si no existe (por ejemplo, tras cargar datos de prueba). */
+async function consumidorFinal() {
+  const buscar = () => db.cliente.findFirst({ where: { consumidorFinal: true }, include: { precios: true } });
+  const existente = await buscar();
+  if (existente) return existente;
+  try {
+    return await db.cliente.create({ data: { nombre: "Consumidor final", diasCredito: 0, consumidorFinal: true }, include: { precios: true } });
+  } catch (e) {
+    // Otra venta lo creó al mismo tiempo (índice único).
+    const creado = await buscar();
+    if (creado) return creado;
+    throw e;
+  }
+}
+
 /**
- * Venta en la granja: crea el pedido ya entregado en un solo paso (recibo, inventario y cobro).
- * Valor pagado vacío = paga todo; lo que no pague queda como fiado.
+ * Venta en el punto: crea el pedido ya entregado en un solo paso (recibo, inventario y cobro).
+ * Valor pagado vacío = paga todo; lo que no pague queda como fiado. El consumidor final siempre paga todo.
  */
 export async function registrarVentaDirecta(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("pedidos.crear");
   if (!puede(sesion.operacion, "pedidos.entregar")) return { error: "No tienes permiso para entregar pedidos." };
   let consecutivo: number;
   try {
-    const clienteId = entero(form, "clienteId", "Cliente");
-    const cliente = clienteId ? await db.cliente.findUnique({ where: { id: clienteId }, include: { precios: true } }) : null;
-    if (!cliente || !cliente.activo) throw new ErrorUsuario("Elige el cliente.");
+    const final = form.get("clienteId") === "final";
+    const clienteId = final ? null : entero(form, "clienteId", "Cliente");
+    const cliente = final
+      ? await consumidorFinal()
+      : clienteId
+        ? await db.cliente.findUnique({ where: { id: clienteId }, include: { precios: true } })
+        : null;
+    if (!cliente || (!cliente.activo && !final)) throw new ErrorUsuario("Elige el cliente.");
 
     const productos = await db.producto.findMany({ where: { activo: true } });
     const especiales = new Map(cliente.precios.map((p) => [p.productoId, p.precio]));
@@ -41,6 +61,8 @@ export async function registrarVentaDirecta(_: EstadoForm, form: FormData): Prom
     if (detalles.length === 0) throw new ErrorUsuario("Escribe al menos una cantidad.");
     const total = totalPedido(detalles);
     const pagado = entero(form, "pagado", "Valor pagado") ?? total;
+    if (cliente.consumidorFinal && pagado !== total)
+      throw new ErrorUsuario(`El consumidor final paga todo (${formatoPesos(total)}). Si va a quedar debiendo o pagar de más, regístralo primero como cliente.`);
     const { medio, referencia } = leerMedio(form);
 
     consecutivo = await db.$transaction(async (tx) => {
@@ -48,7 +70,7 @@ export async function registrarVentaDirecta(_: EstadoForm, form: FormData): Prom
         data: {
           clienteId: cliente.id,
           fechaEntrega: diaUTC(hoyISO()),
-          nota: textoOpcional(form, "nota") ?? "Venta en la granja",
+          nota: textoOpcional(form, "nota") ?? "Venta en el punto",
           creadoPorId: sesion.usuario.id,
           detalles: { create: detalles },
         },

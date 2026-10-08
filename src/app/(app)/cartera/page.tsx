@@ -46,6 +46,7 @@ export default async function CarteraPage({ searchParams }: { searchParams: Prom
   const buscados = q
     ? await db.cliente.findMany({
         where: {
+          consumidorFinal: false,
           OR: [
             { nombre: { contains: q, mode: "insensitive" } },
             { telefono: { contains: q } },
