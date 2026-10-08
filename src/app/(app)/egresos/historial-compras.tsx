@@ -19,7 +19,7 @@ export async function HistorialCompras({ operacion, pagina, diaISO }: { operacio
     db.compra.count(),
   ]);
   return (
-    <Tarjeta id="historial" titulo={`Todas las compras (${total})`}>
+    <Tarjeta id="historial" titulo={`Historial de compras (${total})`}>
         {compras.length === 0 ? (
           <Vacio>Todavía no hay compras.</Vacio>
         ) : (
@@ -75,7 +75,7 @@ export async function HistorialCompras({ operacion, pagina, diaISO }: { operacio
             </tbody>
           </Tabla>
         )}
-      <Paginacion ruta="/egresos" params={{ dia: diaISO, ver: "historial" }} param="compras" pagina={pagina} total={total} porPagina={20} />
+      <Paginacion ruta="/egresos" params={{ dia: diaISO, registrar: "historial" }} param="compras" pagina={pagina} total={total} porPagina={20} />
     </Tarjeta>
   );
 }
