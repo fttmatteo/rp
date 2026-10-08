@@ -88,45 +88,63 @@ export function Etiqueta({ children, color = "gris" }: { children: ReactNode; co
   return <span className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${estilos}`}>{children}</span>;
 }
 
-export type EnlaceSeccion = { id: string; texto: string };
+export type Vista = { clave: string; texto: string };
 
 /**
- * Barra fija con enlaces a las secciones de una página larga, para no tener que bajar con el dedo
- * hasta la última. Solo en páginas donde una sección queda muy abajo (liquidación de ruta, lote, Mi ruta);
- * en las cortas sobra. Las secciones se marcan con id; los falsos se omiten.
+ * Pestañas dentro de una misma página larga (liquidación de ruta, lote, Mi ruta): muestran una parte
+ * a la vez en vez de apilarlo todo y obligar a bajar. La parte elegida va en ?ver=, junto con los filtros
+ * de la página. Se ven igual que las pestañas de sección.
  */
-export function Subnav({ enlaces }: { enlaces: (EnlaceSeccion | false | null | undefined)[] }) {
-  const lista = enlaces.filter((e): e is EnlaceSeccion => !!e);
-  if (lista.length < 2) return null;
+export function Vistas({
+  ruta,
+  actual,
+  vistas,
+  params = {},
+}: {
+  ruta: string;
+  actual: string;
+  vistas: (Vista | false | null | undefined)[];
+  params?: Record<string, string | undefined>;
+}) {
+  const enlace = (clave: string) => {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) if (v) q.set(k, v);
+    q.set("ver", clave);
+    return `${ruta}?${q}`;
+  };
   return (
-    <nav aria-label="Secciones de la página" className="sticky top-0 z-10 -mx-4 mb-4 overflow-x-auto border-b border-stone-200 bg-stone-50 px-4">
-      <ul className="flex gap-2 whitespace-nowrap py-2 text-sm">
-        {lista.map((e) => (
-          <li key={e.id}>
-            <a href={`#${e.id}`} className="block rounded border border-stone-300 bg-white px-3 py-1.5 hover:bg-stone-100">
-              {e.texto}
-            </a>
-          </li>
-        ))}
-        <li>
-          <a href="#" className="block px-2 py-1.5 text-stone-600 underline">
-            Arriba
-          </a>
-        </li>
-      </ul>
-    </nav>
+    <Pestanas
+      actual={actual}
+      comparar="clave"
+      pestanas={vistas.filter((v): v is Vista => !!v).map((v) => ({ href: enlace(v.clave), texto: v.texto, clave: v.clave }))}
+    />
   );
 }
 
+/** La vista pedida en ?ver= si existe; si no, la primera. */
+export function vistaElegida(valor: string | undefined, vistas: (Vista | false | null | undefined)[]): string | undefined {
+  const lista = vistas.filter((v): v is Vista => !!v);
+  return (lista.find((v) => v.clave === valor) ?? lista[0])?.clave;
+}
+
 /** Pestañas que agrupan páginas de una misma sección (por ejemplo, todo lo de inventario). */
-export function Pestanas({ actual, pestanas }: { actual: string; pestanas: { href: string; texto: string }[] }) {
+export function Pestanas({
+  actual,
+  pestanas,
+  comparar = "ruta",
+}: {
+  actual: string;
+  pestanas: { href: string; texto: string; clave?: string }[];
+  /** "ruta": la pestaña es otra página. "clave": la pestaña es una vista de la misma página (Vistas). */
+  comparar?: "ruta" | "clave";
+}) {
   if (pestanas.length < 2) return null;
   return (
     <nav aria-label="Pestañas" className="mb-4 overflow-x-auto border-b border-stone-200">
       <ul className="flex gap-1 whitespace-nowrap text-sm">
         {pestanas.map((p) => {
           // Se compara solo la ruta: los enlaces pueden llevar filtros (?fecha=...).
-          const activa = p.href.split("?")[0] === actual;
+          const activa = comparar === "clave" ? p.clave === actual : p.href.split("?")[0] === actual;
           return (
             <li key={p.href}>
               <Link

@@ -1,7 +1,8 @@
+import type { ReactNode } from "react";
 import { Buscador } from "@/components/buscador";
 import { Formulario } from "@/components/formulario";
 import { leerFecha, SelectorDia } from "@/components/selector-dia";
-import { Alerta, Boton, Campo, Etiqueta, Subnav, Titulo, Vacio } from "@/components/ui";
+import { Alerta, Boton, Campo, Etiqueta, Titulo, Vacio, Vistas, vistaElegida } from "@/components/ui";
 import { deudasDeClientes, type DeudaCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
 import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
@@ -194,10 +195,11 @@ function pedidosSinTomar(dia: Date) {
   });
 }
 
-function TomarPedidos({ pedidos }: { pedidos: Disponible[] }) {
+function TomarPedidos({ pedidos, titulo }: { pedidos: Disponible[]; titulo: boolean }) {
   return (
-    <section id="sin-tomar-seccion" className="mt-6">
-      <h2 className="mb-2 font-semibold">Pedidos sin tomar ({pedidos.length})</h2>
+    <section>
+      {/* Con ruta, el título ya está en la pestaña. */}
+      {titulo && <h2 className="mb-2 font-semibold">Pedidos sin tomar ({pedidos.length})</h2>}
       {/* El formulario queda montado aunque ya no haya pedidos, para que se vea la confirmación. */}
       <Formulario accion={tomarPedidos} className="space-y-3">
         {pedidos.length === 0 ? (
@@ -239,9 +241,10 @@ function TomarPedidos({ pedidos }: { pedidos: Disponible[] }) {
   );
 }
 
-export default async function MiRutaPage({ searchParams }: { searchParams: Promise<{ fecha?: string }> }) {
+export default async function MiRutaPage({ searchParams }: { searchParams: Promise<{ fecha?: string; ver?: string }> }) {
   const sesion = await requerir("ruta.propia");
-  const fecha = leerFecha((await searchParams).fecha);
+  const sp = await searchParams;
+  const fecha = leerFecha(sp.fecha);
   const hoy = diaUTC(hoyISO());
   const dia = diaUTC(fecha);
   const ruta = await db.ruta.findUnique({ where: { fecha_repartidorId: { fecha: dia, repartidorId: sesion.usuario.id } } });
@@ -252,25 +255,27 @@ export default async function MiRutaPage({ searchParams }: { searchParams: Promi
   const abierta = ruta?.estado === "ABIERTA";
   const paradas = datos?.filas.length ?? 0;
   const pendientes = datos?.filas.filter((f) => f.pedido.estado === "PENDIENTE").length ?? 0;
+  // Una parte a la vez: lo que falta entregar (o el precierre, cuando ya no falta nada), lo hecho y lo que se puede tomar.
+  const vistas = [
+    abierta && pendientes > 0 && { clave: "entregar", texto: `Por entregar (${pendientes})` },
+    abierta && pendientes === 0 && paradas > 0 && { clave: "entregar", texto: "Precierre" },
+    paradas - pendientes > 0 && { clave: "hechas", texto: `Hechas (${paradas - pendientes})` },
+    puedeTomar && { clave: "sin-tomar", texto: `Sin tomar (${disponibles.length})` },
+  ];
+  const ver = vistaElegida(sp.ver, vistas);
+  // Sin ruta solo queda «Sin tomar», así que no hay pestañas; con ruta van debajo del resumen.
+  const pestanas = <Vistas ruta="/mi-ruta" actual={ver ?? ""} vistas={vistas} params={{ fecha }} />;
 
   return (
     <>
       <Titulo>Mi ruta del {formatoDia(dia)}</Titulo>
       <SelectorDia ruta="/mi-ruta" fecha={fecha} />
-      <Subnav
-        enlaces={[
-          abierta && pendientes > 0 && { id: "por-entregar", texto: `Por entregar (${pendientes})` },
-          abierta && pendientes === 0 && paradas > 0 && { id: "precierre", texto: "Precierre" },
-          paradas - pendientes > 0 && { id: "hechas", texto: `Hechas (${paradas - pendientes})` },
-          puedeTomar && { id: "sin-tomar-seccion", texto: `Sin tomar (${disponibles.length})` },
-        ]}
-      />
       {datos ? (
-        <RutaRepartidor datos={datos} hoy={hoy} />
+        <RutaRepartidor datos={datos} hoy={hoy} ver={ver} pestanas={pestanas} />
       ) : (
         !puedeTomar && <Vacio>No tuviste ruta ese día.</Vacio>
       )}
-      {puedeTomar && <TomarPedidos pedidos={disponibles} />}
+      {ver === "sin-tomar" && <TomarPedidos pedidos={disponibles} titulo={!datos} />}
     </>
   );
 }
@@ -279,7 +284,6 @@ function Precierre({ rutaId, esperado }: { rutaId: number; esperado: number }) {
   return (
     <Formulario
       accion={precerrarRuta.bind(null, rutaId)}
-      id="precierre"
       confirmar="¿Enviar el precierre? Después ya no puedes registrar entregas ni cobros en esta ruta."
       className="space-y-3 rounded border border-stone-200 bg-white p-4"
     >
@@ -300,7 +304,7 @@ function Precierre({ rutaId, esperado }: { rutaId: number; esperado: number }) {
   );
 }
 
-async function RutaRepartidor({ datos, hoy }: { datos: Datos; hoy: Date }) {
+async function RutaRepartidor({ datos, hoy, ver, pestanas }: { datos: Datos; hoy: Date; ver?: string; pestanas: ReactNode }) {
   const { ruta, filas, cierre, liquidacion } = datos;
   const abierta = ruta.estado === "ABIERTA";
   const pendientes = filas.filter((f) => f.pedido.estado === "PENDIENTE");
@@ -335,9 +339,10 @@ async function RutaRepartidor({ datos, hoy }: { datos: Datos; hoy: Date }) {
           <Alerta tipo="ok">El administrador aprobó el cierre. Esta ruta ya se liquidó.</Alerta>
         </div>
       )}
+      {pestanas}
 
-      {abierta && pendientes.length > 0 && (
-        <div id="por-entregar">
+      {ver === "entregar" && pendientes.length > 0 && (
+        <div>
           <div className="mb-3">
             <Buscador objetivo="paradas" placeholder="Buscar cliente, barrio o dirección" />
           </div>
@@ -348,13 +353,10 @@ async function RutaRepartidor({ datos, hoy }: { datos: Datos; hoy: Date }) {
           </ul>
         </div>
       )}
-      {abierta && pendientes.length === 0 && filas.length > 0 && <Precierre rutaId={ruta.id} esperado={liquidacion.efectivoEsperado} />}
+      {ver === "entregar" && pendientes.length === 0 && <Precierre rutaId={ruta.id} esperado={liquidacion.efectivoEsperado} />}
 
-      {hechas.length > 0 && (
+      {ver === "hechas" && (
         <>
-          <h2 id="hechas" className="mb-2 mt-6 font-semibold">
-            Hechas ({hechas.length})
-          </h2>
           <ul className="divide-y divide-stone-100 rounded border border-stone-200 bg-white text-sm">
             {hechas.map(({ pedido: p, valores }) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">

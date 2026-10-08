@@ -35,10 +35,6 @@
   label {
     @apply block text-sm font-medium text-stone-700;
   }
-  /* Al saltar a una sección desde la barra de secciones, que esta no la tape. */
-  [id] {
-    scroll-margin-top: 3.5rem;
-  }
   dialog::backdrop {
     background: rgb(0 0 0 / 0.4);
   }
