@@ -9,6 +9,7 @@ import { entero, ErrorUsuario, mensajeError, texto, textoOpcional, type EstadoFo
 import { leerMedio } from "@/lib/pagos";
 import { requerir } from "@/lib/sesion";
 import { efectivoEsperado, validarCierre } from "@/modules/caja";
+import { conceptoGasto } from "@/modules/gastos";
 
 function leerDia(diaISO: string): Date {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(diaISO) || diaISO > hoyISO()) throw new ErrorUsuario("Día no válido.");
@@ -45,8 +46,10 @@ export async function registrarMovimientoCaja(diaISO: string, _: EstadoForm, for
     const dia = leerDia(diaISO);
     const tipo = texto(form, "tipo");
     if (tipo !== "INGRESO" && tipo !== "EGRESO") throw new ErrorUsuario("Elige si es ingreso o gasto.");
-    const concepto = texto(form, "concepto");
-    if (!concepto) throw new ErrorUsuario("Escribe el concepto.");
+    // Los gastos se eligen de una lista; el concepto se escribe solo con "Otro" o en otro ingreso.
+    const elegido = form.get("gasto");
+    const concepto = typeof elegido === "string" && tipo === "EGRESO" ? conceptoGasto(elegido, texto(form, "concepto")) : texto(form, "concepto");
+    if (!concepto) throw new ErrorUsuario(elegido === "" ? "Elige el gasto." : "Escribe el concepto.");
     const valor = entero(form, "valor", "Valor") ?? 0;
     if (valor <= 0) throw new ErrorUsuario("El valor debe ser mayor que cero.");
     const { medio } = leerMedio(form);

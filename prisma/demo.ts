@@ -715,14 +715,14 @@ async function main() {
           }
         }
         // ---------- Gastos del día ----------
-        for (const r of repartidoresDel(d)) gasto({ tipo: "EGRESO", concepto: `Gasolina moto ${r.nombre}`, valor: entre(15, 30) * 1000, medio: "EFECTIVO", fecha: hora(d, 6, 45), usuarioId: ventas.id });
+        for (const r of repartidoresDel(d)) gasto({ tipo: "EGRESO", concepto: "Gasolina", valor: entre(15, 30) * 1000, medio: "EFECTIVO", fecha: hora(d, 6, 45), usuarioId: ventas.id });
         if (d.getUTCDay() === 1 || d.getUTCDay() === 4)
-          movCaja({ tipo: "EGRESO", concepto: `Concentrado para gallinas (${entre(95, 110)} bultos)`, valor: entre(95, 110) * 104000, medio: "TRANSFERENCIA", fecha: hora(d, 9, 30), usuarioId: admin.id });
+          movCaja({ tipo: "EGRESO", concepto: "Cuido", valor: entre(95, 110) * 104000, medio: "TRANSFERENCIA", fecha: hora(d, 9, 30), usuarioId: admin.id });
         if (d.getUTCDate() === 15 || ultimoDelMes(d) || (domingo(sumar(d, 1)) && (sumar(d, 1).getUTCDate() === 15 || ultimoDelMes(sumar(d, 1)))))
-          movCaja({ tipo: "EGRESO", concepto: "Nómina de la quincena", valor: 4850000, medio: "TRANSFERENCIA", fecha: hora(d, 16), usuarioId: admin.id });
+          movCaja({ tipo: "EGRESO", concepto: "Nómina", valor: 4850000, medio: "TRANSFERENCIA", fecha: hora(d, 16), usuarioId: admin.id });
         if (d.getUTCDate() === 2) movCaja({ tipo: "EGRESO", concepto: "Arriendo de la bodega", valor: 1500000, medio: "TRANSFERENCIA", fecha: hora(d, 10), usuarioId: admin.id });
-        if (d.getUTCDate() === 6) movCaja({ tipo: "EGRESO", concepto: "Servicios públicos (energía y agua)", valor: entre(650, 900) * 1000, medio: "TRANSFERENCIA", fecha: hora(d, 10), usuarioId: admin.id });
-        if (prob(0.12)) gasto({ tipo: "EGRESO", concepto: elegir(["Cubetas de cartón (500 unidades)", "Mantenimiento moto", "Bombillos y cables para galpón", "Desinfectante para galpones"]), valor: entre(60, 220) * 1000, medio: "EFECTIVO", fecha: hora(d, 11), usuarioId: ventas.id });
+        if (d.getUTCDate() === 6) movCaja({ tipo: "EGRESO", concepto: "Servicios", valor: entre(650, 900) * 1000, medio: "TRANSFERENCIA", fecha: hora(d, 10), usuarioId: admin.id });
+        if (prob(0.12)) gasto({ tipo: "EGRESO", concepto: elegir(["Cubetas", "Arreglos general moto", "Materiales galpones", "Limpido", "Papel higiénico", "Guantes"]), valor: entre(60, 220) * 1000, medio: "EFECTIVO", fecha: hora(d, 11), usuarioId: ventas.id });
         if (prob(0.05)) movCaja({ tipo: "INGRESO", concepto: "Venta de costales vacíos", valor: entre(15, 40) * 1000, medio: "EFECTIVO", fecha: hora(d, 12), usuarioId: ventas.id });
       } else {
         // Hoy, temprano: huevo comprado que sigue sin clasificar, la gasolina y otro ingreso por transferencia.
@@ -730,7 +730,7 @@ async function main() {
         const cubetas = entre(30, 45);
         filas.compras.push({ id: compraId, proveedorId: elEden.id, fecha: hora(d, 7, 30), dia: d, usuarioId: ventas.id, clasificada: false, huevos: cubetas * HUEVOS, porClasificar: cubetas * HUEVOS, total: cubetas * 12500, saldo: 0, formaPago: "CONTADO", vence: null });
         movCaja({ tipo: "EGRESO", concepto: `Compra de huevo a ${elEden.nombre}`, valor: cubetas * 12500, medio: "TRANSFERENCIA", fecha: hora(d, 7, 30), usuarioId: ventas.id, compraId });
-        for (const r of [repartidores[0], diana]) movCaja({ tipo: "EGRESO", concepto: `Gasolina moto ${r.nombre}`, valor: entre(15, 30) * 1000, medio: "EFECTIVO", fecha: hora(d, 6, 45), usuarioId: ventas.id });
+        for (const r of [repartidores[0], diana]) movCaja({ tipo: "EGRESO", concepto: "Gasolina", valor: entre(15, 30) * 1000, medio: "EFECTIVO", fecha: hora(d, 6, 45), usuarioId: ventas.id });
         movCaja({ tipo: "INGRESO", concepto: "Arriendo del potrero a un vecino", valor: 350000, medio: "TRANSFERENCIA", fecha: hora(d, 8, 10), usuarioId: admin.id });
       }
 

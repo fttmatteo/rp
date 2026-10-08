@@ -44,7 +44,7 @@ export function ElegirRegistro({
   actual: string;
   opciones: { clave: string; texto: string }[];
 }) {
-  if (opciones.length < 2) return null;
+  if (opciones.length === 0) return null;
   return (
     <nav aria-label="Qué vas a registrar" className="flex flex-wrap gap-2 text-sm">
       {opciones.map((o) => (
