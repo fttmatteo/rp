@@ -89,10 +89,10 @@ export default async function PedidoPage({
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         <Tarjeta>
           <p className="mb-1">
-            <Link href={`/clientes/${pedido.clienteId}`} className="text-lg font-semibold underline">
+            <Link href={`/cartera/${pedido.clienteId}`} className="text-lg font-semibold underline">
               {pedido.cliente.nombre}
             </Link>
           </p>

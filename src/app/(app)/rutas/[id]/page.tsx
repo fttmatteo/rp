@@ -86,6 +86,7 @@ export default async function RutaPage({ params }: { params: Promise<{ id: strin
       <Subnav
         enlaces={[
           { id: "liquidacion", texto: ruta.estado === "PRECERRADA" ? "Liquidación · precierre por aprobar" : "Liquidación" },
+          { id: "paradas", texto: `Paradas (${filas.length})` },
           { id: "cobros", texto: `Cobros (${pagos.length})` },
         ]}
       />
@@ -93,95 +94,11 @@ export default async function RutaPage({ params }: { params: Promise<{ id: strin
         {filas.length} paradas · {cierre.entregados} entregadas · {pendientes} por entregar · {cierre.noEntregados} no entregadas
       </p>
 
-      {abierta && filas.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2">
-          <Formulario accion={ordenarRutaPorZona.bind(null, ruta.id)} className="inline">
-            <Boton type="submit" variante="secundario">
-              Ordenar por zona
-            </Boton>
-          </Formulario>
-          <Formulario accion={guardarOrden.bind(null, ruta.id)} id="orden" className="inline">
-            <Boton type="submit" variante="secundario">
-              Guardar orden escrito
-            </Boton>
-          </Formulario>
-        </div>
-      )}
-
-      {filas.length === 0 ? (
-        <Alerta tipo="aviso">La ruta no tiene paradas. El repartidor toma sus pedidos desde Mi ruta.</Alerta>
-      ) : (
-        <Tabla>
-          <thead>
-            <tr>
-              <th>Orden</th>
-              <th>Cliente</th>
-              <th>Productos</th>
-              <th className="text-right">Valor</th>
-              <th className="text-right">Pagado</th>
-              <th className="text-right">Pendiente</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map(({ pedido: p, reparto, valores }) => (
-              <tr key={p.id}>
-                <td className="w-20">
-                  {abierta ? (
-                    <input
-                      form="orden"
-                      name={`orden_${p.id}`}
-                      inputMode="numeric"
-                      defaultValue={p.ordenEnRuta ?? ""}
-                      aria-label={`Orden de ${p.cliente.nombre}`}
-                    />
-                  ) : (
-                    p.ordenEnRuta
-                  )}
-                </td>
-                <td>
-                  <Link href={`/pedidos/${p.id}`} className="underline">
-                    {p.cliente.nombre}
-                  </Link>
-                  <span className="block text-xs text-stone-500">{[p.cliente.zona, p.cliente.direccion].filter(Boolean).join(" · ")}</span>
-                </td>
-                <td className="text-stone-600">
-                  {p.detalles.map((d) => `${d.cantidadEntregada ?? d.cantidad} ${d.producto.nombre}`).join(", ")}
-                </td>
-                <td className="text-right">{formatoPesos(valores.valor)}</td>
-                <td className="text-right">{reparto.entregado ? formatoPesos(valores.pagado) : "–"}</td>
-                <td className={`text-right ${valores.pendiente > 0 ? "text-red-700" : ""}`}>
-                  {reparto.entregado ? formatoPesos(valores.pendiente) : "–"}
-                </td>
-                <td>
-                  <Etiqueta color={ESTADO_PEDIDO[p.estado].color}>
-                    {ESTADO_PEDIDO[p.estado].texto}
-                    {p.estado === "ENTREGADO" && esParcial(p.detalles) && " parcial"}
-                  </Etiqueta>
-                  {p.motivoNoEntrega && <span className="block text-xs text-stone-500">{p.motivoNoEntrega}</span>}
-                  {abierta && p.estado === "PENDIENTE" && (
-                    <Formulario accion={quitarDeRuta.bind(null, p.id)} className="inline">
-                      <button type="submit" className="ml-1 text-xs text-red-700 underline">
-                        Quitar
-                      </button>
-                    </Formulario>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Tabla>
-      )}
-      {abierta && filas.length > 0 && (
-        <p className="mt-2 text-xs text-stone-500">
-          Para cambiar el orden escribe el número de parada (por ejemplo, 1 para que vaya de primera) y pulsa «Guardar orden escrito».
-        </p>
-      )}
-
-      <h2 id="liquidacion" className="mb-3 mt-6 text-lg font-semibold">
+      {/* La liquidación va primero: es lo que se revisa y aprueba. Las paradas, que pueden ser muchas, van debajo. */}
+      <h2 id="liquidacion" className="mb-3 text-lg font-semibold">
         Liquidación de la ruta
       </h2>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="mb-6 grid items-start gap-4 lg:grid-cols-2">
         <Tarjeta titulo="Producto">
           <Tabla>
             <thead>
@@ -303,26 +220,114 @@ export default async function RutaPage({ params }: { params: Promise<{ id: strin
           </Tarjeta>
         )}
 
-        <Tarjeta id="cobros" titulo={`Cobros en la ruta (${pagos.length})`}>
-          {pagos.length === 0 ? (
-            <p className="text-sm text-stone-500">Sin cobros.</p>
-          ) : (
-            <ul className="divide-y divide-stone-100 text-sm">
-              {pagos.map((p) => (
-                <li key={p.id} className="flex justify-between gap-2 py-2">
-                  <span>
-                    <a href={`/recibos/pago/${p.id}`} target="_blank" className="underline">
-                      {formatoConsecutivo("AB", p.consecutivo)}
-                    </a>{" "}
-                    {p.cliente.nombre} · {p.medio === "EFECTIVO" ? "efectivo" : "transferencia"}
-                  </span>
-                  <span>{formatoPesos(p.valor)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Tarjeta>
       </div>
+      <h2 id="paradas" className="mb-3 text-lg font-semibold">
+        Paradas ({filas.length})
+      </h2>
+      {abierta && filas.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Formulario accion={ordenarRutaPorZona.bind(null, ruta.id)} className="inline">
+            <Boton type="submit" variante="secundario">
+              Ordenar por zona
+            </Boton>
+          </Formulario>
+          <Formulario accion={guardarOrden.bind(null, ruta.id)} id="orden" className="inline">
+            <Boton type="submit" variante="secundario">
+              Guardar orden escrito
+            </Boton>
+          </Formulario>
+        </div>
+      )}
+
+      {filas.length === 0 ? (
+        <Alerta tipo="aviso">La ruta no tiene paradas. El repartidor toma sus pedidos desde Mi ruta.</Alerta>
+      ) : (
+        <Tabla>
+          <thead>
+            <tr>
+              <th>Orden</th>
+              <th>Cliente</th>
+              <th>Productos</th>
+              <th className="text-right">Valor</th>
+              <th className="text-right">Pagado</th>
+              <th className="text-right">Pendiente</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map(({ pedido: p, reparto, valores }) => (
+              <tr key={p.id}>
+                <td className="w-20">
+                  {abierta ? (
+                    <input
+                      form="orden"
+                      name={`orden_${p.id}`}
+                      inputMode="numeric"
+                      defaultValue={p.ordenEnRuta ?? ""}
+                      aria-label={`Orden de ${p.cliente.nombre}`}
+                    />
+                  ) : (
+                    p.ordenEnRuta
+                  )}
+                </td>
+                <td>
+                  <Link href={`/pedidos/${p.id}`} className="underline">
+                    {p.cliente.nombre}
+                  </Link>
+                  <span className="block text-xs text-stone-500">{[p.cliente.zona, p.cliente.direccion].filter(Boolean).join(" · ")}</span>
+                </td>
+                <td className="text-stone-600">
+                  {p.detalles.map((d) => `${d.cantidadEntregada ?? d.cantidad} ${d.producto.nombre}`).join(", ")}
+                </td>
+                <td className="text-right">{formatoPesos(valores.valor)}</td>
+                <td className="text-right">{reparto.entregado ? formatoPesos(valores.pagado) : "–"}</td>
+                <td className={`text-right ${valores.pendiente > 0 ? "text-red-700" : ""}`}>
+                  {reparto.entregado ? formatoPesos(valores.pendiente) : "–"}
+                </td>
+                <td>
+                  <Etiqueta color={ESTADO_PEDIDO[p.estado].color}>
+                    {ESTADO_PEDIDO[p.estado].texto}
+                    {p.estado === "ENTREGADO" && esParcial(p.detalles) && " parcial"}
+                  </Etiqueta>
+                  {p.motivoNoEntrega && <span className="block text-xs text-stone-500">{p.motivoNoEntrega}</span>}
+                  {abierta && p.estado === "PENDIENTE" && (
+                    <Formulario accion={quitarDeRuta.bind(null, p.id)} className="inline">
+                      <button type="submit" className="ml-1 text-xs text-red-700 underline">
+                        Quitar
+                      </button>
+                    </Formulario>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Tabla>
+      )}
+      {abierta && filas.length > 0 && (
+        <p className="mt-2 text-xs text-stone-500">
+          Para cambiar el orden escribe el número de parada (por ejemplo, 1 para que vaya de primera) y pulsa «Guardar orden escrito».
+        </p>
+      )}
+
+      <Tarjeta id="cobros" titulo={`Cobros en la ruta (${pagos.length})`} className="mt-6">
+        {pagos.length === 0 ? (
+          <p className="text-sm text-stone-500">Sin cobros.</p>
+        ) : (
+          <ul className="divide-y divide-stone-100 text-sm">
+            {pagos.map((p) => (
+              <li key={p.id} className="flex justify-between gap-2 py-2">
+                <span>
+                  <a href={`/recibos/pago/${p.id}`} target="_blank" className="underline">
+                    {formatoConsecutivo("AB", p.consecutivo)}
+                  </a>{" "}
+                  {p.cliente.nombre} · {p.medio === "EFECTIVO" ? "efectivo" : "transferencia"}
+                </span>
+                <span>{formatoPesos(p.valor)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Tarjeta>
     </>
   );
 }

@@ -6,12 +6,14 @@ import { db } from "@/lib/db";
 import { esParcial } from "@/lib/estados";
 import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
-import { PestanasRutas } from "@/components/secciones";
+import { normalizar } from "@/lib/texto";
+import { PestanasPedidos } from "@/components/secciones";
 import { cierreReparto, valoresPedido, type PedidoReparto } from "@/modules/reparto";
 
-export default async function RepartoPage({ searchParams }: { searchParams: Promise<{ fecha?: string; ruta?: string; pagina?: string }> }) {
+export default async function RepartoPage({ searchParams }: { searchParams: Promise<{ fecha?: string; ruta?: string; q?: string; pagina?: string }> }) {
   const sesion = await requerir("pedidos.ver");
-  const { fecha: f, ruta: rutaParam = "", pagina: paginaParam } = await searchParams;
+  const { fecha: f, ruta: rutaParam = "", q: qParam = "", pagina: paginaParam } = await searchParams;
+  const q = qParam.trim();
   const pagina = leerPagina(paginaParam);
   const fecha = leerFecha(f);
   const rutas = await db.ruta.findMany({ where: { fecha: diaUTC(fecha) }, include: { repartidor: true }, orderBy: { repartidor: { nombre: "asc" } } });
@@ -53,6 +55,11 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
     return { pedido: p, reparto, valores: valoresPedido(reparto) };
   });
   const cierre = cierreReparto(filas.map((f) => f.reparto));
+  // La búsqueda solo filtra la lista; el cierre sigue siendo el del día (o de la ruta elegida).
+  const buscado = normalizar(q);
+  const lista = buscado
+    ? filas.filter((f) => normalizar(`${f.pedido.cliente.nombre} ${f.pedido.cliente.zona ?? ""}`).includes(buscado))
+    : filas;
   const porProducto = [...cierre.porProducto].sort((a, b) => (orden.get(a.productoId) ?? 0) - (orden.get(b.productoId) ?? 0));
 
   return (
@@ -62,7 +69,7 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
         {rutaElegida && ` · ruta de ${rutaElegida.repartidor.nombre}`}
         {rutaParam === "sin" && " · sin ruta"}
       </Titulo>
-      <PestanasRutas actual="/reparto" operacion={sesion.operacion} fecha={fecha} />
+      <PestanasPedidos actual="/reparto" operacion={sesion.operacion} fecha={fecha} />
       <SelectorDia ruta="/reparto" fecha={fecha} etiqueta="Fecha de entrega">
         {rutas.length > 0 && (
           <label>
@@ -78,6 +85,10 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
             </select>
           </label>
         )}
+        <label>
+          Cliente o zona
+          <input type="search" name="q" defaultValue={q} placeholder="Buscar" className="mt-1" />
+        </label>
       </SelectorDia>
       {rutaElegida && (
         <p className="mb-4 text-sm">
@@ -94,65 +105,39 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
 
       <Subnav
         enlaces={[
-          filas.length > 0 && { id: "pedidos", texto: `Pedidos (${filas.length})` },
           filas.length > 0 && { id: "cierre", texto: "Cierre del reparto" },
+          filas.length > 0 && { id: "pedidos", texto: `Pedidos (${filas.length})` },
         ]}
       />
       {filas.length === 0 ? (
         <Vacio>No hay pedidos para entregar ese día.</Vacio>
       ) : (
         <>
-          <div id="pedidos" />
-          <Tabla>
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Clasificación y cantidad</th>
-                <th className="text-right">Valor</th>
-                <th className="text-right">Pagado</th>
-                <th className="text-right">Pendiente</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginar(filas, pagina).map(({ pedido: p, reparto, valores }) => (
-                <tr key={p.id}>
-                  <td>
-                    <Link href={`/pedidos/${p.id}`} className="underline">
-                      {p.cliente.nombre}
-                    </Link>
-                    {p.cliente.zona && <span className="block text-xs text-stone-500">{p.cliente.zona}</span>}
-                  </td>
-                  <td className="text-stone-600">
-                    {p.detalles.map((d) => `${reparto.entregado ? (d.cantidadEntregada ?? d.cantidad) : d.cantidad} ${nombres.get(d.productoId)}`).join(", ")}
-                  </td>
-                  <td className="text-right">{formatoPesos(valores.valor)}</td>
-                  <td className="text-right">{reparto.entregado ? formatoPesos(valores.pagado) : "–"}</td>
-                  <td className={`text-right ${valores.pendiente > 0 ? "text-red-700" : ""}`}>
-                    {reparto.entregado ? formatoPesos(valores.pendiente) : "–"}
-                  </td>
-                  <td>
-                    {reparto.entregado ? (
-                      <Etiqueta color="verde">Entregado{esParcial(p.detalles) && " parcial"}</Etiqueta>
-                    ) : reparto.noEntregado ? (
-                      <Etiqueta color="rojo">No entregado</Etiqueta>
-                    ) : (
-                      <Etiqueta color="ambar">Por entregar</Etiqueta>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Tabla>
-          <Paginacion ruta="/reparto" params={{ fecha, ruta: rutaParam }} pagina={pagina} total={filas.length} ancla="pedidos" />
-          <p className="mt-2 text-xs text-stone-500">
-            Pagado es lo que el cliente pagó el día de la entrega. Lo que no pagó queda como pendiente (fiado) y se ve en su cartera.
-          </p>
-
-          <h2 id="cierre" className="mb-3 mt-6 text-lg font-semibold">
+          {/* El cierre (totales) va primero: es el resumen que se busca; la lista de pedidos puede tener muchas páginas. */}
+          <h2 id="cierre" className="mb-3 text-lg font-semibold">
             Cierre del reparto
           </h2>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="mb-6 grid gap-4 lg:grid-cols-[2fr_3fr]">
+            <Tarjeta titulo="Valores" className="self-start">
+              <dl className="grid grid-cols-2 gap-y-1 text-sm">
+                <dt>Valor entregado</dt>
+                <dd className="text-right">{formatoPesos(cierre.valorEntregado)}</dd>
+                <dt>Pagado en efectivo</dt>
+                <dd className="text-right">{formatoPesos(cierre.pagadoEfectivo)}</dd>
+                <dt>Pagado por transferencia</dt>
+                <dd className="text-right">{formatoPesos(cierre.pagadoTransferencia)}</dd>
+                <dt className="font-semibold">Valor pagado</dt>
+                <dd className="text-right font-semibold">{formatoPesos(cierre.pagado)}</dd>
+                <dt className="font-semibold">Valor pendiente</dt>
+                <dd className={`text-right font-semibold ${cierre.pendiente > 0 ? "text-red-700" : ""}`}>{formatoPesos(cierre.pendiente)}</dd>
+                {cierre.valorPorEntregar > 0 && (
+                  <>
+                    <dt className="text-stone-500">Falta por entregar</dt>
+                    <dd className="text-right text-stone-500">{formatoPesos(cierre.valorPorEntregar)}</dd>
+                  </>
+                )}
+              </dl>
+            </Tarjeta>
             <Tarjeta titulo="Cantidad por clasificación">
               <Tabla>
                 <thead>
@@ -178,27 +163,59 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
               </Tabla>
               <p className="mt-2 text-xs text-stone-500">Cubetas de 30 huevos; gallinas por unidad. Devuelto: entregas parciales y pedidos no entregados.</p>
             </Tarjeta>
-            <Tarjeta titulo="Valores">
-              <dl className="grid grid-cols-2 gap-y-1 text-sm">
-                <dt>Valor entregado</dt>
-                <dd className="text-right">{formatoPesos(cierre.valorEntregado)}</dd>
-                <dt>Pagado en efectivo</dt>
-                <dd className="text-right">{formatoPesos(cierre.pagadoEfectivo)}</dd>
-                <dt>Pagado por transferencia</dt>
-                <dd className="text-right">{formatoPesos(cierre.pagadoTransferencia)}</dd>
-                <dt className="font-semibold">Valor pagado</dt>
-                <dd className="text-right font-semibold">{formatoPesos(cierre.pagado)}</dd>
-                <dt className="font-semibold">Valor pendiente</dt>
-                <dd className={`text-right font-semibold ${cierre.pendiente > 0 ? "text-red-700" : ""}`}>{formatoPesos(cierre.pendiente)}</dd>
-                {cierre.valorPorEntregar > 0 && (
-                  <>
-                    <dt className="text-stone-500">Falta por entregar</dt>
-                    <dd className="text-right text-stone-500">{formatoPesos(cierre.valorPorEntregar)}</dd>
-                  </>
-                )}
-              </dl>
-            </Tarjeta>
           </div>
+          <h2 id="pedidos" className="mb-3 text-lg font-semibold">
+            Pedidos ({q ? `${lista.length} de ${filas.length}` : filas.length})
+          </h2>
+          {lista.length === 0 && <Vacio>Ningún pedido de ese día coincide con la búsqueda.</Vacio>}
+          {lista.length > 0 && (
+            <Tabla>
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Clasificación y cantidad</th>
+                  <th className="text-right">Valor</th>
+                  <th className="text-right">Pagado</th>
+                  <th className="text-right">Pendiente</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginar(lista, pagina).map(({ pedido: p, reparto, valores }) => (
+                  <tr key={p.id}>
+                    <td>
+                      <Link href={`/pedidos/${p.id}`} className="underline">
+                        {p.cliente.nombre}
+                      </Link>
+                      {p.cliente.zona && <span className="block text-xs text-stone-500">{p.cliente.zona}</span>}
+                    </td>
+                    <td className="text-stone-600">
+                      {p.detalles.map((d) => `${reparto.entregado ? (d.cantidadEntregada ?? d.cantidad) : d.cantidad} ${nombres.get(d.productoId)}`).join(", ")}
+                    </td>
+                    <td className="text-right">{formatoPesos(valores.valor)}</td>
+                    <td className="text-right">{reparto.entregado ? formatoPesos(valores.pagado) : "–"}</td>
+                    <td className={`text-right ${valores.pendiente > 0 ? "text-red-700" : ""}`}>
+                      {reparto.entregado ? formatoPesos(valores.pendiente) : "–"}
+                    </td>
+                    <td>
+                      {reparto.entregado ? (
+                        <Etiqueta color="verde">Entregado{esParcial(p.detalles) && " parcial"}</Etiqueta>
+                      ) : reparto.noEntregado ? (
+                        <Etiqueta color="rojo">No entregado</Etiqueta>
+                      ) : (
+                        <Etiqueta color="ambar">Por entregar</Etiqueta>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Tabla>
+          )}
+          <Paginacion ruta="/reparto" params={{ fecha, ruta: rutaParam, q }} pagina={pagina} total={lista.length} ancla="pedidos" />
+          <p className="mt-2 text-xs text-stone-500">
+            Pagado es lo que el cliente pagó el día de la entrega. Lo que no pagó queda como pendiente (fiado) y se ve en su cartera.
+          </p>
+
         </>
       )}
     </>

@@ -2,11 +2,10 @@ import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
 import { BotonLink, Etiqueta, Tabla, Titulo, Vacio } from "@/components/ui";
-import { saldosPorCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
-import { formatoPesos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
+import { PestanasUsuarios } from "@/components/secciones";
 
 export default async function ClientesPage({ searchParams }: { searchParams: Promise<{ q?: string; inactivos?: string; pagina?: string }> }) {
   const sesion = await requerir("clientes.ver");
@@ -34,13 +33,15 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
     }),
     db.cliente.count({ where }),
   ]);
-  const saldos = await saldosPorCliente(clientes.map((c) => c.id));
+
+  const editar = puede(sesion.operacion, "clientes.editar");
 
   return (
     <>
-      <Titulo accion={puede(sesion.operacion, "clientes.editar") && <BotonLink href="/clientes/nuevo">Nuevo cliente</BotonLink>}>
+      <Titulo accion={editar && <BotonLink href="/clientes/nuevo">Nuevo cliente</BotonLink>}>
         Clientes
       </Titulo>
+      <PestanasUsuarios actual="/clientes" operacion={sesion.operacion} />
       <form className="mb-4 flex flex-wrap gap-2">
         <input name="q" defaultValue={q} placeholder="Buscar por nombre, teléfono o zona" className="max-w-sm" />
         <label className="flex items-center gap-2 font-normal">
@@ -59,29 +60,26 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
               <th>Cliente</th>
               <th>Teléfono</th>
               <th>Zona</th>
-              <th className="text-right">Debe</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {clientes.map((c) => {
-              const saldo = saldos.get(c.id) ?? 0;
-              return (
-                <tr key={c.id}>
-                  <td>
-                    <Link href={`/clientes/${c.id}`} className="underline">
-                      {c.nombre}
-                    </Link>{" "}
-                    {c._count.precios > 0 && <Etiqueta color="ambar">Precio especial</Etiqueta>}{" "}
-                    {!c.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
-                  </td>
-                  <td>{c.telefono}</td>
-                  <td>{c.zona}</td>
-                  <td className={`text-right ${saldo > 0 ? "font-semibold text-red-700" : "text-stone-500"}`}>
-                    {formatoPesos(saldo)}
-                  </td>
-                </tr>
-              );
-            })}
+            {clientes.map((c) => (
+              <tr key={c.id}>
+                <td>
+                  {c.nombre}{" "}
+                  {c._count.precios > 0 && <Etiqueta color="ambar">Precio especial</Etiqueta>}{" "}
+                  {!c.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
+                </td>
+                <td>{c.telefono}</td>
+                <td>{c.zona}</td>
+                <td className="text-right">
+                  <Link href={`/clientes/${c.id}`} className="underline">
+                    {editar ? "Editar" : "Ver"}
+                  </Link>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </Tabla>
       )}

@@ -85,7 +85,7 @@ export async function registrarAbonoCliente(_: EstadoForm, form: FormData): Prom
       const { pago, aplicaciones } = await abonar(tx, { clienteId, usuarioId: sesion.usuario.id, valor, medio, referencia, ventaId: null });
       await auditar(tx, sesion.usuario.id, "Pago", pago.id, "abono", { valor, medio, aplicaciones });
     });
-    revalidatePath(`/clientes/${clienteId}`);
+    revalidatePath(`/cartera/${clienteId}`);
   } catch (e) {
     return { error: mensajeError(e) };
   }

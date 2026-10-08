@@ -4,22 +4,24 @@ import { Boton, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/compon
 import { db } from "@/lib/db";
 import { ETIQUETA_OPERACION, esOperacion } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
+import { PestanasUsuarios } from "@/components/secciones";
 import { crearUsuario } from "./acciones";
 import { CampoNombre, CamposAccesos } from "./campos";
 
 export default async function UsuariosPage() {
-  await requerir("usuarios");
+  const sesion = await requerir("usuarios");
   const usuarios = await db.usuario.findMany({ orderBy: [{ activo: "desc" }, { nombre: "asc" }] });
   return (
     <>
-      <Titulo>Usuarios</Titulo>
+      <Titulo>Empleados</Titulo>
+      <PestanasUsuarios actual="/usuarios" operacion={sesion.operacion} />
       <Subnav
         enlaces={[
           { id: "lista", texto: `Usuarios (${usuarios.length})` },
           { id: "nuevo", texto: "Nuevo usuario" },
         ]}
       />
-      <div id="lista" className="grid gap-6 md:grid-cols-[2fr_1fr]">
+      <div id="lista" className="grid items-start gap-6 md:grid-cols-[2fr_1fr]">
         <Tabla>
           <thead>
             <tr>

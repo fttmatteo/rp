@@ -40,8 +40,8 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
       <Subnav
         enlaces={[
           { id: "existencias", texto: "Existencias" },
-          { id: "movimientos", texto: "Movimientos" },
           ajustar && { id: "ajuste", texto: "Ajuste" },
+          { id: "movimientos", texto: "Movimientos" },
         ]}
       />
       <div id="existencias" className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -62,45 +62,11 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div>
-          <h2 id="movimientos" className="mb-2 font-semibold">
-            Movimientos
-          </h2>
-          <Tabla>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Producto</th>
-                <th>Tipo</th>
-                <th className="text-right">Cantidad</th>
-                <th>Detalle</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movimientos.map((m) => (
-                <tr key={m.id}>
-                  <td className="whitespace-nowrap">{formatoFechaHora(m.fecha)}</td>
-                  <td>{m.producto.nombre}</td>
-                  <td>{TIPO[m.tipo]}</td>
-                  <td className={`whitespace-nowrap text-right ${m.cantidad < 0 ? "text-red-700" : "text-green-700"}`}>
-                    {m.cantidad > 0 ? "+" : ""}
-                    {formatoCantidad(m.producto.tipo, m.cantidad, m.producto.unidad)}
-                  </td>
-                  <td className="text-stone-600">
-                    {m.venta ? m.venta.cliente.nombre : m.compra && !m.nota ? `Compra #${m.compra.id} a ${m.compra.proveedor.nombre}` : m.nota}
-                    {m.usuario && <span className="text-stone-400"> · {m.usuario.nombre}</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Tabla>
-          <Paginacion ruta="/inventario" pagina={pagina} total={totalMovimientos} ancla="movimientos" />
-        </div>
-
-        {ajustar && (
-          <Tarjeta id="ajuste" titulo="Ajuste de inventario" className="self-start">
-            <Formulario accion={registrarAjuste}>
+      {/* El ajuste va en una fila sobre los movimientos; así la tabla usa todo el ancho y cada movimiento cabe en una línea. */}
+      {ajustar && (
+        <Tarjeta id="ajuste" titulo="Ajuste de inventario" className="mb-6">
+          <Formulario accion={registrarAjuste} className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <Campo etiqueta="Producto">
                 <select name="productoId" required>
                   {productos.map((p) => (
@@ -110,33 +76,70 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
                   ))}
                 </select>
               </Campo>
-              <div className="grid grid-cols-2 gap-3">
-                <Campo etiqueta="Tipo" ayuda="Ajuste: corrige tras un conteo. Rotura: siempre resta.">
-                  <select name="tipo">
-                    <option value="AJUSTE">Ajuste</option>
-                    <option value="ROTURA">Rotura (salida)</option>
-                  </select>
-                </Campo>
-                <Campo etiqueta="Sentido" ayuda="Entrada suma, salida resta. En rotura no se usa.">
-                  <select name="sentido">
-                    <option value="entrada">Entrada</option>
-                    <option value="salida">Salida</option>
-                  </select>
-                </Campo>
-                <Campo etiqueta="Cubetas, gallinas o gallinaza">
-                  <input name="cantidad" inputMode="numeric" defaultValue="0" />
-                </Campo>
-                <Campo etiqueta="Huevos sueltos" ayuda="Los que no completan una cubeta de 30. No aplica a gallinas.">
-                  <input name="sueltos" inputMode="numeric" defaultValue="0" />
+              <Campo etiqueta="Tipo" ayuda="Ajuste: corrige tras un conteo. Rotura: siempre resta.">
+                <select name="tipo">
+                  <option value="AJUSTE">Ajuste</option>
+                  <option value="ROTURA">Rotura (salida)</option>
+                </select>
+              </Campo>
+              <Campo etiqueta="Sentido" ayuda="Entrada suma, salida resta. En rotura no se usa.">
+                <select name="sentido">
+                  <option value="entrada">Entrada</option>
+                  <option value="salida">Salida</option>
+                </select>
+              </Campo>
+              <Campo etiqueta="Cubetas, gallinas o gallinaza">
+                <input name="cantidad" inputMode="numeric" defaultValue="0" />
+              </Campo>
+              <Campo etiqueta="Huevos sueltos" ayuda="Los que no completan una cubeta de 30. No aplica a gallinas.">
+                <input name="sueltos" inputMode="numeric" defaultValue="0" />
+              </Campo>
+            </div>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-64 flex-1">
+                <Campo etiqueta="Motivo">
+                  <input name="nota" required placeholder="Conteo físico, cubetas rotas en bodega..." />
                 </Campo>
               </div>
-              <Campo etiqueta="Motivo">
-                <input name="nota" required placeholder="Conteo físico, cubetas rotas en bodega..." />
-              </Campo>
               <Boton type="submit">Registrar ajuste</Boton>
-            </Formulario>
-          </Tarjeta>
-        )}
+            </div>
+          </Formulario>
+        </Tarjeta>
+      )}
+
+      <div>
+        <h2 id="movimientos" className="mb-2 font-semibold">
+          Movimientos
+        </h2>
+        <Tabla>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Producto</th>
+              <th>Tipo</th>
+              <th className="text-right">Cantidad</th>
+              <th>Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            {movimientos.map((m) => (
+              <tr key={m.id}>
+                <td className="whitespace-nowrap">{formatoFechaHora(m.fecha)}</td>
+                <td>{m.producto.nombre}</td>
+                <td>{TIPO[m.tipo]}</td>
+                <td className={`whitespace-nowrap text-right ${m.cantidad < 0 ? "text-red-700" : "text-green-700"}`}>
+                  {m.cantidad > 0 ? "+" : ""}
+                  {formatoCantidad(m.producto.tipo, m.cantidad, m.producto.unidad)}
+                </td>
+                <td className="text-stone-600">
+                  {m.venta ? m.venta.cliente.nombre : m.compra && !m.nota ? `Compra #${m.compra.id} a ${m.compra.proveedor.nombre}` : m.nota}
+                  {m.usuario && <span className="text-stone-400"> · {m.usuario.nombre}</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Tabla>
+        <Paginacion ruta="/inventario" pagina={pagina} total={totalMovimientos} ancla="movimientos" />
       </div>
     </>
   );

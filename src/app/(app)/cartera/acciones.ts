@@ -30,7 +30,7 @@ export async function registrarAbono(clienteId: number, _: EstadoForm, form: For
   } catch (e) {
     return { error: mensajeError(e) };
   }
-  revalidatePath(`/clientes/${clienteId}`);
+  revalidatePath(`/cartera/${clienteId}`);
   return { ok: "Abono registrado. El recibo está en los movimientos del cliente." };
 }
 
@@ -62,7 +62,7 @@ export async function anularPago(pagoId: number, _: EstadoForm, _form: FormData)
   } catch (e) {
     return { error: mensajeError(e) };
   }
-  revalidatePath(`/clientes/${clienteId}`);
+  revalidatePath(`/cartera/${clienteId}`);
   return { ok: "Pago anulado." };
 }
 
@@ -95,6 +95,6 @@ export async function registrarSaldoInicial(clienteId: number, _: EstadoForm, fo
   } catch (e) {
     return { error: mensajeError(e) };
   }
-  revalidatePath(`/clientes/${clienteId}`);
+  revalidatePath(`/cartera/${clienteId}`);
   return { ok: "Saldo inicial cargado." };
 }

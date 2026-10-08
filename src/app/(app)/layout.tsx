@@ -1,27 +1,29 @@
 import Link from "next/link";
 import { ETIQUETA_OPERACION, puede, type Permiso } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
+import { CONTABILIDAD, inicioSeccion, PEDIDOS, USUARIOS, type Pestana } from "@/components/secciones";
 import { salir } from "../login/acciones";
 
-const MENU: { href: string; texto: string; permiso?: Permiso }[] = [
+const MENU: ({ href: string; texto: string; permiso?: Permiso } | { texto: string; seccion: Pestana[] })[] = [
   { href: "/", texto: "Inicio" },
   { href: "/mi-ruta", texto: "Mi ruta", permiso: "ruta.propia" },
-  { href: "/rutas", texto: "Rutas", permiso: "rutas" },
-  { href: "/clientes", texto: "Clientes", permiso: "clientes.ver" },
-  { href: "/cartera", texto: "Cartera", permiso: "cartera.ver" },
-  // Dinero reúne Ingresos, Pedidos, Egresos y Caja; Rutas incluye el resumen del reparto (pestañas dentro de la página).
-  { href: "/ingresos", texto: "Dinero", permiso: "caja" },
+  // Pedidos, Contabilidad y Usuarios agrupan varias páginas en pestañas (components/secciones.tsx).
+  { texto: "Pedidos", seccion: PEDIDOS },
+  { texto: "Contabilidad", seccion: CONTABILIDAD },
   // Inventario reúne existencias, clasificación y aves (pestañas dentro de la página).
   { href: "/inventario", texto: "Inventario", permiso: "inventario.ver" },
-  { href: "/proveedores", texto: "Proveedores", permiso: "compras" },
-  { href: "/reportes", texto: "Reportes", permiso: "reportes" },
-  { href: "/precios", texto: "Precios", permiso: "precios" },
-  { href: "/usuarios", texto: "Usuarios", permiso: "usuarios" },
+  { texto: "Usuarios", seccion: USUARIOS },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const sesion = await requerir();
-  const menu = MENU.filter((m) => !m.permiso || puede(sesion.operacion, m.permiso));
+  const menu = MENU.flatMap((m) => {
+    if ("seccion" in m) {
+      const href = inicioSeccion(m.seccion, sesion.operacion);
+      return href ? [{ href, texto: m.texto }] : [];
+    }
+    return !m.permiso || puede(sesion.operacion, m.permiso) ? [m] : [];
+  });
   return (
     <>
       <header className="border-b border-stone-200 bg-white">

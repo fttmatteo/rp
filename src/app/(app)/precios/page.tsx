@@ -4,10 +4,11 @@ import { Boton, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatoFechaHora, formatoPesos, nombreProducto, UNIDADES_GALLINAZA } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
+import { PestanasContabilidad } from "@/components/secciones";
 import { guardarPreciosGenerales } from "./acciones";
 
 export default async function PreciosPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
-  await requerir("precios");
+  const sesion = await requerir("precios");
   const pagina = leerPagina((await searchParams).pagina);
   const [productos, historial, totalHistorial] = await Promise.all([
     db.producto.findMany({ orderBy: { orden: "asc" } }),
@@ -21,6 +22,7 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
   return (
     <>
       <Titulo>Precios</Titulo>
+      <PestanasContabilidad actual="/precios" operacion={sesion.operacion} />
       <Subnav
         enlaces={[
           { id: "generales", texto: "Precios generales" },

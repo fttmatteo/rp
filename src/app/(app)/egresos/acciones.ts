@@ -29,7 +29,7 @@ export async function registrarPagoProveedor(_: EstadoForm, form: FormData): Pro
       });
       await auditar(tx, sesion.usuario.id, "PagoProveedor", pago.id, "abono", { valor, medio, aplicaciones });
     });
-    revalidatePath(`/proveedores/${proveedor.id}`);
+    revalidatePath(`/por-pagar/${proveedor.id}`);
   } catch (e) {
     return { error: mensajeError(e) };
   }

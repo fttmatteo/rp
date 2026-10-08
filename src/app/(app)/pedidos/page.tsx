@@ -7,20 +7,22 @@ import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
 import { diaUTC, formatoDia, formatoPesos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
-import { PestanasDinero } from "@/components/secciones";
+import { PestanasPedidos } from "@/components/secciones";
 import { totalPedido } from "@/modules/precios";
 
 const ESTADOS = ESTADO_PEDIDO;
 
-export default async function PedidosPage({ searchParams }: { searchParams: Promise<{ estado?: string; fecha?: string; pagina?: string }> }) {
+export default async function PedidosPage({ searchParams }: { searchParams: Promise<{ estado?: string; fecha?: string; q?: string; pagina?: string }> }) {
   const sesion = await requerir("pedidos.ver");
   const params = await searchParams;
   const { estado = "PENDIENTE", fecha = "" } = params;
+  const q = (params.q ?? "").trim();
   const pagina = leerPagina(params.pagina);
   const conFecha = /^\d{4}-\d{2}-\d{2}$/.test(fecha);
   const where: Prisma.PedidoWhereInput = {
     ...(estado in ESTADOS ? { estado: estado as EstadoPedido } : {}),
     ...(conFecha ? { fechaEntrega: diaUTC(fecha) } : {}),
+    ...(q ? { cliente: { OR: [{ nombre: { contains: q, mode: "insensitive" } }, { zona: { contains: q, mode: "insensitive" } }] } } : {}),
   };
   const [pedidos, total, delDia] = await Promise.all([
     db.pedido.findMany({
@@ -53,7 +55,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
       <Titulo accion={puede(sesion.operacion, "pedidos.crear") && <BotonLink href="/pedidos/nuevo">Nuevo pedido</BotonLink>}>
         Pedidos
       </Titulo>
-      <PestanasDinero actual="/pedidos" operacion={sesion.operacion} />
+      <PestanasPedidos actual="/pedidos" operacion={sesion.operacion} fecha={conFecha ? fecha : undefined} />
       <form className="mb-4 flex flex-wrap items-end gap-2">
         <label>
           Estado
@@ -68,6 +70,10 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
         <label>
           Fecha de entrega
           <input type="date" name="fecha" defaultValue={fecha} className="mt-1" />
+        </label>
+        <label>
+          Cliente o zona
+          <input type="search" name="q" defaultValue={q} placeholder="Buscar" className="mt-1" />
         </label>
         <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
           Filtrar
@@ -109,7 +115,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
           {conFecha && (
             <tfoot>
               <tr className="font-semibold">
-                <td colSpan={3}>Total del día</td>
+                <td colSpan={3}>{q ? "Total del día (de esta búsqueda)" : "Total del día"}</td>
                 <td>{resumen.join(", ")}</td>
                 <td className="text-right">{formatoPesos(valorTotal)}</td>
                 <td>
