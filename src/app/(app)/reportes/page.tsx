@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { leerPagina, Paginacion, paginar } from "@/components/paginacion";
-import { Alerta, BotonLink, Subnav, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { Alerta, BotonLink, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { diaUTC, formatoDia, hoyISO } from "@/lib/formato";
 import { diasSinCerrar, primerMesLibro } from "@/lib/libro-db";
 import { formatoCelda, generarReporte, leerParametros, REPORTES } from "@/lib/reportes";
@@ -32,12 +32,6 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
     <>
       <Titulo>Reportes</Titulo>
       <PestanasContabilidad actual="/reportes" operacion={sesion.operacion} />
-      <Subnav
-        enlaces={[
-          { id: "libro", texto: "Libro mensual" },
-          { id: "reporte", texto: reporte.titulo },
-        ]}
-      />
       <Tarjeta id="libro" titulo="Libro mensual en Excel" className="mb-6">
         <p className="mb-3 text-sm text-stone-500">
           Cada cobro, ingreso y egreso con su saldo. Solo sale si todas las cajas de esas fechas están cerradas; lo que incluya hoy sale hasta hoy.

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Alerta, Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { saldoCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
 import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
@@ -75,14 +75,6 @@ export default async function PedidoPage({
           {parcial && " parcial"}
         </Etiqueta>
       </Titulo>
-      <Subnav
-        enlaces={[
-          { id: "cuenta", texto: "Cuenta del cliente" },
-          pedido.estado === "PENDIENTE" && puedeEntregar && { id: "entrega", texto: "Registrar entrega" },
-          pedido.estado === "NO_ENTREGADO" && puede(op, "pedidos.crear") && { id: "reprogramar", texto: "Reprogramar" },
-          venta && { id: "venta", texto: "Venta" },
-        ]}
-      />
       {creado && (
         <div className="mb-4">
           <Alerta tipo="ok">Pedido creado. Queda pendiente hasta que se entregue.</Alerta>

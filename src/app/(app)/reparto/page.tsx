@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { leerFecha, SelectorDia } from "@/components/selector-dia";
 import { leerPagina, Paginacion, paginar } from "@/components/paginacion";
-import { Etiqueta, Subnav, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { Etiqueta, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { esParcial } from "@/lib/estados";
 import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
@@ -103,12 +103,6 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
         <p className="mb-4 text-sm text-stone-600">Reparto programado: son los pedidos creados para esa fecha. Se entregan y cobran ese día.</p>
       )}
 
-      <Subnav
-        enlaces={[
-          filas.length > 0 && { id: "cierre", texto: "Cierre del reparto" },
-          filas.length > 0 && { id: "pedidos", texto: `Pedidos (${filas.length})` },
-        ]}
-      />
       {filas.length === 0 ? (
         <Vacio>No hay pedidos para entregar ese día.</Vacio>
       ) : (

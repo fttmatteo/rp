@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion } from "@/components/paginacion";
-import { Alerta, Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { rangoAntiguedad, superaCupo } from "@/modules/cartera";
 import { enlaceMaps, enlaceWhatsApp } from "@/modules/contacto";
 import { mensajeEstadoCuenta } from "@/modules/mensajes";
@@ -80,13 +80,6 @@ export default async function CarteraClientePage({
       >
         {cliente.nombre} {!cliente.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
       </Titulo>
-      <Subnav
-        enlaces={[
-          { id: "deudas", texto: `Deudas (${deudas.length})` },
-          { id: "movimientos", texto: "Movimientos" },
-          puede(op, "anular") && { id: "saldo-inicial", texto: "Saldo inicial" },
-        ]}
-      />
       <div className="mb-6 flex flex-wrap items-baseline gap-x-6 gap-y-2">
         <p>
           <span className="text-sm text-stone-600">Debe: </span>

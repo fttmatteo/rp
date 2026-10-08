@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
-import { Boton, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { ETIQUETA_OPERACION, esOperacion } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
@@ -15,12 +15,6 @@ export default async function UsuariosPage() {
     <>
       <Titulo>Empleados</Titulo>
       <PestanasUsuarios actual="/usuarios" operacion={sesion.operacion} />
-      <Subnav
-        enlaces={[
-          { id: "lista", texto: `Usuarios (${usuarios.length})` },
-          { id: "nuevo", texto: "Nuevo usuario" },
-        ]}
-      />
       <div id="lista" className="grid items-start gap-6 md:grid-cols-[2fr_1fr]">
         <Tabla>
           <thead>

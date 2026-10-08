@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
-import { Boton, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { Boton, Campo, Etiqueta, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { avesPorLote, huevosPorLoteYDia } from "@/lib/aves-db";
 import { db } from "@/lib/db";
 import { ESTADO_LOTE } from "@/lib/etiquetas-aves";
@@ -47,14 +47,6 @@ export default async function AvesPage({ searchParams }: { searchParams: Promise
     <>
       <Titulo>Aves</Titulo>
       <PestanasInventario actual="/aves" operacion={sesion.operacion} />
-      <Subnav
-        enlaces={[
-          { id: "activos", texto: `Lotes activos (${activos.length})` },
-          totalCerrados > 0 && { id: "cerrados", texto: `Lotes cerrados (${totalCerrados})` },
-          galpones.length > 0 && { id: "nuevo-lote", texto: "Nuevo lote" },
-          { id: "nuevo-galpon", texto: "Nuevo galpón" },
-        ]}
-      />
       <p className="mb-4">
         Aves vivas: <strong>{totalAves.toLocaleString("es-CO")}</strong> en {activos.length} lotes activos.
       </p>

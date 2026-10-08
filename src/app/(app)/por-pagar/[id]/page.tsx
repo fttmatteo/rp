@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion } from "@/components/paginacion";
-import { Boton, BotonLink, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoFecha, formatoHuevos, formatoPesos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
@@ -55,12 +55,6 @@ export default async function PorPagarProveedorPage({
       >
         {proveedor.nombre} {!proveedor.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
       </Titulo>
-      <Subnav
-        enlaces={[
-          { id: "por-pagar", texto: `Cuentas por pagar (${deudas.length})` },
-          { id: "movimientos", texto: "Movimientos" },
-        ]}
-      />
       <div className="mb-6 flex flex-wrap items-baseline gap-x-6 gap-y-2">
         <p>
           <span className="text-sm text-stone-600">Le debemos: </span>
