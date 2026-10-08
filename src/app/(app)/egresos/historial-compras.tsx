@@ -6,22 +6,37 @@ import { Etiqueta, Tabla, Tarjeta, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatoFecha, formatoHuevos, formatoPesos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
+import { nombreMes } from "@/modules/libro";
+import { diasDelMes } from "@/components/historial-dinero";
 import { anularCompra } from "./compras";
 
-/** Todas las compras de huevo (de contado y a crédito), de la más reciente a la más antigua. */
-export async function HistorialCompras({ operacion, pagina, diaISO }: { operacion: Operacion; pagina: number; diaISO: string }) {
+/** Las compras de huevo de un mes (de contado y a crédito), de la más reciente a la más antigua. */
+export async function HistorialCompras({
+  operacion,
+  pagina,
+  mes,
+  params,
+}: {
+  operacion: Operacion;
+  pagina: number;
+  mes: string;
+  /** Filtros de la URL que se conservan al cambiar de página. */
+  params: Record<string, string | undefined>;
+}) {
+  const where = { dia: diasDelMes(mes) };
   const [compras, total] = await Promise.all([
     db.compra.findMany({
+      where,
       orderBy: { id: "desc" },
       ...rango(pagina, 20),
       include: { proveedor: { select: { nombre: true } }, detalles: { include: { producto: { select: { nombre: true } } } } },
     }),
-    db.compra.count(),
+    db.compra.count({ where }),
   ]);
   return (
-    <Tarjeta id="historial" titulo={`Historial de compras (${total})`}>
+    <Tarjeta id="historial" titulo={`Compras de huevo de ${nombreMes(mes)} (${total})`}>
         {compras.length === 0 ? (
-          <Vacio>Todavía no hay compras.</Vacio>
+          <Vacio>No hay compras en este mes.</Vacio>
         ) : (
           <Tabla>
             <thead>
@@ -75,7 +90,7 @@ export async function HistorialCompras({ operacion, pagina, diaISO }: { operacio
             </tbody>
           </Tabla>
         )}
-      <Paginacion ruta="/egresos" params={{ dia: diaISO, registrar: "historial" }} param="compras" pagina={pagina} total={total} porPagina={20} />
+      <Paginacion ruta="/egresos" params={params} pagina={pagina} total={total} porPagina={20} />
     </Tarjeta>
   );
 }

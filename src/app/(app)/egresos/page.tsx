@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { leerPagina } from "@/components/paginacion";
 import { ElegirRegistro, ListaDinero, registroElegido, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
@@ -14,12 +13,13 @@ import { anularMovimientoCaja } from "../caja/acciones";
 import { FormularioMovimiento } from "../caja/formulario-movimiento";
 import { registrarPagoProveedor } from "./acciones";
 import { FormularioCompra } from "./formulario-compra";
-import { HistorialCompras } from "./historial-compras";
+import { filaEgreso, incluirEgreso } from "./filas";
+import { HistorialEgresos } from "./historial";
 
-export default async function EgresosPage({ searchParams }: { searchParams: Promise<{ dia?: string; pagina?: string; compras?: string; registrar?: string }> }) {
+export default async function EgresosPage({ searchParams }: { searchParams: Promise<{ dia?: string; pagina?: string; registrar?: string; mes?: string; tipo?: string; concepto?: string }> }) {
   const sesion = await requerir("caja");
   const hoy = hoyISO();
-  const { dia: diaParam, pagina: paginaParam, compras: paginaCompras, registrar } = await searchParams;
+  const { dia: diaParam, pagina: paginaParam, registrar, mes, tipo, concepto } = await searchParams;
   const pagina = leerPagina(paginaParam);
   const diaISO = diaParam && /^\d{4}-\d{2}-\d{2}$/.test(diaParam) && diaParam <= hoy ? diaParam : hoy;
   const dia = diaUTC(diaISO);
@@ -31,11 +31,7 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
     db.movimientoCaja.findMany({
       where: { dia, tipo: "EGRESO" },
       orderBy: { fecha: "asc" },
-      include: {
-        usuario: { select: { nombre: true } },
-        compra: { select: { id: true, proveedorId: true } },
-        pagoProveedor: { select: { proveedorId: true } },
-      },
+      include: incluirEgreso,
     }),
   ]);
   const abierta = caja.estado === "ABIERTA";
@@ -46,42 +42,27 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
     comprar ? db.producto.findMany({ where: { tipo: "CUBETA" }, orderBy: { orden: "asc" } }) : [],
     comprar ? saldosProveedores() : new Map<number, number>(),
   ]);
-  const opciones = [
+  const formularios = [
     ...(comprar ? [{ clave: "compra", texto: "Compra de huevo" }, { clave: "pago", texto: "Pago a proveedor" }] : []),
     ...(abierta ? [{ clave: "gasto", texto: "Gasto o retiro" }] : []),
-    // El historial va como un botón más, para no repetirse debajo de cada formulario.
-    ...(verCompras ? [{ clave: "historial", texto: "Historial de compras" }] : []),
   ];
-  const elegido = registroElegido(registrar, opciones);
+  // El historial va como un botón más, para no repetirse debajo de cada formulario. Nunca se abre solo.
+  const opciones = [...formularios, { clave: "historial", texto: "Historial de egresos" }];
+  const elegido = registrar === "historial" ? "historial" : registroElegido(registrar, formularios);
   const porPagar = proveedores.filter((p) => (saldos.get(p.id) ?? 0) > 0);
 
-  const filas: FilaDinero[] = movimientos.map((m) => {
-    const proveedorId = m.compra?.proveedorId ?? m.pagoProveedor?.proveedorId;
-    return {
-      clave: `m${m.id}`,
-      fecha: m.fecha,
-      origen: m.compraId ? "Compra" : m.pagoProveedorId ? "Pago a proveedor" : m.rutaId ? "Faltante de ruta" : "Gasto",
-      detalle: proveedorId ? (
-        <Link href={`/por-pagar/${proveedorId}`} className="underline">
-          {m.concepto}
-        </Link>
-      ) : (
-        m.concepto
-      ),
-      medio: m.medio,
-      usuario: m.usuario.nombre,
-      valor: m.valor,
-      anulado: m.anulado,
-      anular:
-        abierta && !m.anulado && !m.rutaId && !m.compraId && !m.pagoProveedorId ? (
-          <Formulario accion={anularMovimientoCaja.bind(null, m.id)} className="inline" confirmar="¿Anular este gasto?">
-            <button type="submit" className="text-xs text-red-700 underline">
-              Anular
-            </button>
-          </Formulario>
-        ) : undefined,
-    };
-  });
+  const filas: FilaDinero[] = movimientos.map((m) =>
+    filaEgreso(
+      m,
+      abierta && !m.anulado && !m.rutaId && !m.compraId && !m.pagoProveedorId ? (
+        <Formulario accion={anularMovimientoCaja.bind(null, m.id)} className="inline" confirmar="¿Anular este gasto?">
+          <button type="submit" className="text-xs text-red-700 underline">
+            Anular
+          </button>
+        </Formulario>
+      ) : undefined,
+    ),
+  );
 
   return (
     <>
@@ -97,64 +78,73 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
       <div className="mb-3">
         <ElegirRegistro ruta="/egresos" diaISO={diaISO} actual={elegido ?? ""} opciones={opciones} />
       </div>
-      {/* El historial es una tabla ancha: ocupa todo el ancho y las salidas del día quedan debajo. */}
-      <div className={`grid items-start gap-6 ${elegido === "historial" ? "" : "lg:grid-cols-2"}`}>
-        <div className="space-y-3">
-          {elegido === "compra" && (
-            <Tarjeta id="compra" titulo="Compra de huevo">
-              <FormularioCompra proveedores={proveedores} tipos={tipos} />
-            </Tarjeta>
-          )}
+      {elegido === "historial" ? (
+        // El historial es una tabla ancha de cualquier mes: ocupa todo el ancho en lugar de los formularios y la lista del día.
+        <HistorialEgresos
+          operacion={sesion.operacion}
+          diaISO={diaISO}
+          mes={mes}
+          tipo={tipo}
+          concepto={concepto}
+          pagina={pagina}
+        />
+      ) : (
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <div className="space-y-3">
+            {elegido === "compra" && (
+              <Tarjeta id="compra" titulo="Compra de huevo">
+                <FormularioCompra proveedores={proveedores} tipos={tipos} />
+              </Tarjeta>
+            )}
 
-          {elegido === "pago" && (
-            <Tarjeta id="pago" titulo="Pago a proveedor">
-              {porPagar.length === 0 ? (
-                <p className="text-sm text-stone-500">No le debemos a ningún proveedor.</p>
-              ) : (
-                <Formulario accion={registrarPagoProveedor} className="space-y-3">
-                  <Campo etiqueta="Proveedor" ayuda="Se aplica a la compra más antigua. Para pagar una compra en particular, hazlo desde Por pagar.">
-                    <select name="proveedorId" required defaultValue="">
-                      <option value="" disabled>
-                        Elige el proveedor
-                      </option>
-                      {porPagar.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.nombre} · le debemos {formatoPesos(saldos.get(p.id) ?? 0)}
+            {elegido === "pago" && (
+              <Tarjeta id="pago" titulo="Pago a proveedor">
+                {porPagar.length === 0 ? (
+                  <p className="text-sm text-stone-500">No le debemos a ningún proveedor.</p>
+                ) : (
+                  <Formulario accion={registrarPagoProveedor} className="space-y-3">
+                    <Campo etiqueta="Proveedor" ayuda="Se aplica a la compra más antigua. Para pagar una compra en particular, hazlo desde Por pagar.">
+                      <select name="proveedorId" required defaultValue="">
+                        <option value="" disabled>
+                          Elige el proveedor
                         </option>
-                      ))}
-                    </select>
-                  </Campo>
-                  <div className="grid grid-cols-2 gap-3">
-                    <Campo etiqueta="Valor">
-                      <input name="valor" inputMode="numeric" required />
-                    </Campo>
-                    <Campo etiqueta="Medio">
-                      <select name="medio" defaultValue="EFECTIVO">
-                        <option value="EFECTIVO">Efectivo</option>
-                        <option value="TRANSFERENCIA">Transferencia</option>
+                        {porPagar.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.nombre} · le debemos {formatoPesos(saldos.get(p.id) ?? 0)}
+                          </option>
+                        ))}
                       </select>
                     </Campo>
-                  </div>
-                  <Campo etiqueta="Referencia">
-                    <input name="referencia" placeholder="Si es transferencia" />
-                  </Campo>
-                  <Boton type="submit">Registrar pago</Boton>
-                </Formulario>
-              )}
-            </Tarjeta>
-          )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <Campo etiqueta="Valor">
+                        <input name="valor" inputMode="numeric" required />
+                      </Campo>
+                      <Campo etiqueta="Medio">
+                        <select name="medio" defaultValue="EFECTIVO">
+                          <option value="EFECTIVO">Efectivo</option>
+                          <option value="TRANSFERENCIA">Transferencia</option>
+                        </select>
+                      </Campo>
+                    </div>
+                    <Campo etiqueta="Referencia">
+                      <input name="referencia" placeholder="Si es transferencia" />
+                    </Campo>
+                    <Boton type="submit">Registrar pago</Boton>
+                  </Formulario>
+                )}
+              </Tarjeta>
+            )}
 
-          {elegido === "gasto" && (
-            <Tarjeta id="gasto" titulo="Gasto o retiro">
-              <FormularioMovimiento diaISO={diaISO} tipo="EGRESO" />
-            </Tarjeta>
-          )}
+            {elegido === "gasto" && (
+              <Tarjeta id="gasto" titulo="Gasto o retiro">
+                <FormularioMovimiento diaISO={diaISO} tipo="EGRESO" />
+              </Tarjeta>
+            )}
+          </div>
 
-          {elegido === "historial" && <HistorialCompras operacion={sesion.operacion} pagina={leerPagina(paginaCompras)} diaISO={diaISO} />}
+          <ListaDinero id="lista" titulo="Salidas del día" filas={filas} ruta="/egresos" diaISO={diaISO} pagina={pagina} vacio="Sin egresos." />
         </div>
-
-        <ListaDinero id="lista" titulo="Salidas del día" filas={filas} ruta="/egresos" diaISO={diaISO} pagina={pagina} vacio="Sin egresos." />
-      </div>
+      )}
     </>
   );
 }
