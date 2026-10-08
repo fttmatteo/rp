@@ -1,5 +1,6 @@
 import "server-only";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+import { leerLogo } from "@/lib/logo";
 import { formatoCelda, type Reporte } from "@/lib/reportes";
 
 /** Las fuentes estándar del PDF solo tienen caracteres latinos; el resto se reemplaza. */
@@ -56,12 +57,16 @@ export async function generarTablaPdf(r: Reporte, subtitulo: string): Promise<Ui
     linea();
   };
 
-  page.drawText("RP SOFTWARE", { x: margen, y, size: 12, font: negrita });
-  y -= 16;
-  page.drawText(limpiar(r.titulo), { x: margen, y, size: 11, font: negrita });
+  // Encabezado de la primera página: logo a la izquierda; título y período a la derecha.
+  const logo = await pdf.embedPng(await leerLogo());
+  const altoLogo = 36;
+  page.drawImage(logo, { x: margen, y: y + 10 - altoLogo, height: altoLogo, width: (logo.width / logo.height) * altoLogo });
+  const derecha = (t: string, size: number, font: PDFFont, color = rgb(0, 0, 0)) =>
+    page.drawText(limpiar(t), { x: margen + ancho - font.widthOfTextAtSize(limpiar(t), size), y, size, font, color });
+  derecha(r.titulo, 11, negrita);
   y -= 13;
-  page.drawText(limpiar(subtitulo), { x: margen, y, size: 8, font: normal, color: gris });
-  y -= 20;
+  derecha(subtitulo, 8, normal, gris);
+  y -= 34;
   encabezado();
 
   for (const f of r.filas) {

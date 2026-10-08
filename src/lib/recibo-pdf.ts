@@ -1,5 +1,6 @@
 import "server-only";
 import { PDFDocument, StandardFonts, degrees, rgb } from "pdf-lib";
+import { leerLogo } from "@/lib/logo";
 
 export interface LineaRecibo {
   descripcion: string;
@@ -40,18 +41,22 @@ export async function generarRecibo(d: DatosRecibo): Promise<Uint8Array> {
 
   const texto = (t: string, x: number, size = 9, font = normal, color = rgb(0, 0, 0)) =>
     page.drawText(limpiar(t), { x, y, size, font, color });
-  const derecha = (t: string, xFin: number, size = 9, font = normal) =>
-    page.drawText(limpiar(t), { x: xFin - font.widthOfTextAtSize(limpiar(t), size), y, size, font });
+  const derecha = (t: string, xFin: number, size = 9, font = normal, color = rgb(0, 0, 0)) =>
+    page.drawText(limpiar(t), { x: xFin - font.widthOfTextAtSize(limpiar(t), size), y, size, font, color });
   const linea = () => {
     page.drawLine({ start: { x: margen, y: y + 4 }, end: { x: margen + ancho, y: y + 4 }, thickness: 0.5, color: gris });
   };
 
-  texto("RP SOFTWARE", margen, 14, negrita);
+  // Encabezado: logo a la izquierda; número, tipo de recibo y fecha a la derecha.
+  const imagen = await pdf.embedPng(await leerLogo());
+  const altoLogo = 40;
+  page.drawImage(imagen, { x: margen, y: y + 10 - altoLogo, height: altoLogo, width: (imagen.width / imagen.height) * altoLogo });
   derecha(d.numero, margen + ancho, 12, negrita);
-  y -= 16;
-  texto(d.titulo, margen, 10, normal, gris);
+  y -= 15;
+  derecha(d.titulo, margen + ancho, 9, normal, gris);
+  y -= 12;
   derecha(d.fecha, margen + ancho, 9);
-  y -= 26;
+  y -= 30;
   texto("Cliente", margen, 8, normal, gris);
   y -= 12;
   texto(d.cliente.slice(0, 60), margen, 11, negrita);

@@ -114,8 +114,8 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         <h2 className="font-semibold">{reporte.titulo}</h2>
         {/* Descargan solo este reporte con los filtros elegidos; el libro mensual tiene su propio botón abajo. */}
         <span className="flex gap-2">
-          <BotonLink href={`/reportes/exportar?${consulta}&formato=csv`} variante="secundario" prefetch={false}>
-            Descargar este reporte en Excel (CSV)
+          <BotonLink href={`/reportes/exportar?${consulta}&formato=xlsx`} variante="secundario" prefetch={false}>
+            Descargar este reporte en Excel
           </BotonLink>
           <BotonLink href={`/reportes/exportar?${consulta}&formato=pdf`} variante="secundario" prefetch={false} target="_blank">
             Descargar este reporte en PDF

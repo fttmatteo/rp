@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { diaUTC, formatoDia, hoyISO } from "@/lib/formato";
 import { diasSinCerrar, libroDelPeriodo } from "@/lib/libro-db";
+import { leerLogo } from "@/lib/logo";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 import { leerPeriodo, nombreMes } from "@/modules/libro";
@@ -40,6 +41,7 @@ export async function GET(req: Request) {
     ],
     filas,
     negrilla: [0, filas.length - 1],
+    encabezado: { logo: await leerLogo(), lineas: [`Libro ${mes ? `de ${periodo}` : periodo}`, `Generado por ${sesion.usuario.nombre}`] },
   });
   return new Response(Buffer.from(archivo), {
     headers: {

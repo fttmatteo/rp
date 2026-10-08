@@ -9,8 +9,7 @@ export default async function LoginPage() {
   return (
     <main className="mx-auto mt-16 max-w-sm px-4">
       <img src="/icons/svg/logo-horizontal.svg" alt="" width={1200} height={400} className="mb-4 w-full rounded-lg" />
-      <h1 className="mb-1 text-2xl font-semibold">RP Software</h1>
-      <p className="mb-6 text-sm text-stone-600">Ingresa con tu usuario.</p>
+      <h1 className="mb-1 text-2xl font-semibold text-center">Inicio de sesión</h1>
       <Formulario accion={iniciarSesion}>
         <Campo etiqueta="Usuario">
           <input name="usuario" autoComplete="username" autoCapitalize="none" required />

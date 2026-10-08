@@ -30,7 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2">
           <Link href="/" className="flex items-center gap-2 font-semibold">
             <img src="/icons/svg/icono.svg" alt="" width={32} height={32} className="rounded" />
-            RP Software
+            RP Huevos Campesinos
           </Link>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-stone-600">
