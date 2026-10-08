@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PieCreditos } from "@/components/creditos";
+import { OcultarEn } from "@/components/ocultar-en";
 import { ETIQUETA_OPERACION, puede, type Permiso } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 import { CONTABILIDAD, inicioSeccion, PEDIDOS, USUARIOS, type Pestana } from "@/components/secciones";
@@ -61,6 +63,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </nav>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+      {/* En "Acerca de" ya están los créditos: el pie no enlaza a la misma página. */}
+      <OcultarEn ruta="/acerca">
+        <PieCreditos />
+      </OcultarEn>
     </>
   );
 }
