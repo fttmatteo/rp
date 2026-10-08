@@ -58,7 +58,7 @@ export default async function AvesPage({ searchParams }: { searchParams: Promise
       <p className="mb-4">
         Aves vivas: <strong>{totalAves.toLocaleString("es-CO")}</strong> en {activos.length} lotes activos.
       </p>
-      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+      <div className="grid items-start gap-6 lg:grid-cols-[3fr_2fr]">
         <div id="activos" className="space-y-6">
           {activos.length === 0 ? (
             <Vacio>Todavía no hay lotes. Crea primero el galpón y luego el lote con sus aves.</Vacio>

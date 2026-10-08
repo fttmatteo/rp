@@ -41,7 +41,7 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
           { id: "registros", texto: `Registros (${totalRegistros})` },
         ]}
       />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         <Tarjeta id="registrar" titulo="Registrar clasificación">
           <Formulario accion={registrarClasificacion}>
             <Campo etiqueta="Fecha">

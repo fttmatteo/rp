@@ -112,7 +112,7 @@ export default async function InicioPage() {
   if (rutasPorAprobar)
     alertas.push({ texto: `${cuenta(rutasPorAprobar, "ruta", "rutas")} con precierre del repartidor por aprobar.`, href: "/rutas" });
   if (rutasSinLiquidar) alertas.push({ texto: `${cuenta(rutasSinLiquidar, "ruta", "rutas")} de días anteriores sin liquidar.`, href: "/rutas" });
-  if (comprasVencidas) alertas.push({ texto: `${cuenta(comprasVencidas, "compra a proveedor vencida", "compras a proveedores vencidas")}.`, href: "/proveedores" });
+  if (comprasVencidas) alertas.push({ texto: `${cuenta(comprasVencidas, "compra a proveedor vencida", "compras a proveedores vencidas")}.`, href: "/por-pagar" });
   if (sinClasificar > 0) alertas.push({ texto: `${formatoHuevos(sinClasificar)} de huevo comprado por clasificar.`, href: "/clasificacion" });
   if (atrasados) alertas.push({ texto: `${cuenta(atrasados, "pedido atrasado", "pedidos atrasados")} de días anteriores.`, href: "/pedidos" });
 
@@ -169,7 +169,7 @@ export default async function InicioPage() {
           />
         )}
         {porPagar && (
-          <Dato titulo="Cuentas por pagar" valor={formatoPesos(porPagar._sum.saldo ?? 0)} href="/proveedores" enlace="Ver proveedores" />
+          <Dato titulo="Cuentas por pagar" valor={formatoPesos(porPagar._sum.saldo ?? 0)} href="/por-pagar" enlace="Ver cuentas por pagar" />
         )}
         {cajaHoy !== null && (
           <Dato

@@ -1,25 +1,25 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { leerPagina } from "@/components/paginacion";
-import { ListaDinero, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
-import { Alerta, Boton, Campo, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { ElegirRegistro, ListaDinero, registroElegido, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
+import { Alerta, Boton, Campo, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { obtenerCaja } from "@/lib/caja-db";
 import { saldosPorCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoConsecutivo, formatoDia, formatoPesos, hoyISO, nombreProducto } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
-import { PestanasDinero } from "@/components/secciones";
+import { PestanasContabilidad } from "@/components/secciones";
 import { anularMovimientoCaja } from "../caja/acciones";
 import { FormularioMovimiento } from "../caja/formulario-movimiento";
 import { registrarAbonoCliente, registrarVentaDirecta } from "./acciones";
 
 
-export default async function IngresosPage({ searchParams }: { searchParams: Promise<{ dia?: string; pagina?: string }> }) {
+export default async function IngresosPage({ searchParams }: { searchParams: Promise<{ dia?: string; pagina?: string; registrar?: string }> }) {
   const sesion = await requerir("caja");
   const op = sesion.operacion;
   const hoy = hoyISO();
-  const { dia: diaParam, pagina: paginaParam } = await searchParams;
+  const { dia: diaParam, pagina: paginaParam, registrar } = await searchParams;
   const pagina = leerPagina(paginaParam);
   const diaISO = diaParam && /^\d{4}-\d{2}-\d{2}$/.test(diaParam) && diaParam <= hoy ? diaParam : hoy;
   const dia = diaUTC(diaISO);
@@ -46,6 +46,12 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
     vender ? db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }) : [],
     abonar ? saldosPorCliente() : new Map<number, number>(),
   ]);
+  const opciones = [
+    ...(vender ? [{ clave: "venta", texto: "Venta en la granja" }] : []),
+    ...(abonar ? [{ clave: "abono", texto: "Abono de cliente" }] : []),
+    ...(abierta ? [{ clave: "otro", texto: "Otro ingreso" }] : []),
+  ];
+  const elegido = registroElegido(registrar, opciones);
   const deudores = clientes.filter((c) => (saldos.get(c.id) ?? 0) > 0);
 
   const filas: FilaDinero[] = [
@@ -105,35 +111,25 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <Titulo>
-        Ingresos del {formatoDia(dia)}
-      </Titulo>
-      <PestanasDinero actual="/ingresos" operacion={op} dia={diaISO} />
+      <Titulo accion={<SelectorDiaCaja ruta="/ingresos" diaISO={diaISO} />}>Ingresos del {formatoDia(dia)}</Titulo>
+      <PestanasContabilidad actual="/ingresos" operacion={op} dia={diaISO} />
       <p className="mb-4 text-sm text-stone-600">
-        Todo el dinero que entra se registra aquí: ventas, abonos de clientes y otros ingresos. Los cobros de los repartidores llegan solos desde{" "}
+        Ventas, abonos de clientes y otros ingresos. Los cobros de los repartidores llegan solos desde{" "}
         <Link href="/rutas" className="underline">
           Rutas
         </Link>
         .
       </p>
-      <SelectorDiaCaja ruta="/ingresos" diaISO={diaISO} />
-      <Subnav
-        enlaces={[
-          vender && { id: "venta", texto: "Venta" },
-          abonar && { id: "abono", texto: "Abono" },
-          abierta && { id: "otro", texto: "Otro ingreso" },
-          { id: "lista", texto: `Entradas del día (${filas.filter((f) => !f.anulado).length})` },
-        ]}
-      />
       {!abierta && (
         <div className="mb-4">
           <Alerta tipo="aviso">La caja de este día está cerrada. Para registrar algo, el administrador debe reabrirla.</Alerta>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-4">
-          {vender && (
+      <div className="grid items-start gap-6 lg:grid-cols-2">
+        <div className="space-y-3">
+          <ElegirRegistro ruta="/ingresos" diaISO={diaISO} actual={elegido ?? ""} opciones={opciones} />
+          {elegido === "venta" && (
             <Tarjeta id="venta" titulo="Venta en la granja">
               <Formulario accion={registrarVentaDirecta} className="space-y-3">
                 <p className="text-xs text-stone-500">
@@ -195,13 +191,13 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
             </Tarjeta>
           )}
 
-          {abonar && (
+          {elegido === "abono" && (
             <Tarjeta id="abono" titulo="Abono de cliente">
               {deudores.length === 0 ? (
                 <p className="text-sm text-stone-500">Ningún cliente debe dinero.</p>
               ) : (
                 <Formulario accion={registrarAbonoCliente} className="space-y-3">
-                  <Campo etiqueta="Cliente" ayuda="Se aplica a la deuda más antigua. Para abonar a un recibo en particular, hazlo desde la ficha del cliente.">
+                  <Campo etiqueta="Cliente" ayuda="Se aplica a la deuda más antigua. Para abonar a un recibo en particular, hazlo desde la cartera del cliente.">
                     <select name="clienteId" required defaultValue="">
                       <option value="" disabled>
                         Elige el cliente
@@ -233,7 +229,7 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
             </Tarjeta>
           )}
 
-          {abierta && (
+          {elegido === "otro" && (
             <Tarjeta id="otro" titulo="Otro ingreso">
               <FormularioMovimiento diaISO={diaISO} tipo="INGRESO" />
             </Tarjeta>

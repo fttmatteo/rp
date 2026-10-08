@@ -96,7 +96,7 @@ export default async function LotePage({
         </Tarjeta>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid items-start gap-6 lg:grid-cols-2">
         {lote.activo && (
           <Tarjeta id="novedad" titulo="Registrar novedad">
             <Formulario accion={registrarNovedad.bind(null, id)}>

@@ -160,7 +160,7 @@ export async function anularVenta(ventaId: number, _: EstadoForm, _form: FormDat
       clienteId = venta.clienteId;
       await bloquearCliente(tx, venta.clienteId);
       if (venta.aplicaciones.some((a) => !a.pago.anulado))
-        throw new ErrorUsuario("La venta tiene pagos. Anula primero esos pagos en la ficha del cliente.");
+        throw new ErrorUsuario("La venta tiene pagos. Anula primero esos pagos en la cartera del cliente.");
       const marcada = await tx.venta.updateMany({ where: { id: ventaId, anulada: false }, data: { anulada: true, saldo: 0 } });
       if (marcada.count === 0) throw new ErrorUsuario("Esta venta ya estaba anulada.");
       const salidas = venta.movimientos.filter((m) => m.tipo === "VENTA");
@@ -184,6 +184,6 @@ export async function anularVenta(ventaId: number, _: EstadoForm, _form: FormDat
     return { error: mensajeError(e) };
   }
   if (pedidoId) revalidatePath(`/pedidos/${pedidoId}`);
-  if (clienteId) revalidatePath(`/clientes/${clienteId}`);
+  if (clienteId) revalidatePath(`/cartera/${clienteId}`);
   return { ok: "Venta anulada y mercancía devuelta al inventario." };
 }

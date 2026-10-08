@@ -5,12 +5,13 @@ import { diaUTC, formatoDia, hoyISO } from "@/lib/formato";
 import { diasSinCerrar, primerMesLibro } from "@/lib/libro-db";
 import { formatoCelda, generarReporte, leerParametros, REPORTES } from "@/lib/reportes";
 import { requerir } from "@/lib/sesion";
+import { PestanasContabilidad } from "@/components/secciones";
 import { leerPeriodo, mesesEntre, nombreMes } from "@/modules/libro";
 
 type Parametros = { tipo?: string; desde?: string; hasta?: string; libroMes?: string; libroDesde?: string; libroHasta?: string; pagina?: string };
 
 export default async function ReportesPage({ searchParams }: { searchParams: Promise<Parametros> }) {
-  await requerir("reportes");
+  const sesion = await requerir("reportes");
   const hoy = hoyISO();
   const sp = await searchParams;
   const p = leerParametros(sp, hoy);
@@ -30,12 +31,67 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
   return (
     <>
       <Titulo>Reportes</Titulo>
+      <PestanasContabilidad actual="/reportes" operacion={sesion.operacion} />
       <Subnav
         enlaces={[
-          { id: "reporte", texto: reporte.titulo },
           { id: "libro", texto: "Libro mensual" },
+          { id: "reporte", texto: reporte.titulo },
         ]}
       />
+      <Tarjeta id="libro" titulo="Libro mensual en Excel" className="mb-6">
+        <p className="mb-3 text-sm text-stone-500">
+          Cada cobro, ingreso y egreso con su saldo. Solo sale si todas las cajas de esas fechas están cerradas; lo que incluya hoy sale hasta hoy.
+        </p>
+        {sinCerrar.length > 0 && (
+          <div className="mb-3">
+            <Alerta>
+              {`No se generó el libro ${pedido?.mes ? `de ${nombreMes(pedido.mes)}` : "de ese periodo"} porque ${
+                sinCerrar.length === 1 ? "esta caja no está cerrada" : "estas cajas no están cerradas"
+              }. Ciérra${sinCerrar.length === 1 ? "la" : "las"} en Caja y vuelve a descargarlo: `}
+              {sinCerrar.map((d, i) => (
+                <span key={d}>
+                  {i > 0 && ", "}
+                  <Link href={`/caja?dia=${d}`} className="underline">
+                    {formatoDia(diaUTC(d))}
+                  </Link>
+                </span>
+              ))}
+              .
+            </Alerta>
+          </div>
+        )}
+        <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+        <form action="/reportes/libro" className="flex flex-wrap items-end gap-2">
+          <label>
+            Mes
+            <select name="mes" defaultValue={pedido?.mes ?? meses[0]} className="mt-1">
+              {meses.map((m) => (
+                <option key={m} value={m}>
+                  {nombreMes(m)}
+                  {m === mesActual ? " (en curso)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+            Descargar Excel del mes
+          </button>
+        </form>
+        <form action="/reportes/libro" className="flex flex-wrap items-end gap-2">
+          <label>
+            Desde
+            <input type="date" name="desde" defaultValue={pedido && !pedido.mes ? pedido.desde : p.desde} max={hoy} required className="mt-1" />
+          </label>
+          <label>
+            Hasta
+            <input type="date" name="hasta" defaultValue={pedido && !pedido.mes ? pedido.hasta : p.hasta} max={hoy} required className="mt-1" />
+          </label>
+          <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+            Descargar Excel del periodo
+          </button>
+        </form>
+        </div>
+      </Tarjeta>
       <form action="/reportes" className="mb-4 flex flex-wrap items-end gap-2">
         <label>
           Reporte
@@ -112,59 +168,6 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
       <Paginacion ruta="/reportes" params={{ tipo: p.tipo, desde: p.desde, hasta: p.hasta }} pagina={pagina} total={reporte.filas.length} ancla="reporte" />
       {reporte.nota && <p className="mt-2 text-sm text-stone-500">{reporte.nota}</p>}
 
-      <Tarjeta id="libro" titulo="Libro mensual" className="mt-6">
-        <p className="mb-3 text-sm text-stone-500">
-          Cada cobro, ingreso y egreso con su saldo (fecha, concepto, ingreso, egreso y saldo). Descarga un mes completo o el periodo que quieras. Solo
-          sale si todas las cajas de esas fechas están cerradas; lo que incluya hoy sale hasta hoy.
-        </p>
-        {sinCerrar.length > 0 && (
-          <div className="mb-3">
-            <Alerta>
-              {`No se generó el libro ${pedido?.mes ? `de ${nombreMes(pedido.mes)}` : "de ese periodo"} porque ${
-                sinCerrar.length === 1 ? "esta caja no está cerrada" : "estas cajas no están cerradas"
-              }. Ciérra${sinCerrar.length === 1 ? "la" : "las"} en Caja y vuelve a descargarlo: `}
-              {sinCerrar.map((d, i) => (
-                <span key={d}>
-                  {i > 0 && ", "}
-                  <Link href={`/caja?dia=${d}`} className="underline">
-                    {formatoDia(diaUTC(d))}
-                  </Link>
-                </span>
-              ))}
-              .
-            </Alerta>
-          </div>
-        )}
-        <form action="/reportes/libro" className="mb-3 flex flex-wrap items-end gap-2">
-          <label>
-            Mes
-            <select name="mes" defaultValue={pedido?.mes ?? meses[0]} className="mt-1">
-              {meses.map((m) => (
-                <option key={m} value={m}>
-                  {nombreMes(m)}
-                  {m === mesActual ? " (en curso)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
-            Descargar Excel del mes
-          </button>
-        </form>
-        <form action="/reportes/libro" className="flex flex-wrap items-end gap-2">
-          <label>
-            Desde
-            <input type="date" name="desde" defaultValue={pedido && !pedido.mes ? pedido.desde : p.desde} max={hoy} required className="mt-1" />
-          </label>
-          <label>
-            Hasta
-            <input type="date" name="hasta" defaultValue={pedido && !pedido.mes ? pedido.hasta : p.hasta} max={hoy} required className="mt-1" />
-          </label>
-          <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
-            Descargar Excel del periodo
-          </button>
-        </form>
-      </Tarjeta>
     </>
   );
 }
