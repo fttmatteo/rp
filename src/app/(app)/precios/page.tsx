@@ -1,6 +1,6 @@
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
-import { Boton, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatoFechaHora, formatoPesos, nombreProducto, UNIDADES_GALLINAZA } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
@@ -23,12 +23,6 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
     <>
       <Titulo>Precios</Titulo>
       <PestanasContabilidad actual="/precios" operacion={sesion.operacion} />
-      <Subnav
-        enlaces={[
-          { id: "generales", texto: "Precios generales" },
-          { id: "cambios", texto: "Cambios de precio" },
-        ]}
-      />
       <div className="space-y-6">
         <Formulario accion={guardarPreciosGenerales} id="generales">
           <Tabla>

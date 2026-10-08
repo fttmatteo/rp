@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Subnav, Tarjeta, Titulo } from "@/components/ui";
+import { Tarjeta, Titulo } from "@/components/ui";
 import { avesPorLote, huevosPorLoteYDia } from "@/lib/aves-db";
 import { obtenerCaja, totalesCaja } from "@/lib/caja-db";
 import { db } from "@/lib/db";
@@ -119,13 +119,6 @@ export default async function InicioPage() {
   return (
     <>
       <Titulo>Inicio</Titulo>
-      <Subnav
-        enlaces={[
-          alertas.length > 0 && { id: "revisar", texto: `Para revisar (${alertas.length})` },
-          { id: "resumen", texto: "Resumen del día" },
-          productos && stock && { id: "inventario", texto: "Inventario" },
-        ]}
-      />
       {alertas.length > 0 && (
         <div id="revisar" className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm">
           <p className="mb-1 font-semibold text-amber-900">Para revisar</p>

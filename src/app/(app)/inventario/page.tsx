@@ -1,6 +1,6 @@
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
-import { Boton, Campo, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, Campo, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { existencias } from "@/lib/existencias";
 import { formatoCantidad, formatoFechaHora, formatoHuevos } from "@/lib/formato";
@@ -37,13 +37,6 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
     <>
       <Titulo>Inventario</Titulo>
       <PestanasInventario actual="/inventario" operacion={sesion.operacion} />
-      <Subnav
-        enlaces={[
-          { id: "existencias", texto: "Existencias" },
-          ajustar && { id: "ajuste", texto: "Ajuste" },
-          { id: "movimientos", texto: "Movimientos" },
-        ]}
-      />
       <div id="existencias" className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {productos.map((p) => {
           const cantidad = stock.get(p.id) ?? 0;

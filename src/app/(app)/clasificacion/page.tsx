@@ -1,6 +1,6 @@
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
-import { Boton, Campo, Etiqueta, Subnav, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatoCantidad, formatoDia, formatoHuevos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
@@ -35,12 +35,6 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
     <>
       <Titulo>Clasificación diaria</Titulo>
       <PestanasInventario actual="/clasificacion" operacion={sesion.operacion} />
-      <Subnav
-        enlaces={[
-          { id: "registrar", texto: "Registrar" },
-          { id: "registros", texto: `Registros (${totalRegistros})` },
-        ]}
-      />
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <Tarjeta id="registrar" titulo="Registrar clasificación">
           <Formulario accion={registrarClasificacion}>

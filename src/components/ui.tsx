@@ -92,7 +92,8 @@ export type EnlaceSeccion = { id: string; texto: string };
 
 /**
  * Barra fija con enlaces a las secciones de una página larga, para no tener que bajar con el dedo
- * hasta la última. Las secciones se marcan con id; los falsos se omiten.
+ * hasta la última. Solo en páginas donde una sección queda muy abajo (liquidación de ruta, lote, Mi ruta);
+ * en las cortas sobra. Las secciones se marcan con id; los falsos se omiten.
  */
 export function Subnav({ enlaces }: { enlaces: (EnlaceSeccion | false | null | undefined)[] }) {
   const lista = enlaces.filter((e): e is EnlaceSeccion => !!e);
