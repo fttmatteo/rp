@@ -27,7 +27,7 @@ export type Permiso =
   | "rutas" // ver las rutas del día, ordenarlas y quitarles pedidos
   | "rutas.aprobar" // aprobar el precierre del repartidor y liquidar la ruta (solo administrador)
   | "ruta.propia" // la ruta del día del repartidor: toma pedidos, entrega, cobra y hace el precierre
-  | "aves" // galpones, lotes y novedades
+  | "aves" // galpones y novedades de las aves
   | "compras" // proveedores, compras de huevo a terceros y cuentas por pagar
   | "reportes" // reportes y exportaciones
   | "anular";

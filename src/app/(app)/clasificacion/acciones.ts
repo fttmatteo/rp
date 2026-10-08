@@ -14,7 +14,7 @@ export async function registrarClasificacion(_: EstadoForm, form: FormData): Pro
   try {
     const fechaISO = texto(form, "fecha");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaISO) || fechaISO > hoyISO()) throw new ErrorUsuario("Fecha no válida.");
-    // Las gallinas para la venta salen de un lote (Aves → Paso a venta), no de la clasificación.
+    // Las gallinas para la venta salen de un galpón (Aves → Paso a venta), no de la clasificación.
     const productos = await db.producto.findMany({ where: { activo: true, tipo: { not: "GALLINA" } } });
     const detalles = productos
       .map((p) => ({
@@ -36,7 +36,7 @@ export async function registrarClasificacion(_: EstadoForm, form: FormData): Pro
 
     const lote = texto(form, "lote");
     const loteId = compraId === null && lote ? Number(lote) : null;
-    if (loteId !== null && !(await db.lote.findFirst({ where: { id: loteId, activo: true } }))) throw new ErrorUsuario("El lote elegido no está activo.");
+    if (loteId !== null && !(await db.lote.findFirst({ where: { id: loteId, activo: true } }))) throw new ErrorUsuario("El galpón elegido ya no tiene aves.");
 
     await db.$transaction(async (tx) => {
       if (compraId !== null) {

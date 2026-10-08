@@ -19,10 +19,10 @@ export async function avesPorLote(lotes: Pick<Lote, "id" | "cantidadInicial">[],
   return new Map(lotes.map((l) => [l.id, avesVivas(l, novedades)]));
 }
 
-/** Bloquea los lotes (en orden de id) para que dos novedades simultáneas no saquen más aves de las que hay. */
-export async function bloquearLotes(tx: Tx, ids: number[]): Promise<void> {
+/** Bloquea los galpones (en orden de id) para que no entren dos grupos de aves a la vez al mismo galpón. */
+export async function bloquearGalpones(tx: Tx, ids: number[]): Promise<void> {
   const ordenados = [...new Set(ids)].sort((a, b) => a - b);
-  await tx.$queryRaw`SELECT 1 FROM "Lote" WHERE "id" = ANY(${ordenados}::int[]) ORDER BY "id" FOR UPDATE`;
+  await tx.$queryRaw`SELECT 1 FROM "Galpon" WHERE "id" = ANY(${ordenados}::int[]) ORDER BY "id" FOR UPDATE`;
 }
 
 /** Huevos recogidos por lote y día (clasificados + rotos), sin registros anulados. */

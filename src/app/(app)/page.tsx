@@ -89,7 +89,7 @@ export default async function InicioPage() {
     si("aves", () => db.lote.findMany({ where: { activo: true } })),
   ]);
 
-  // Postura de hoy de los lotes activos.
+  // Postura de hoy de las aves que hay en los galpones.
   let postura: { huevos: number; aves: number } | null = null;
   if (lotes && lotes.length > 0) {
     const [aves, huevos] = await Promise.all([avesPorLote(lotes), huevosPorLoteYDia(lotes.map((l) => l.id), hoy, hoy)]);
@@ -183,7 +183,7 @@ export default async function InicioPage() {
             valor={postura.huevos > 0 ? `${porcentajePostura(postura.huevos, postura.aves)}% postura` : "Sin registro"}
             detalle={`${formatoHuevos(postura.huevos)} de ${postura.aves.toLocaleString("es-CO")} aves`}
             href="/aves"
-            enlace="Ver lotes"
+            enlace="Ver galpones"
           />
         )}
         {productos && stock && (
