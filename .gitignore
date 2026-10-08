@@ -7,3 +7,7 @@ next-env.d.ts
 coverage/
 produccion.env
 respaldos/
+
+# Motor de la skill impeccable (se descarga solo en el primer uso)
+.claude/skills/impeccable/scripts/bin/
+.impeccable/
