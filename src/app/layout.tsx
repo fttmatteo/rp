@@ -9,7 +9,7 @@ const SPLASH = [
 ] as const;
 
 export const metadata: Metadata = {
-  title: "RP Huevos Campesinos",
+  title: "RP Software",
   description: "Gestión de producción, inventario, ventas y cartera",
   // El favicon.ico de esta carpeta lo agrega Next solo; aquí van los demás tamaños.
   manifest: "/manifest.webmanifest",
