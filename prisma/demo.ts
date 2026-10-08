@@ -161,7 +161,12 @@ async function main() {
   // ---------- Usuarios (se guardan junto con todo lo demás, al final) ----------
   const claveHash = await bcrypt.hash(clave, 10);
   const usuarios: Prisma.UsuarioCreateManyInput[] = [];
-  const ids: Record<string, number> = { Usuario: (await db.usuario.aggregate({ _max: { id: true } }))._max.id ?? 0 };
+  // Cada tabla sigue desde su id más alto: la base puede traer usuarios o auditoría del seed o de haber usado la app.
+  const ids: Record<string, number> = {};
+  for (const tabla of TABLAS_CON_ID) {
+    const [{ max }] = await db.$queryRawUnsafe<{ max: number | null }[]>(`SELECT MAX("id")::int AS max FROM "${tabla}"`);
+    ids[tabla] = max ?? 0;
+  }
   const nuevoId = (tabla: string) => (ids[tabla] = (ids[tabla] ?? 0) + 1);
   const nuevoUsuario = (nombre: string, usuario: string, accesos: ("VENTAS" | "REPARTIDOR")[], activo = true) => {
     const fila = { id: nuevoId("Usuario"), nombre, usuario, claveHash, accesos, activo, creadoEn: sumar(inicio, -10) };
