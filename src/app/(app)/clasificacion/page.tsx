@@ -18,7 +18,7 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
       ...rango(pagina, 20),
       include: {
         usuario: { select: { nombre: true } },
-        lote: { select: { nombre: true } },
+        lote: { select: { galpon: { select: { nombre: true } } } },
         compra: { include: { proveedor: true } },
         detalles: { include: { producto: true } },
         movimientos: { where: { tipo: "ANULACION" }, take: 1, select: { id: true } },
@@ -26,7 +26,7 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
     }),
     db.registroClasificacion.count(),
     db.compra.findMany({ where: { anulada: false, porClasificar: { gt: 0 } }, orderBy: { fecha: "asc" }, include: { proveedor: true } }),
-    db.lote.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, include: { galpon: true } }),
+    db.lote.findMany({ where: { activo: true }, orderBy: { galpon: { nombre: "asc" } }, include: { galpon: true } }),
   ]);
   const huevos = productos.filter((p) => p.tipo === "CUBETA");
   const gallinaza = productos.filter((p) => p.tipo === "GALLINAZA");
@@ -42,12 +42,12 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
               <input name="fecha" type="date" defaultValue={hoyISO()} max={hoyISO()} required />
             </Campo>
             {lotes.length > 0 && (
-              <Campo etiqueta="Lote" ayuda="El lote que puso estos huevos; con él se calcula el % de postura. No aplica a huevo comprado.">
+              <Campo etiqueta="Galpón" ayuda="El galpón de donde salieron estos huevos; con él se calcula el % de postura. No aplica a huevo comprado.">
                 <select name="lote" defaultValue={lotes.length === 1 ? lotes[0].id : ""}>
-                  <option value="">Sin lote</option>
+                  <option value="">Sin galpón</option>
                   {lotes.map((l) => (
                     <option key={l.id} value={l.id}>
-                      {l.nombre} ({l.galpon.nombre})
+                      {l.galpon.nombre}
                     </option>
                   ))}
                 </select>
@@ -100,7 +100,7 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
             <Campo etiqueta="Nota">
               <input name="nota" />
             </Campo>
-            <p className="text-xs text-stone-500">Las gallinas para vender se registran en Aves, en el lote del que salen (novedad «Paso a venta»).</p>
+            <p className="text-xs text-stone-500">Las gallinas para vender se registran en Aves, en el galpón del que salen (novedad «Paso a venta»).</p>
             <Boton type="submit">Guardar</Boton>
           </Formulario>
         </Tarjeta>
@@ -125,7 +125,7 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
                   {r.detalles.map((d) => `${d.producto.nombre}: ${formatoCantidad(d.producto.tipo, d.cantidad, d.producto.unidad)}`).join(" · ")}
                 </p>
                 {r.rotos > 0 && <p className="text-stone-500">Rotos: {r.rotos}</p>}
-                {r.lote && <p className="text-stone-500">Lote: {r.lote.nombre}</p>}
+                {r.lote && <p className="text-stone-500">Galpón: {r.lote.galpon.nombre}</p>}
                 {r.nota && <p className="text-stone-500">{r.nota}</p>}
                 {puede(sesion.operacion, "anular") && r.movimientos.length === 0 && (
                   <Formulario accion={anularClasificacion.bind(null, r.id)} confirmar="¿Anular este registro? Sus cantidades salen del inventario." className="mt-1">

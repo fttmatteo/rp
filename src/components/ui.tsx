@@ -91,7 +91,7 @@ export function Etiqueta({ children, color = "gris" }: { children: ReactNode; co
 export type Vista = { clave: string; texto: string };
 
 /**
- * Pestañas dentro de una misma página larga (liquidación de ruta, lote, Mi ruta): muestran una parte
+ * Pestañas dentro de una misma página larga (liquidación de ruta, galpón, Mi ruta): muestran una parte
  * a la vez en vez de apilarlo todo y obligar a bajar. La parte elegida va en ?ver=, junto con los filtros
  * de la página. Se ven igual que las pestañas de sección.
  */

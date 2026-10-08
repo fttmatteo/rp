@@ -394,12 +394,12 @@ async function main() {
   // ---------- Galpones y lotes ----------
   interface LoteDemo {
     id: number;
-    nombre: string;
+    galpon: string;
     ingreso: Date;
     edadIngreso: number;
     vivas: number;
     postura: boolean;
-    paraVenta: boolean; // lote viejo que se va vendiendo como gallina
+    paraVenta: boolean; // aves viejas que se van vendiendo como gallina
   }
   const lotes: LoteDemo[] = [];
   const agregarGalpon = (nombre: string, capacidad: number, activo = true) => {
@@ -407,19 +407,21 @@ async function main() {
     filas.galpones.push({ id, nombre, capacidad, activo, creadoEn: sumar(inicio, -600) });
     return id;
   };
-  const agregarLote = (galponId: number, nombre: string, raza: string, ingreso: Date, edadIngreso: number, cantidad: number, estado: "CRIA" | "LEVANTE" | "POSTURA", paraVenta = false) => {
+  // Cada lote es el grupo de aves que hay en un galpón; en pantalla solo se ve el galpón.
+  const agregarLote = (galponId: number, raza: string, ingreso: Date, edadIngreso: number, cantidad: number, estado: "CRIA" | "LEVANTE" | "POSTURA", paraVenta = false) => {
     const id = nuevoId("Lote");
-    filas.lotes.push({ id, galponId, nombre, raza, fechaIngreso: ingreso, edadIngresoSemanas: edadIngreso, cantidadInicial: cantidad, estado, creadoEn: hora(ingreso, 9) });
-    const lote = { id, nombre, ingreso, edadIngreso, vivas: cantidad, postura: estado === "POSTURA", paraVenta };
+    const galpon = filas.galpones.find((g) => g.id === galponId)!.nombre;
+    filas.lotes.push({ id, galponId, nombre: `Entrada ${ingreso.toISOString().slice(0, 10)}`, raza, fechaIngreso: ingreso, edadIngresoSemanas: edadIngreso, cantidadInicial: cantidad, estado, creadoEn: hora(ingreso, 9) });
+    const lote = { id, galpon, ingreso, edadIngreso, vivas: cantidad, postura: estado === "POSTURA", paraVenta };
     lotes.push(lote);
     return lote;
   };
-  agregarLote(agregarGalpon("Galpón 1", 4500), "L-1 Hy-Line", "Hy-Line Brown", sumar(inicio, -280), 16, 4000, "POSTURA");
-  agregarLote(agregarGalpon("Galpón 2", 4000), "L-2 Lohmann", "Lohmann Brown", sumar(inicio, -170), 16, 3500, "POSTURA");
-  agregarLote(agregarGalpon("Galpón 3", 4000), "L-3 Hy-Line", "Hy-Line Brown", sumar(inicio, -45), 17, 3300, "POSTURA");
-  const loteViejo = agregarLote(agregarGalpon("Galpón 4", 3000), "L-0 Isa Brown", "Isa Brown", sumar(inicio, -520), 18, 2700, "POSTURA", true);
+  agregarLote(agregarGalpon("Galpón 1", 4500), "Hy-Line Brown", sumar(inicio, -280), 16, 4000, "POSTURA");
+  agregarLote(agregarGalpon("Galpón 2", 4000), "Lohmann Brown", sumar(inicio, -170), 16, 3500, "POSTURA");
+  agregarLote(agregarGalpon("Galpón 3", 4000), "Hy-Line Brown", sumar(inicio, -45), 17, 3300, "POSTURA");
+  const loteViejo = agregarLote(agregarGalpon("Galpón 4", 3000), "Isa Brown", sumar(inicio, -520), 18, 2700, "POSTURA", true);
   // Pollitas que llegaron hace diez semanas: en levante, todavía sin postura.
-  agregarLote(agregarGalpon("Galpón 5 (levante)", 3500), "L-5 Lohmann", "Lohmann Brown", sumar(hoy, -70), 1, 3000, "LEVANTE");
+  agregarLote(agregarGalpon("Galpón 5 (levante)", 3500), "Lohmann Brown", sumar(hoy, -70), 1, 3000, "LEVANTE");
   const galponCria = agregarGalpon("Galpón 6 (cría)", 3500);
   agregarGalpon("Galpón viejo (fuera de uso)", 2000, false);
   const diaPollitas = sumar(inicio, Math.floor(dias * 0.6));
@@ -517,7 +519,7 @@ async function main() {
           const cantidad = l.vivas < 200 ? l.vivas : entre(95, 125);
           const novedadId = nuevoId("NovedadLote");
           filas.novedades.push({ id: novedadId, loteId: l.id, fecha: d, tipo: "VENTA", cantidad, usuarioId: galponero.id, creadoEn: hora(d, 5, 15), nota: "Para venta como gallina" });
-          mover({ fecha: hora(d, 5, 15), productoId: prod("GALLINA").id, cantidad, tipo: "PRODUCCION", novedadId, usuarioId: galponero.id, nota: `Del lote ${l.nombre}` });
+          mover({ fecha: hora(d, 5, 15), productoId: prod("GALLINA").id, cantidad, tipo: "PRODUCCION", novedadId, usuarioId: galponero.id, nota: `Del ${l.galpon}` });
           l.vivas -= cantidad;
           if (prob(0.3) && l.vivas > 20) {
             const descarte = entre(5, 15);
@@ -533,9 +535,9 @@ async function main() {
         destino.vivas += 40;
       }
       if (d.getTime() === sumar(inicio, 10).getTime())
-        filas.novedades.push({ id: nuevoId("NovedadLote"), loteId: lotes[0].id, fecha: d, tipo: "MUERTE", cantidad: 25, usuarioId: galponero.id, creadoEn: hora(d, 8), nota: "Se escribió en el lote equivocado", anulada: true });
+        filas.novedades.push({ id: nuevoId("NovedadLote"), loteId: lotes[0].id, fecha: d, tipo: "MUERTE", cantidad: 25, usuarioId: galponero.id, creadoEn: hora(d, 8), nota: "Se escribió en el galpón equivocado", anulada: true });
       if (d.getTime() === diaPollitas.getTime()) {
-        const pollitas = agregarLote(galponCria, "L-4 Hy-Line", "Hy-Line Brown", d, 1, 3200, "CRIA");
+        const pollitas = agregarLote(galponCria, "Hy-Line Brown", d, 1, 3200, "CRIA");
         pollitas.postura = false;
       }
 

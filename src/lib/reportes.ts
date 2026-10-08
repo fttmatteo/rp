@@ -24,7 +24,7 @@ export const REPORTES = {
   "ventas-clientes": "Ventas por cliente",
   "ventas-productos": "Ventas por producto",
   produccion: "Producción propia y comprada",
-  lotes: "Lotes: mortalidad y postura",
+  lotes: "Galpones: mortalidad y postura",
   cartera: "Cartera por cliente",
   compras: "Compras por proveedor",
 } as const;
@@ -119,7 +119,7 @@ async function lotes(desde: Date, hasta: Date): Promise<Reporte> {
   const lista = await db.lote.findMany({
     where: { fechaIngreso: { lte: hasta }, OR: [{ activo: true }, { novedades: { some: { fecha: { gte: desde } } } }] },
     include: { galpon: true },
-    orderBy: { nombre: "asc" },
+    orderBy: [{ galpon: { nombre: "asc" } }, { fechaIngreso: "asc" }],
   });
   const [novedades, registros] = await Promise.all([
     novedadesDe(lista.map((l) => l.id)),
@@ -129,8 +129,8 @@ async function lotes(desde: Date, hasta: Date): Promise<Reporte> {
     }),
   ]);
   const columnas: Columna[] = [
-    { titulo: "Lote" },
     { titulo: "Galpón" },
+    { titulo: "Entrada de las aves" },
     { titulo: "Aves al inicio", tipo: "numero" },
     { titulo: "Muertes", tipo: "numero" },
     { titulo: "Descartes", tipo: "numero" },
@@ -150,8 +150,8 @@ async function lotes(desde: Date, hasta: Date): Promise<Reporte> {
     const dias = new Set(propios.map((r) => r.fecha.getTime())).size;
     const base = Math.max(inicio, fin);
     return [
-      l.nombre,
       l.galpon.nombre,
+      formatoDia(l.fechaIngreso),
       inicio,
       bajas.MUERTE,
       bajas.DESCARTE,
@@ -163,7 +163,7 @@ async function lotes(desde: Date, hasta: Date): Promise<Reporte> {
       dias > 0 ? porcentajePostura(huevos / dias, fin) : null,
     ];
   });
-  return { titulo: REPORTES.lotes, nota: "Traslados: aves que entraron menos las que salieron a otros lotes. Postura promedio: huevos por día con registro ÷ aves al final del período.", columnas, filas };
+  return { titulo: REPORTES.lotes, nota: "Una fila por cada grupo de aves que estuvo en el galpón en el período. Traslados: aves que llegaron de otros galpones menos las que salieron a otros. Postura promedio: huevos por día con registro ÷ aves al final del período.", columnas, filas };
 }
 
 async function cartera(hoy: Date): Promise<Reporte> {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avesVivas, bajasPorTipo, edadSemanas, porcentajePostura, type Novedad } from "./aves";
+import { avesQueEntraron, avesVivas, bajasPorTipo, edadSemanas, porcentajePostura, type Novedad } from "./aves";
 
 const d = (iso: string) => new Date(`${iso}T00:00:00Z`);
 const n = (p: Partial<Novedad>): Novedad => ({
@@ -23,6 +23,10 @@ describe("aves", () => {
     expect(avesVivas({ id: 1, cantidadInicial: 1000 }, novedades)).toBe(875);
     expect(avesVivas({ id: 2, cantidadInicial: 500 }, novedades)).toBe(600);
     expect(avesVivas({ id: 1, cantidadInicial: 1000 }, novedades, d("2026-10-02"))).toBe(895);
+  });
+  it("suma a las aves que entraron las que llegaron por traslado", () => {
+    expect(avesQueEntraron({ id: 1, cantidadInicial: 1000 }, novedades)).toBe(1000);
+    expect(avesQueEntraron({ id: 2, cantidadInicial: 0 }, novedades)).toBe(100);
   });
   it("calcula edad y postura", () => {
     expect(edadSemanas(d("2026-09-01"), 18, d("2026-10-05"))).toBe(22);
