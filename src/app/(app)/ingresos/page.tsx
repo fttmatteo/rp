@@ -42,12 +42,12 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
   const vender = esHoy && abierta && puede(op, "pedidos.crear") && puede(op, "pedidos.entregar");
   const abonar = esHoy && abierta && puede(op, "pagos.registrar") && op !== "REPARTIDOR";
   const [clientes, productos, saldos] = await Promise.all([
-    vender || abonar ? db.cliente.findMany({ where: { activo: true }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }) : [],
+    vender || abonar ? db.cliente.findMany({ where: { activo: true, consumidorFinal: false }, orderBy: { nombre: "asc" }, select: { id: true, nombre: true } }) : [],
     vender ? db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }) : [],
     abonar ? saldosPorCliente() : new Map<number, number>(),
   ]);
   const opciones = [
-    ...(vender ? [{ clave: "venta", texto: "Venta en la granja" }] : []),
+    ...(vender ? [{ clave: "venta", texto: "Venta en el punto" }] : []),
     ...(abonar ? [{ clave: "abono", texto: "Abono de cliente" }] : []),
     ...(abierta ? [{ clave: "otro", texto: "Otro ingreso" }] : []),
   ];
@@ -130,7 +130,7 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
         <div className="space-y-3">
           <ElegirRegistro ruta="/ingresos" diaISO={diaISO} actual={elegido ?? ""} opciones={opciones} />
           {elegido === "venta" && (
-            <Tarjeta id="venta" titulo="Venta en la granja">
+            <Tarjeta id="venta" titulo="Venta en el punto">
               <Formulario accion={registrarVentaDirecta} className="space-y-3">
                 <p className="text-xs text-stone-500">
                   Para el cliente que se lleva el producto ahora: queda entregada con su recibo. Los pedidos para repartir se crean en{" "}
@@ -139,11 +139,9 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
                   </Link>
                   .
                 </p>
-                <Campo etiqueta="Cliente">
-                  <select name="clienteId" required defaultValue="">
-                    <option value="" disabled>
-                      Elige el cliente
-                    </option>
+                <Campo etiqueta="Cliente" ayuda="Consumidor final: alguien que compra una vez y no está registrado. Paga todo en el momento.">
+                  <select name="clienteId" required defaultValue="final">
+                    <option value="final">Consumidor final (no registrado)</option>
                     {clientes.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.nombre}

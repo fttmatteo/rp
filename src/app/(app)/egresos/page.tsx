@@ -24,6 +24,7 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
   const diaISO = diaParam && /^\d{4}-\d{2}-\d{2}$/.test(diaParam) && diaParam <= hoy ? diaParam : hoy;
   const dia = diaUTC(diaISO);
   const esHoy = diaISO === hoy;
+  const verCompras = puede(sesion.operacion, "compras");
 
   const [caja, movimientos] = await Promise.all([
     obtenerCaja(dia, db, esHoy),
@@ -39,7 +40,6 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
   ]);
   const abierta = caja.estado === "ABIERTA";
   // Compras y pagos a proveedores siempre salen de la caja de hoy.
-  const verCompras = puede(sesion.operacion, "compras");
   const comprar = esHoy && abierta && verCompras;
   const [proveedores, tipos, saldos] = await Promise.all([
     comprar ? db.proveedor.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }) : [],
@@ -49,6 +49,8 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
   const opciones = [
     ...(comprar ? [{ clave: "compra", texto: "Compra de huevo" }, { clave: "pago", texto: "Pago a proveedor" }] : []),
     ...(abierta ? [{ clave: "gasto", texto: "Gasto o retiro" }] : []),
+    // El historial va como un botón más, para no repetirse debajo de cada formulario.
+    ...(verCompras ? [{ clave: "historial", texto: "Historial de compras" }] : []),
   ];
   const elegido = registroElegido(registrar, opciones);
   const porPagar = proveedores.filter((p) => (saldos.get(p.id) ?? 0) > 0);
@@ -85,27 +87,19 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
     <>
       <Titulo accion={<SelectorDiaCaja ruta="/egresos" diaISO={diaISO} />}>Egresos del {formatoDia(dia)}</Titulo>
       <PestanasContabilidad actual="/egresos" operacion={sesion.operacion} dia={diaISO} />
-      <p className="mb-4 text-sm text-stone-600">
-        Compras de huevo, pagos a proveedores y gastos.
-        {verCompras && (
-          <>
-            {" "}
-            <a href="#historial" className="underline">
-              Ver el historial de compras
-            </a>
-            .
-          </>
-        )}
-      </p>
+      <p className="mb-4 text-sm text-stone-600">Compras de huevo, pagos a proveedores y gastos.</p>
       {!abierta && (
         <div className="mb-4">
           <Alerta tipo="aviso">La caja de este día está cerrada. Para registrar algo, el administrador debe reabrirla.</Alerta>
         </div>
       )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-2">
+      <div className="mb-3">
+        <ElegirRegistro ruta="/egresos" diaISO={diaISO} actual={elegido ?? ""} opciones={opciones} />
+      </div>
+      {/* El historial es una tabla ancha: ocupa todo el ancho y las salidas del día quedan debajo. */}
+      <div className={`grid items-start gap-6 ${elegido === "historial" ? "" : "lg:grid-cols-2"}`}>
         <div className="space-y-3">
-          <ElegirRegistro ruta="/egresos" diaISO={diaISO} actual={elegido ?? ""} opciones={opciones} />
           {elegido === "compra" && (
             <Tarjeta id="compra" titulo="Compra de huevo">
               <FormularioCompra proveedores={proveedores} tipos={tipos} />
@@ -155,11 +149,12 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
               <FormularioMovimiento diaISO={diaISO} tipo="EGRESO" />
             </Tarjeta>
           )}
+
+          {elegido === "historial" && <HistorialCompras operacion={sesion.operacion} pagina={leerPagina(paginaCompras)} diaISO={diaISO} />}
         </div>
 
         <ListaDinero id="lista" titulo="Salidas del día" filas={filas} ruta="/egresos" diaISO={diaISO} pagina={pagina} vacio="Sin egresos." />
       </div>
-      {verCompras && <HistorialCompras operacion={sesion.operacion} pagina={leerPagina(paginaCompras)} diaISO={diaISO} />}
     </>
   );
 }

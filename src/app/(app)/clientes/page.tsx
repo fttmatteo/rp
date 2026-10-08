@@ -12,7 +12,9 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
   const params = await searchParams;
   const { q = "", inactivos } = params;
   const pagina = leerPagina(params.pagina);
+  // El consumidor final de la venta en el punto no es un cliente registrado.
   const where: Prisma.ClienteWhereInput = {
+    consumidorFinal: false,
     ...(inactivos ? {} : { activo: true }),
     ...(q
       ? {

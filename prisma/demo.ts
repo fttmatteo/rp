@@ -2,7 +2,7 @@
 // producción por lote, compras a proveedores) para ver la app como si ya estuviera en uso.
 // Cubre cada caso que la app muestra: rutas abiertas, con precierre por aprobar, devueltas y
 // liquidadas (y una reabierta); la caja de ayer sin cerrar y la de hoy abierta con movimientos;
-// pedidos de hoy sin tomar y atrasados; ventas en la granja; abonos a un recibo; compras vencidas,
+// pedidos de hoy sin tomar y atrasados; ventas en el punto; abonos a un recibo; compras vencidas,
 // anuladas y por clasificar; abonos a proveedores parciales y anulados; lotes en cría, levante,
 // postura y cerrados; precios especiales que cambian o se quitan; existencias bajas.
 // Solo se cargan en una base sin clientes, galpones, proveedores ni caja: nunca en producción.
@@ -293,6 +293,12 @@ async function main() {
     }
   }
   FINCAS.forEach((nombre, i) => agregarCliente(nombre, "FINCA", ZONAS_RUTA[i % 2][4], i % 2));
+  // Consumidor final: quien compra una vez en el punto y no está registrado. No está en ninguna ruta ni en la lista de clientes.
+  const final: ClienteDemo = {
+    id: nuevoId("Cliente"), nombre: "Consumidor final", zona: "", ruta: -1, tamano: "TIENDA", perfil: "CONTADO",
+    frecuencia: 0, diasCredito: 0, activo: true, precios: new Map(), deudas: [],
+  };
+  filas.clientes.push({ id: final.id, nombre: final.nombre, diasCredito: 0, consumidorFinal: true, creadoEn: hora(sumar(inicio, -20), 8) });
 
   // Alza de precios generales a mitad del periodo.
   for (const [codigo, anterior] of Object.entries(PRECIO_ANTERIOR)) {
@@ -450,7 +456,7 @@ async function main() {
   const pendientesClasificar: (typeof filas.compras)[number][] = [];
   let pedidosEntregados = 0;
   let pedidosParciales = 0;
-  let ventasGranja = 0;
+  let ventasPunto = 0;
   const pedidoDe = new Map<number, (typeof filas.pedidos)[number]>();
   const reprogramados = new Map<number, { pedidoId: number; lineas: (typeof filas.detallesPedido)[number][] }>();
   const repartidoresDel = (d: Date) => [repartidores[0], deVacaciones(d) ? diana : repartidores[1]];
@@ -814,7 +820,7 @@ async function main() {
           },
         });
       }
-      // Ventas en la granja: el cliente viene por gallinaza o gallinas y se le vende en un solo paso, sin ruta.
+      // Ventas en el punto: el cliente viene por gallinaza o gallinas y se le vende en un solo paso, sin ruta.
       if (esHoy || prob(0.35)) {
         const c = elegir(lista.filter((x) => x.activo && (x.tamano === "FINCA" || x.tamano === "ASADERO")));
         const instante = esHoy ? hora(d, 8, 15) : hora(d, entre(9, 15), entre(0, 59));
@@ -827,15 +833,38 @@ async function main() {
             if (cantidad <= 0) return;
             const precio = c.precios.get(codigo) ?? precioGeneral(codigo, d);
             const pedidoId = nuevoId("Pedido");
-            filas.pedidos.push({ id: pedidoId, clienteId: c.id, fechaEntrega: d, estado: "ENTREGADO", nota: "Venta en la granja", creadoEn: instante, creadoPorId: ventas.id });
+            filas.pedidos.push({ id: pedidoId, clienteId: c.id, fechaEntrega: d, estado: "ENTREGADO", nota: "Venta en el punto", creadoEn: instante, creadoPorId: ventas.id });
             filas.detallesPedido.push({ id: nuevoId("DetallePedido"), pedidoId, productoId: p.id, cantidad, precioUnitario: precio, cantidadEntregada: cantidad });
             const venta = crearVenta(c, { fecha: instante, total: cantidad * precio, usuarioId: ventas.id, pedidoId });
             mover({ fecha: instante, productoId: p.id, cantidad: -cantidad, tipo: "VENTA", ventaId: venta.id, usuarioId: ventas.id });
             pedidosEntregados++;
-            ventasGranja++;
+            ventasPunto++;
             // Casi siempre paga todo; a veces aprovecha para pagar lo que debía, o deja una parte fiada.
             const valor = elegir([venta.total, venta.total, venta.total, venta.total, deudaDe(c), miles(venta.total / 2)]);
             const pago = pagar(c, { dia: d, fecha: new Date(instante.getTime() + 60_000), valor, medio: prob(0.8) ? "EFECTIVO" : "TRANSFERENCIA", usuarioId: ventas.id, ventaId: venta.id });
+            if (pago?.medio === "EFECTIVO") caja.cobrosEf += pago.valor;
+          },
+        });
+      }
+      // Alguien de paso compra unas cubetas o una gallina como consumidor final: paga todo, a precio general.
+      if (esHoy || prob(0.5)) {
+        const instante = esHoy ? hora(d, 9, 40) : hora(d, entre(8, 16), entre(0, 59));
+        eventos.push({
+          instante,
+          hacer: () => {
+            const codigo = elegir(["AA", "AA", "A", "GALLINA"]);
+            const p = prod(codigo);
+            const cantidad = Math.min(entre(1, 3), stock.get(p.id) ?? 0);
+            if (cantidad <= 0) return;
+            const precio = precioGeneral(codigo, d);
+            const pedidoId = nuevoId("Pedido");
+            filas.pedidos.push({ id: pedidoId, clienteId: final.id, fechaEntrega: d, estado: "ENTREGADO", nota: "Venta en el punto", creadoEn: instante, creadoPorId: ventas.id });
+            filas.detallesPedido.push({ id: nuevoId("DetallePedido"), pedidoId, productoId: p.id, cantidad, precioUnitario: precio, cantidadEntregada: cantidad });
+            const venta = crearVenta(final, { fecha: instante, total: cantidad * precio, usuarioId: ventas.id, pedidoId });
+            mover({ fecha: instante, productoId: p.id, cantidad: -cantidad, tipo: "VENTA", ventaId: venta.id, usuarioId: ventas.id });
+            pedidosEntregados++;
+            ventasPunto++;
+            const pago = pagar(final, { dia: d, fecha: new Date(instante.getTime() + 60_000), valor: venta.total, medio: prob(0.85) ? "EFECTIVO" : "TRANSFERENCIA", usuarioId: ventas.id, ventaId: venta.id });
             if (pago?.medio === "EFECTIVO") caja.cobrosEf += pago.valor;
           },
         });
@@ -1084,7 +1113,7 @@ async function main() {
   const cartera = filas.ventas.reduce((s, v) => s + v.saldo, 0);
   console.log(`Datos de ejemplo cargados: ${dias} días desde ${inicio.toISOString().slice(0, 10)}.`);
   console.log(
-    `  ${filas.clientes.length} clientes, ${filas.pedidos.length} pedidos (${pedidosEntregados} entregados, ${pedidosParciales} parciales, ${ventasGranja} ventas en la granja), ${filas.pagos.length} pagos.`,
+    `  ${filas.clientes.length} clientes, ${filas.pedidos.length} pedidos (${pedidosEntregados} entregados, ${pedidosParciales} parciales, ${ventasPunto} ventas en el punto), ${filas.pagos.length} pagos.`,
   );
   console.log(`  Cartera pendiente: $${cartera.toLocaleString("es-CO")}.`);
   console.log(`  Por revisar: la caja de ayer sin cerrar, una ruta de ayer devuelta sin liquidar, el precierre de Diana de hoy por aprobar,`);

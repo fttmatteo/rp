@@ -137,19 +137,21 @@ model HistorialPrecio {
 // ---------- Clientes ----------
 
 model Cliente {
-  id          Int      @id @default(autoincrement())
-  nombre      String
-  telefono    String?
-  direccion   String?
-  zona        String?
+  id              Int      @id @default(autoincrement())
+  nombre          String
+  telefono        String?
+  direccion       String?
+  zona            String?
   // Ubicación GPS opcional para abrir la parada en Google Maps.
-  latitud     Float?
-  longitud    Float?
-  notas       String?
-  cupoCredito Int? // null = sin límite
-  diasCredito Int      @default(15)
-  activo      Boolean  @default(true)
-  creadoEn    DateTime @default(now())
+  latitud         Float?
+  longitud        Float?
+  notas           String?
+  cupoCredito     Int? // null = sin límite
+  diasCredito     Int      @default(15)
+  activo          Boolean  @default(true)
+  // Cliente genérico de la venta en el punto para quien compra una vez y no está registrado. Hay uno solo.
+  consumidorFinal Boolean  @default(false)
+  creadoEn        DateTime @default(now())
 
   precios   PrecioCliente[]
   historial HistorialPrecio[]

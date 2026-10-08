@@ -18,6 +18,7 @@ export async function crearPedido(clienteId: number, _: EstadoForm, form: FormDa
   try {
     const cliente = await db.cliente.findUnique({ where: { id: clienteId }, include: { precios: true } });
     if (!cliente || !cliente.activo) throw new ErrorUsuario("Cliente no encontrado o inactivo.");
+    if (cliente.consumidorFinal) throw new ErrorUsuario("Al consumidor final se le vende en el punto, desde Ingresos.");
     const fechaISO = texto(form, "fechaEntrega");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaISO) || fechaISO < hoyISO()) throw new ErrorUsuario("La fecha de entrega no es válida.");
 

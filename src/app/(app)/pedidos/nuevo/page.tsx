@@ -15,11 +15,11 @@ export default async function NuevoPedidoPage({ searchParams }: { searchParams: 
   const pagina = leerPagina(paginaParam);
   const clienteId = Number(clienteParam);
   const cliente = Number.isInteger(clienteId) && clienteId > 0
-    ? await db.cliente.findFirst({ where: { id: clienteId, activo: true }, include: { precios: true } })
+    ? await db.cliente.findFirst({ where: { id: clienteId, activo: true, consumidorFinal: false }, include: { precios: true } })
     : null;
 
   if (!cliente) {
-    const where = { activo: true, ...(q ? { OR: [{ nombre: { contains: q, mode: "insensitive" as const } }, { telefono: { contains: q } }] } : {}) };
+    const where = { activo: true, consumidorFinal: false, ...(q ? { OR: [{ nombre: { contains: q, mode: "insensitive" as const } }, { telefono: { contains: q } }] } : {}) };
     const [clientes, total] = await Promise.all([
       db.cliente.findMany({ where, orderBy: [{ nombre: "asc" }, { id: "asc" }], ...rango(pagina), select: { id: true, nombre: true, zona: true, telefono: true } }),
       db.cliente.count({ where }),
