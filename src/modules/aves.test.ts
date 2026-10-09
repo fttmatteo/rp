@@ -3,8 +3,8 @@ import { avesQueEntraron, avesVivas, bajasPorTipo, edadSemanas, porcentajePostur
 
 const d = (iso: string) => new Date(`${iso}T00:00:00Z`);
 const n = (p: Partial<Novedad>): Novedad => ({
-  loteId: 1,
-  loteDestinoId: null,
+  grupoId: 1,
+  grupoDestinoId: null,
   tipo: "MUERTE",
   cantidad: 1,
   fecha: d("2026-10-01"),
@@ -16,7 +16,7 @@ describe("aves", () => {
   const novedades = [
     n({ tipo: "MUERTE", cantidad: 5 }),
     n({ tipo: "VENTA", cantidad: 20, fecha: d("2026-10-03") }),
-    n({ tipo: "TRASLADO", cantidad: 100, loteDestinoId: 2 }),
+    n({ tipo: "TRASLADO", cantidad: 100, grupoDestinoId: 2 }),
     n({ tipo: "DESCARTE", cantidad: 7, anulada: true }),
   ];
   it("cuenta las aves vivas con traslados de entrada y salida", () => {

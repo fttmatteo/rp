@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Tarjeta, Titulo } from "@/components/ui";
-import { avesPorLote, huevosPorLoteYDia } from "@/lib/aves-db";
+import { avesPorGrupo, huevosPorGrupoYDia } from "@/lib/aves-db";
 import { obtenerCaja, totalesCaja } from "@/lib/caja-db";
 import { db } from "@/lib/db";
 import { existencias } from "@/lib/existencias";
@@ -57,7 +57,7 @@ export default async function InicioPage() {
     porPagar,
     comprasVencidas,
     porClasificar,
-    lotes,
+    grupos,
   ] = await Promise.all([
     puede(op, "ruta.propia")
       ? db.ruta.findUnique({
@@ -86,13 +86,13 @@ export default async function InicioPage() {
     si("compras", () => db.compra.aggregate({ where: { anulada: false, saldo: { gt: 0 } }, _sum: { saldo: true } })),
     si("compras", () => db.compra.count({ where: { anulada: false, saldo: { gt: 0 }, vence: { lt: hoy } } })),
     si("inventario.ver", () => db.compra.aggregate({ where: { anulada: false, porClasificar: { gt: 0 } }, _sum: { porClasificar: true } })),
-    si("aves", () => db.lote.findMany({ where: { activo: true } })),
+    si("aves", () => db.grupoAves.findMany({ where: { activo: true } })),
   ]);
 
   // Postura de hoy de las aves que hay en los galpones.
   let postura: { huevos: number; aves: number } | null = null;
-  if (lotes && lotes.length > 0) {
-    const [aves, huevos] = await Promise.all([avesPorLote(lotes), huevosPorLoteYDia(lotes.map((l) => l.id), hoy, hoy)]);
+  if (grupos && grupos.length > 0) {
+    const [aves, huevos] = await Promise.all([avesPorGrupo(grupos), huevosPorGrupoYDia(grupos.map((l) => l.id), hoy, hoy)]);
     postura = { aves: [...aves.values()].reduce((s, n) => s + n, 0), huevos: [...huevos.values()].reduce((s, n) => s + n, 0) };
   }
 

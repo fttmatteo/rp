@@ -1,4 +1,4 @@
-export const ESTADO_LOTE = { CRIA: "Cría", LEVANTE: "Levante", POSTURA: "Postura", DESCARTE: "Descarte" } as const;
+export const ETAPA_AVES = { CRIA: "Cría", LEVANTE: "Levante", POSTURA: "Postura", DESCARTE: "Descarte" } as const;
 
 export const TIPO_NOVEDAD = {
   MUERTE: "Muerte",

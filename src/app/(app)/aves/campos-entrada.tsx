@@ -1,5 +1,5 @@
 import { Campo } from "@/components/ui";
-import { ESTADO_LOTE } from "@/lib/etiquetas-aves";
+import { ETAPA_AVES } from "@/lib/etiquetas-aves";
 import { hoyISO } from "@/lib/formato";
 
 /** Campos de una entrada de aves a un galpón (al crearlo o cuando está vacío). */
@@ -16,8 +16,8 @@ export function CamposEntrada({ obligatoria }: { obligatoria: boolean }) {
         <input name="edadIngresoSemanas" inputMode="numeric" defaultValue="0" />
       </Campo>
       <Campo etiqueta="Etapa">
-        <select name="estado" defaultValue="POSTURA">
-          {Object.entries(ESTADO_LOTE).map(([k, v]) => (
+        <select name="etapa" defaultValue="POSTURA">
+          {Object.entries(ETAPA_AVES).map(([k, v]) => (
             <option key={k} value={k}>
               {v}
             </option>

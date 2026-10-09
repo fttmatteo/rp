@@ -39,7 +39,7 @@ model Usuario {
   clasificaciones RegistroClasificacion[]
   compras         Compra[]
   pagosProveedor  PagoProveedor[]
-  novedades       NovedadLote[]
+  novedades       NovedadAves[]
   pedidos         Pedido[]
   ventas          Venta[]
   pagos           Pago[]
@@ -185,11 +185,11 @@ model MovimientoInventario {
   ventaId         Int?
   clasificacionId Int?
   compraId        Int?
-  novedadId       Int? // gallinas que pasan de un lote a la venta
+  novedadId       Int? // gallinas que pasan de un galpón a la venta
 
   producto      Producto               @relation(fields: [productoId], references: [id])
   compra        Compra?                @relation(fields: [compraId], references: [id])
-  novedad       NovedadLote?           @relation(fields: [novedadId], references: [id])
+  novedad       NovedadAves?           @relation(fields: [novedadId], references: [id])
   usuario       Usuario?               @relation(fields: [usuarioId], references: [id])
   venta         Venta?                 @relation(fields: [ventaId], references: [id])
   clasificacion RegistroClasificacion? @relation(fields: [clasificacionId], references: [id])
@@ -206,12 +206,12 @@ model RegistroClasificacion {
   nota      String?
   // Si viene de una compra sin clasificar; null = producción propia.
   compraId  Int?
-  // Lote que puso esos huevos (producción propia), para el % de postura.
-  loteId    Int?
+  // Grupo de aves (galpón) que puso esos huevos (producción propia), para el % de postura.
+  grupoId   Int?
 
   usuario     Usuario                @relation(fields: [usuarioId], references: [id])
   compra      Compra?                @relation(fields: [compraId], references: [id])
-  lote        Lote?                  @relation(fields: [loteId], references: [id])
+  grupo       GrupoAves?             @relation(fields: [grupoId], references: [id])
   detalles    DetalleClasificacion[]
   movimientos MovimientoInventario[]
 }
@@ -530,7 +530,9 @@ model AplicacionPagoProveedor {
   @@id([pagoId, compraId])
 }
 
-// ---------- Galpones, lotes y novedades de aves ----------
+// ---------- Galpones y aves ----------
+// En pantalla solo hay galpones. Cada vez que entran aves a un galpón se crea un grupo de aves (a lo sumo uno
+// activo por galpón); cuando salen todas, el grupo se cierra y queda como historial del galpón.
 
 model Galpon {
   id        Int      @id @default(autoincrement())
@@ -539,33 +541,32 @@ model Galpon {
   activo    Boolean  @default(true)
   creadoEn  DateTime @default(now())
 
-  lotes Lote[]
+  grupos GrupoAves[]
 }
 
-enum EstadoLote {
+enum EtapaAves {
   CRIA
   LEVANTE
   POSTURA
   DESCARTE
 }
 
-model Lote {
-  id                 Int        @id @default(autoincrement())
+model GrupoAves {
+  id                 Int       @id @default(autoincrement())
   galponId           Int
-  nombre             String
   raza               String?
-  fechaIngreso       DateTime   @db.Date
-  edadIngresoSemanas Int        @default(0)
+  fechaIngreso       DateTime  @db.Date
+  edadIngresoSemanas Int       @default(0)
   cantidadInicial    Int
-  estado             EstadoLote @default(POSTURA)
-  // false = lote cerrado (ya no tiene aves)
-  activo             Boolean    @default(true)
+  etapa              EtapaAves @default(POSTURA)
+  // false = ya salieron todas las aves del galpón
+  activo             Boolean   @default(true)
   nota               String?
-  creadoEn           DateTime   @default(now())
+  creadoEn           DateTime  @default(now())
 
   galpon           Galpon                  @relation(fields: [galponId], references: [id])
-  novedades        NovedadLote[]           @relation("NovedadOrigen")
-  trasladosEntrada NovedadLote[]           @relation("NovedadDestino")
+  novedades        NovedadAves[]           @relation("NovedadOrigen")
+  trasladosEntrada NovedadAves[]           @relation("NovedadDestino")
   clasificaciones  RegistroClasificacion[]
 }
 
@@ -573,26 +574,26 @@ enum TipoNovedad {
   MUERTE
   DESCARTE
   VENTA // pasan al inventario de gallinas para vender
-  TRASLADO // pasan a otro lote
+  TRASLADO // pasan a otro galpón
 }
 
-model NovedadLote {
-  id            Int         @id @default(autoincrement())
-  loteId        Int
-  fecha         DateTime    @db.Date
-  tipo          TipoNovedad
-  cantidad      Int
-  loteDestinoId Int?
-  nota          String?
-  usuarioId     Int
-  creadoEn      DateTime    @default(now())
-  anulada       Boolean     @default(false)
+model NovedadAves {
+  id             Int         @id @default(autoincrement())
+  grupoId        Int
+  fecha          DateTime    @db.Date
+  tipo           TipoNovedad
+  cantidad       Int
+  grupoDestinoId Int?
+  nota           String?
+  usuarioId      Int
+  creadoEn       DateTime    @default(now())
+  anulada        Boolean     @default(false)
 
-  lote        Lote                   @relation("NovedadOrigen", fields: [loteId], references: [id])
-  loteDestino Lote?                  @relation("NovedadDestino", fields: [loteDestinoId], references: [id])
-  usuario     Usuario                @relation(fields: [usuarioId], references: [id])
-  movimientos MovimientoInventario[]
+  grupo        GrupoAves              @relation("NovedadOrigen", fields: [grupoId], references: [id])
+  grupoDestino GrupoAves?             @relation("NovedadDestino", fields: [grupoDestinoId], references: [id])
+  usuario      Usuario                @relation(fields: [usuarioId], references: [id])
+  movimientos  MovimientoInventario[]
 
-  @@index([loteId])
-  @@index([loteDestinoId])
+  @@index([grupoId])
+  @@index([grupoDestinoId])
 }

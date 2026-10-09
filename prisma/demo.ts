@@ -1,10 +1,10 @@
 // Datos de ejemplo: varios meses de operación simulada (clientes, pedidos, rutas, cartera, caja,
-// producción por lote, compras a proveedores) para ver la app como si ya estuviera en uso.
+// producción por grupo, compras a proveedores) para ver la app como si ya estuviera en uso.
 // Cubre cada caso que la app muestra: rutas abiertas, con precierre por aprobar, devueltas y
 // liquidadas (y una reabierta); la caja de ayer sin cerrar y la de hoy abierta con movimientos;
 // pedidos de hoy sin tomar y atrasados; ventas en el punto; abonos a un recibo; compras vencidas,
-// anuladas y por clasificar; abonos a proveedores parciales y anulados; lotes en cría, levante,
-// postura y cerrados; precios especiales que cambian o se quitan; existencias bajas.
+// anuladas y por clasificar; abonos a proveedores parciales y anulados; galpones con aves en cría,
+// levante, postura y aves anteriores; precios especiales que cambian o se quitan; existencias bajas.
 // Solo se cargan en una base sin clientes, galpones, proveedores ni caja: nunca en producción.
 // Uso: npm run db:seed && npm run db:demo   (DEMO_DIAS cambia cuántos días se simulan; 90 por defecto)
 import { PrismaClient, type Prisma } from "@prisma/client";
@@ -92,7 +92,7 @@ const FRECUENCIA: Record<Tamano, [number, number]> = {
 
 // Precios antes del alza a mitad del periodo (el resto no cambió).
 const PRECIO_ANTERIOR: Record<string, number> = { AAA: 19000, AA: 17000, A: 14000 };
-// Reparto de la producción por tipo de huevo en un lote adulto.
+// Reparto de la producción por tipo de huevo en un grupo adulto.
 const REPARTO_HUEVO: [string, number][] = [["JUMBO", 0.015], ["AAA", 0.1], ["AA", 0.34], ["A", 0.375], ["B", 0.17]];
 
 /** Postura esperada según la edad: sube hasta el pico (semanas 26 a 32) y baja despacio. */
@@ -110,7 +110,7 @@ async function enLotes<T>(filas: T[], crear: (data: T[]) => Promise<unknown>) {
 }
 
 const TABLAS_CON_ID = [
-  "Usuario", "Cliente", "HistorialPrecio", "Galpon", "Lote", "NovedadLote", "Proveedor", "Compra", "PagoProveedor", "Ruta", "Pedido",
+  "Usuario", "Cliente", "HistorialPrecio", "Galpon", "GrupoAves", "NovedadAves", "Proveedor", "Compra", "PagoProveedor", "Ruta", "Pedido",
   "DetallePedido", "Venta", "Pago", "MovimientoCaja", "RegistroClasificacion", "MovimientoInventario", "Auditoria",
 ];
 
@@ -195,8 +195,8 @@ async function main() {
     preciosCliente: [] as Prisma.PrecioClienteCreateManyInput[],
     historial: [] as Prisma.HistorialPrecioCreateManyInput[],
     galpones: [] as Prisma.GalponCreateManyInput[],
-    lotes: [] as Prisma.LoteCreateManyInput[],
-    novedades: [] as Prisma.NovedadLoteCreateManyInput[],
+    grupos: [] as Prisma.GrupoAvesCreateManyInput[],
+    novedades: [] as Prisma.NovedadAvesCreateManyInput[],
     registros: [] as Prisma.RegistroClasificacionCreateManyInput[],
     detallesClasif: [] as Prisma.DetalleClasificacionCreateManyInput[],
     movimientos: [] as Prisma.MovimientoInventarioCreateManyInput[],
@@ -402,8 +402,8 @@ async function main() {
     }
   }
 
-  // ---------- Galpones y lotes ----------
-  interface LoteDemo {
+  // ---------- Galpones y grupos de aves ----------
+  interface GrupoDemo {
     id: number;
     galpon: string;
     ingreso: Date;
@@ -412,31 +412,31 @@ async function main() {
     postura: boolean;
     paraVenta: boolean; // aves viejas que se van vendiendo como gallina
   }
-  const lotes: LoteDemo[] = [];
+  const grupos: GrupoDemo[] = [];
   const agregarGalpon = (nombre: string, capacidad: number, activo = true) => {
     const id = nuevoId("Galpon");
     filas.galpones.push({ id, nombre, capacidad, activo, creadoEn: sumar(inicio, -600) });
     return id;
   };
-  // Cada lote es el grupo de aves que hay en un galpón; en pantalla solo se ve el galpón.
-  const agregarLote = (galponId: number, raza: string, ingreso: Date, edadIngreso: number, cantidad: number, estado: "CRIA" | "LEVANTE" | "POSTURA", paraVenta = false) => {
-    const id = nuevoId("Lote");
+  // Cada grupo son las aves que entraron a un galpón; en pantalla solo se ve el galpón.
+  const agregarGrupo = (galponId: number, raza: string, ingreso: Date, edadIngreso: number, cantidad: number, etapa: "CRIA" | "LEVANTE" | "POSTURA", paraVenta = false) => {
+    const id = nuevoId("GrupoAves");
     const galpon = filas.galpones.find((g) => g.id === galponId)!.nombre;
-    filas.lotes.push({ id, galponId, nombre: `Entrada ${ingreso.toISOString().slice(0, 10)}`, raza, fechaIngreso: ingreso, edadIngresoSemanas: edadIngreso, cantidadInicial: cantidad, estado, creadoEn: hora(ingreso, 9) });
-    const lote = { id, galpon, ingreso, edadIngreso, vivas: cantidad, postura: estado === "POSTURA", paraVenta };
-    lotes.push(lote);
-    return lote;
+    filas.grupos.push({ id, galponId, raza, fechaIngreso: ingreso, edadIngresoSemanas: edadIngreso, cantidadInicial: cantidad, etapa, creadoEn: hora(ingreso, 9) });
+    const grupo = { id, galpon, ingreso, edadIngreso, vivas: cantidad, postura: etapa === "POSTURA", paraVenta };
+    grupos.push(grupo);
+    return grupo;
   };
-  agregarLote(agregarGalpon("Galpón 1", 4500), "Hy-Line Brown", sumar(inicio, -280), 16, 4000, "POSTURA");
-  agregarLote(agregarGalpon("Galpón 2", 4000), "Lohmann Brown", sumar(inicio, -170), 16, 3500, "POSTURA");
-  agregarLote(agregarGalpon("Galpón 3", 4000), "Hy-Line Brown", sumar(inicio, -45), 17, 3300, "POSTURA");
-  const loteViejo = agregarLote(agregarGalpon("Galpón 4", 3000), "Isa Brown", sumar(inicio, -520), 18, 2700, "POSTURA", true);
+  agregarGrupo(agregarGalpon("Galpón 1", 4500), "Hy-Line Brown", sumar(inicio, -280), 16, 4000, "POSTURA");
+  agregarGrupo(agregarGalpon("Galpón 2", 4000), "Lohmann Brown", sumar(inicio, -170), 16, 3500, "POSTURA");
+  agregarGrupo(agregarGalpon("Galpón 3", 4000), "Hy-Line Brown", sumar(inicio, -45), 17, 3300, "POSTURA");
+  const grupoViejo = agregarGrupo(agregarGalpon("Galpón 4", 3000), "Isa Brown", sumar(inicio, -520), 18, 2700, "POSTURA", true);
   // Pollitas que llegaron hace diez semanas: en levante, todavía sin postura.
-  agregarLote(agregarGalpon("Galpón 5 (levante)", 3500), "Lohmann Brown", sumar(hoy, -70), 1, 3000, "LEVANTE");
+  agregarGrupo(agregarGalpon("Galpón 5 (levante)", 3500), "Lohmann Brown", sumar(hoy, -70), 1, 3000, "LEVANTE");
   const galponCria = agregarGalpon("Galpón 6 (cría)", 3500);
   agregarGalpon("Galpón viejo (fuera de uso)", 2000, false);
   const diaPollitas = sumar(inicio, Math.floor(dias * 0.6));
-  const edadSemanas = (l: LoteDemo, d: Date) => l.edadIngreso + Math.floor((d.getTime() - l.ingreso.getTime()) / DIA / 7);
+  const edadSemanas = (l: GrupoDemo, d: Date) => l.edadIngreso + Math.floor((d.getTime() - l.ingreso.getTime()) / DIA / 7);
 
   // ---------- Proveedores ----------
   const proveedor = (nombre: string, telefono: string, diasCredito: number, notas: string | null, activo = true) => {
@@ -516,51 +516,51 @@ async function main() {
 
     // Aves e inventario: pasa temprano, también hoy.
     {
-      // Novedades de los lotes: mortalidad diaria y, en el lote viejo, gallinas que pasan a la venta.
-      // Cuando se acaba el lote viejo, se empieza a vender el que le sigue en edad.
-      if (loteViejo.vivas <= 0) lotes[0].paraVenta = true;
-      for (const l of lotes) {
+      // Novedades de los grupos: mortalidad diaria y, en el grupo viejo, gallinas que pasan a la venta.
+      // Cuando se acaba el grupo viejo, se empieza a vender el que le sigue en edad.
+      if (grupoViejo.vivas <= 0) grupos[0].paraVenta = true;
+      for (const l of grupos) {
         if (l.vivas <= 0 || d < l.ingreso) continue;
         const muertes = entre(0, l.vivas > 3000 ? 3 : 2);
         if (muertes > 0) {
-          filas.novedades.push({ id: nuevoId("NovedadLote"), loteId: l.id, fecha: d, tipo: "MUERTE", cantidad: muertes, usuarioId: galponero.id, creadoEn: hora(d, 7, 30) });
+          filas.novedades.push({ id: nuevoId("NovedadAves"), grupoId: l.id, fecha: d, tipo: "MUERTE", cantidad: muertes, usuarioId: galponero.id, creadoEn: hora(d, 7, 30) });
           l.vivas -= muertes;
         }
         if (l.paraVenta && (d.getUTCDay() === 1 || d.getUTCDay() === 4)) {
           const cantidad = l.vivas < 200 ? l.vivas : entre(95, 125);
-          const novedadId = nuevoId("NovedadLote");
-          filas.novedades.push({ id: novedadId, loteId: l.id, fecha: d, tipo: "VENTA", cantidad, usuarioId: galponero.id, creadoEn: hora(d, 5, 15), nota: "Para venta como gallina" });
+          const novedadId = nuevoId("NovedadAves");
+          filas.novedades.push({ id: novedadId, grupoId: l.id, fecha: d, tipo: "VENTA", cantidad, usuarioId: galponero.id, creadoEn: hora(d, 5, 15), nota: "Para venta como gallina" });
           mover({ fecha: hora(d, 5, 15), productoId: prod("GALLINA").id, cantidad, tipo: "PRODUCCION", novedadId, usuarioId: galponero.id, nota: `Del ${l.galpon}` });
           l.vivas -= cantidad;
           if (prob(0.3) && l.vivas > 20) {
             const descarte = entre(5, 15);
-            filas.novedades.push({ id: nuevoId("NovedadLote"), loteId: l.id, fecha: d, tipo: "DESCARTE", cantidad: descarte, usuarioId: galponero.id, creadoEn: hora(d, 7, 50), nota: "Aves enfermas" });
+            filas.novedades.push({ id: nuevoId("NovedadAves"), grupoId: l.id, fecha: d, tipo: "DESCARTE", cantidad: descarte, usuarioId: galponero.id, creadoEn: hora(d, 7, 50), nota: "Aves enfermas" });
             l.vivas -= descarte;
           }
         }
       }
       if (d.getTime() === sumar(inicio, 20).getTime()) {
-        const [origen, destino] = [lotes[1], lotes[2]];
-        filas.novedades.push({ id: nuevoId("NovedadLote"), loteId: origen.id, loteDestinoId: destino.id, fecha: d, tipo: "TRASLADO", cantidad: 40, usuarioId: galponero.id, creadoEn: hora(d, 8), nota: "Reubicación por espacio" });
+        const [origen, destino] = [grupos[1], grupos[2]];
+        filas.novedades.push({ id: nuevoId("NovedadAves"), grupoId: origen.id, grupoDestinoId: destino.id, fecha: d, tipo: "TRASLADO", cantidad: 40, usuarioId: galponero.id, creadoEn: hora(d, 8), nota: "Reubicación por espacio" });
         origen.vivas -= 40;
         destino.vivas += 40;
       }
       if (d.getTime() === sumar(inicio, 10).getTime())
-        filas.novedades.push({ id: nuevoId("NovedadLote"), loteId: lotes[0].id, fecha: d, tipo: "MUERTE", cantidad: 25, usuarioId: galponero.id, creadoEn: hora(d, 8), nota: "Se escribió en el galpón equivocado", anulada: true });
+        filas.novedades.push({ id: nuevoId("NovedadAves"), grupoId: grupos[0].id, fecha: d, tipo: "MUERTE", cantidad: 25, usuarioId: galponero.id, creadoEn: hora(d, 8), nota: "Se escribió en el galpón equivocado", anulada: true });
       if (d.getTime() === diaPollitas.getTime()) {
-        const pollitas = agregarLote(galponCria, "Hy-Line Brown", d, 1, 3200, "CRIA");
+        const pollitas = agregarGrupo(galponCria, "Hy-Line Brown", d, 1, 3200, "CRIA");
         pollitas.postura = false;
       }
 
-      // Recolección y clasificación de cada lote en postura.
-      for (const l of lotes) {
+      // Recolección y clasificación de cada grupo en postura.
+      for (const l of grupos) {
         if (!l.postura || l.vivas <= 0) continue;
         const semanas = edadSemanas(l, d);
         const huevos = Math.round(l.vivas * curvaPostura(semanas) * (0.97 + azar() * 0.05));
         if (huevos <= 0) continue;
         const rotos = Math.round(huevos * (0.005 + azar() * 0.007));
         const registroId = nuevoId("RegistroClasificacion");
-        filas.registros.push({ id: registroId, fecha: d, creadoEn: hora(d, 5, entre(30, 55)), usuarioId: galponero.id, rotos, loteId: l.id });
+        filas.registros.push({ id: registroId, fecha: d, creadoEn: hora(d, 5, entre(30, 55)), usuarioId: galponero.id, rotos, grupoId: l.id });
         // Las gallinas jóvenes ponen huevo más pequeño; las viejas, más grande.
         const sesgo = Math.max(-0.1, Math.min(0.1, (semanas - 45) * 0.004));
         let restante = huevos - rotos;
@@ -576,7 +576,7 @@ async function main() {
       // Una clasificación registrada dos veces: la repetida se anula y su producción sale del inventario.
       if (mismoDia(d, diaClasifAnulada)) {
         const registroId = nuevoId("RegistroClasificacion");
-        filas.registros.push({ id: registroId, fecha: d, creadoEn: hora(d, 6, 40), usuarioId: galponero.id, loteId: lotes[0].id, nota: "Repetida" });
+        filas.registros.push({ id: registroId, fecha: d, creadoEn: hora(d, 6, 40), usuarioId: galponero.id, grupoId: grupos[0].id, nota: "Repetida" });
         for (const [codigo, cubetas] of [["AA", 40], ["A", 45]] as const) {
           filas.detallesClasif.push({ registroId, productoId: prod(codigo).id, cantidad: cubetas * HUEVOS });
           mover({ fecha: hora(d, 6, 40), productoId: prod(codigo).id, cantidad: cubetas * HUEVOS, tipo: "PRODUCCION", clasificacionId: registroId, usuarioId: galponero.id });
@@ -1084,7 +1084,7 @@ async function main() {
       await enLotes(filas.preciosCliente, (data) => tx.precioCliente.createMany({ data }));
       await enLotes(filas.historial, (data) => tx.historialPrecio.createMany({ data }));
       await enLotes(filas.galpones, (data) => tx.galpon.createMany({ data }));
-      await enLotes(filas.lotes, (data) => tx.lote.createMany({ data }));
+      await enLotes(filas.grupos, (data) => tx.grupoAves.createMany({ data }));
       await enLotes(filas.proveedores, (data) => tx.proveedor.createMany({ data }));
       await enLotes(filas.cajas, (data) => tx.caja.createMany({ data }));
       await enLotes(filas.rutas, (data) => tx.ruta.createMany({ data }));
@@ -1098,14 +1098,14 @@ async function main() {
       await enLotes(filas.pagosProveedor, (data) => tx.pagoProveedor.createMany({ data }));
       await enLotes(filas.aplicacionesProveedor, (data) => tx.aplicacionPagoProveedor.createMany({ data }));
       await enLotes(filas.movimientosCaja, (data) => tx.movimientoCaja.createMany({ data }));
-      await enLotes(filas.novedades, (data) => tx.novedadLote.createMany({ data }));
+      await enLotes(filas.novedades, (data) => tx.novedadAves.createMany({ data }));
       await enLotes(filas.registros, (data) => tx.registroClasificacion.createMany({ data }));
       await enLotes(filas.detallesClasif, (data) => tx.detalleClasificacion.createMany({ data }));
       await enLotes(filas.movimientos, (data) => tx.movimientoInventario.createMany({ data }));
       await enLotes(filas.auditoria, (data) => tx.auditoria.createMany({ data }));
       for (const [id, existencias] of stock) await tx.producto.update({ where: { id }, data: { existencias } });
-      // El lote viejo ya se vendió completo: queda cerrado.
-      if (loteViejo.vivas <= 0) await tx.lote.update({ where: { id: loteViejo.id }, data: { activo: false, estado: "DESCARTE" } });
+      // El grupo viejo ya se vendió completo: queda cerrado.
+      if (grupoViejo.vivas <= 0) await tx.grupoAves.update({ where: { id: grupoViejo.id }, data: { activo: false, etapa: "DESCARTE" } });
       for (const [nombre, valor] of [["VENTA", consecutivoVenta], ["PAGO", consecutivoPago]] as const)
         await tx.consecutivo.upsert({ where: { nombre }, create: { nombre, valor }, update: { valor } });
       // Los ids se dieron aquí; las secuencias siguen desde el último.

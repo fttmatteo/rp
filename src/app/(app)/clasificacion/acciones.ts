@@ -34,9 +34,9 @@ export async function registrarClasificacion(_: EstadoForm, form: FormData): Pro
     if (compraId !== null && detalles.some((d) => productos.find((p) => p.id === d.productoId)?.tipo !== "CUBETA"))
       throw new ErrorUsuario("De una compra solo se clasifican huevos. Registra gallinas o gallinaza como producción propia.");
 
-    const lote = texto(form, "lote");
-    const loteId = compraId === null && lote ? Number(lote) : null;
-    if (loteId !== null && !(await db.lote.findFirst({ where: { id: loteId, activo: true } }))) throw new ErrorUsuario("El galpón elegido ya no tiene aves.");
+    const grupo = texto(form, "grupo");
+    const grupoId = compraId === null && grupo ? Number(grupo) : null;
+    if (grupoId !== null && !(await db.grupoAves.findFirst({ where: { id: grupoId, activo: true } }))) throw new ErrorUsuario("El galpón elegido ya no tiene aves.");
 
     await db.$transaction(async (tx) => {
       if (compraId !== null) {
@@ -55,7 +55,7 @@ export async function registrarClasificacion(_: EstadoForm, form: FormData): Pro
           rotos,
           nota: textoOpcional(form, "nota"),
           compraId,
-          loteId,
+          grupoId,
           detalles: { create: detalles },
         },
       });
@@ -70,7 +70,7 @@ export async function registrarClasificacion(_: EstadoForm, form: FormData): Pro
           compraId,
         })),
       );
-      await auditar(tx, sesion.usuario.id, "RegistroClasificacion", registro.id, "crear", { fecha: fechaISO, detalles, rotos, compraId, loteId });
+      await auditar(tx, sesion.usuario.id, "RegistroClasificacion", registro.id, "crear", { fecha: fechaISO, detalles, rotos, compraId, grupoId });
     });
   } catch (e) {
     return { error: mensajeError(e) };

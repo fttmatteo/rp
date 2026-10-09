@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { Boton, Campo, Etiqueta, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
-import { avesPorLote, huevosPorLoteYDia } from "@/lib/aves-db";
+import { avesPorGrupo, huevosPorGrupoYDia } from "@/lib/aves-db";
 import { db } from "@/lib/db";
-import { ESTADO_LOTE } from "@/lib/etiquetas-aves";
+import { ETAPA_AVES } from "@/lib/etiquetas-aves";
 import { diaUTC, hoyISO, sumarDias } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { edadSemanas, porcentajePostura } from "@/modules/aves";
@@ -15,21 +15,21 @@ export default async function AvesPage() {
   const sesion = await requerir("aves");
   const hoy = diaUTC(hoyISO());
   const desde = sumarDias(hoy, -6);
-  // Los galpones son pocos: se muestran todos, cada uno con las aves que tiene hoy (su lote activo).
+  // Los galpones son pocos: se muestran todos, cada uno con las aves que tiene hoy (su grupo activo).
   const galpones = await db.galpon.findMany({
     orderBy: [{ activo: "desc" }, { nombre: "asc" }],
-    include: { lotes: { where: { activo: true }, take: 1 } },
+    include: { grupos: { where: { activo: true }, take: 1 } },
   });
-  const lotes = galpones.flatMap((g) => g.lotes);
+  const grupos = galpones.flatMap((g) => g.grupos);
   const [vivas, huevos] = await Promise.all([
-    avesPorLote(lotes),
-    huevosPorLoteYDia(
-      lotes.map((l) => l.id),
+    avesPorGrupo(grupos),
+    huevosPorGrupoYDia(
+      grupos.map((l) => l.id),
       desde,
       hoy,
     ),
   ]);
-  const totalAves = lotes.reduce((s, l) => s + (vivas.get(l.id) ?? 0), 0);
+  const totalAves = grupos.reduce((s, l) => s + (vivas.get(l.id) ?? 0), 0);
   // Promedio de 7 días: huevos promedio de los días con registro ÷ aves de hoy (aproximado, para ver la tendencia).
   const semana = (id: number) => {
     const dias = [...huevos].filter(([k]) => k.startsWith(`${id}|`));
@@ -41,7 +41,7 @@ export default async function AvesPage() {
       <Titulo>Aves</Titulo>
       <PestanasInventario actual="/aves" operacion={sesion.operacion} />
       <p className="mb-4">
-        Aves vivas: <strong>{totalAves.toLocaleString("es-CO")}</strong> en {lotes.length} de {galpones.filter((g) => g.activo).length} galpones.
+        Aves vivas: <strong>{totalAves.toLocaleString("es-CO")}</strong> en {grupos.length} de {galpones.filter((g) => g.activo).length} galpones.
       </p>
       <div className="grid items-start gap-6 lg:grid-cols-[3fr_2fr]">
         <div className="space-y-2">
@@ -61,7 +61,7 @@ export default async function AvesPage() {
               </thead>
               <tbody>
                 {galpones.map((g) => {
-                  const l = g.lotes[0];
+                  const l = g.grupos[0];
                   const nombre = (
                     <Link href={`/aves/${g.id}`} className="underline">
                       {g.nombre}
@@ -84,7 +84,7 @@ export default async function AvesPage() {
                   return (
                     <tr key={g.id}>
                       <td>{nombre}</td>
-                      <td>{ESTADO_LOTE[l.estado]}</td>
+                      <td>{ETAPA_AVES[l.etapa]}</td>
                       <td className="text-right">{edadSemanas(l.fechaIngreso, l.edadIngresoSemanas, hoy)} sem.</td>
                       <td className="text-right">{aves.toLocaleString("es-CO")}</td>
                       <td className="text-right">{hoyP === null ? "—" : `${hoyP}%`}</td>
