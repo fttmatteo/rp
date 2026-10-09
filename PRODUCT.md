@@ -29,7 +29,7 @@ Software hecho a medida para la granja de RP, no un producto genérico ni para v
 - Se usa desde el navegador en el computador y en el celular; se puede instalar como app (PWA, `public/manifest.webmanifest`). Sin modo sin conexión (la fase 7 es opcional y no está hecha).
 - Corre en el servidor propio de la empresa con Docker Compose y se publica por un túnel de Cloudflare (HTTPS en el dominio de la empresa).
 - Ritmo diario: clasificación en la mañana, pedidos y reparto del día, cobros, precierre de las rutas, aprobación del administrador y cierre de caja. Libro mensual cuando todas las cajas del periodo están cerradas.
-- Documentos que salen de la app: recibos en PDF con consecutivo (`RP-000001` ventas, `AB-000001` pagos), reportes en Excel (.xlsx) y PDF con el logo, libro mensual en Excel, y mensajes listos para WhatsApp (`wa.me`) que el usuario revisa y envía.
+- Documentos que salen de la app: recibos en PDF con consecutivo (`RP-000001` ventas, `AB-000001` pagos), reportes en Excel (.xlsx) y PDF con el nombre de la empresa, libro mensual en Excel, y mensajes listos para WhatsApp (`wa.me`) que el usuario revisa y envía.
 
 ## Capabilities and Constraints
 
@@ -41,8 +41,11 @@ Software hecho a medida para la granja de RP, no un producto genérico ni para v
 
 ## Brand Commitments
 
-- Nombre: **RP Software** (nombre corto "RP"). Idioma de la interfaz: español de Colombia, frases cortas y llanas, sin tecnicismos.
-- Logos existentes: `public/icons/svg/` (icono, icono maskable, logo horizontal y vertical) y `public/icons/logo-recibo.png` para recibos y reportes, todos con el nombre "RP Software".
+- **Dos identidades que no se mezclan:**
+  - **El software: RP Software** (nombre corto "RP"), de su autor. Es el ícono de la app instalada, el favicon, la pantalla de arranque, la página "Acerca de" y el pie de página. Único logo: `public/icons/svg/icono.svg` (y sus PNG en `public/icons/`).
+  - **La empresa que lo usa:** solo nombre, sin logo, configurado en el servidor con `EMPRESA_NOMBRE`. Es lo que se ve arriba en la app, el título del inicio de sesión y el encabezado de recibos, reportes PDF, Excel y libro mensual.
+  - Los documentos que salen de la empresa no llevan el logo del software: solo una línea gris al pie, "Generado con RP Software".
+- Idioma de la interfaz: español de Colombia, frases cortas y llanas, sin tecnicismos.
 - Créditos: autor fttmatteo (https://github.com/fttmatteo), página "Acerca de" y pie con derechos.
 - Obligatorio en todo trabajo futuro:
   - **Color de acento de la interfaz: ámbar.** Es el color de lo que se toca o marca dónde se está: botón principal, pestaña activa, opción elegida y foco. El texto sobre ámbar debe tener buen contraste. El ámbar ya no se usa para avisos.

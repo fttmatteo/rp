@@ -1,7 +1,8 @@
 import Link from "next/link";
 import paquete from "../../package.json";
+import { NOMBRE_SOFTWARE } from "@/lib/marca";
 
-export const NOMBRE_SOFTWARE = "RP Software";
+export { NOMBRE_SOFTWARE };
 export const VERSION = paquete.version;
 export const AUTOR = {
   nombre: "fttmatteo",

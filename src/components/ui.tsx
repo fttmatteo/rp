@@ -163,8 +163,10 @@ export function Pestanas({
 }) {
   if (pestanas.length < 2) return null;
   return (
-    <nav aria-label="Pestañas" className="mb-4 overflow-x-auto border-b border-stone-200">
-      <ul className="flex gap-1 whitespace-nowrap">
+    // La línea gris de abajo se dibuja dentro de la lista (no con margen negativo en las pestañas): así nada se sale
+    // del contenedor desplazable y no aparece una barra de desplazamiento vertical.
+    <nav aria-label="Pestañas" className="mb-4 overflow-x-auto">
+      <ul className="flex gap-1 whitespace-nowrap shadow-[inset_0_-1px_0_var(--color-stone-200)]">
         {pestanas.map((p) => {
           // Se compara solo la ruta: los enlaces pueden llevar filtros (?fecha=...).
           const activa = comparar === "clave" ? p.clave === actual : p.href.split("?")[0] === actual;
@@ -173,7 +175,7 @@ export function Pestanas({
               <Link
                 href={p.href}
                 aria-current={activa ? "page" : undefined}
-                className={`-mb-px block border-b-2 px-3 py-2.5 ${activa ? "border-amber-600 font-semibold" : "border-transparent text-stone-600 hover:text-stone-900"}`}
+                className={`block border-b-2 px-3 py-2.5 ${activa ? "border-amber-600 font-semibold" : "border-transparent text-stone-600 hover:text-stone-900"}`}
               >
                 {p.texto}
               </Link>

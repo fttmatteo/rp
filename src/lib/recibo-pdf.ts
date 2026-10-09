@@ -1,6 +1,6 @@
 import "server-only";
 import { PDFDocument, StandardFonts, degrees, rgb } from "pdf-lib";
-import { leerLogo } from "@/lib/logo";
+import { CREDITO_DOCUMENTOS, nombreEmpresa } from "@/lib/marca";
 
 export interface LineaRecibo {
   descripcion: string;
@@ -47,10 +47,14 @@ export async function generarRecibo(d: DatosRecibo): Promise<Uint8Array> {
     page.drawLine({ start: { x: margen, y: y + 4 }, end: { x: margen + ancho, y: y + 4 }, thickness: 0.5, color: gris });
   };
 
-  // Encabezado: logo a la izquierda; número, tipo de recibo y fecha a la derecha.
-  const imagen = await pdf.embedPng(await leerLogo());
-  const altoLogo = 40;
-  page.drawImage(imagen, { x: margen, y: y + 10 - altoLogo, height: altoLogo, width: (imagen.width / imagen.height) * altoLogo });
+  // Encabezado: la empresa a la izquierda; número, tipo de recibo y fecha a la derecha.
+  const empresa = limpiar(nombreEmpresa());
+  if (empresa) {
+    // Se recorta para que no choque con el número del recibo.
+    let nombre = empresa;
+    while (nombre.length > 1 && negrita.widthOfTextAtSize(nombre, 13) > ancho * 0.55) nombre = nombre.slice(0, -1);
+    page.drawText(nombre, { x: margen, y: y - 2, size: 13, font: negrita });
+  }
   derecha(d.numero, margen + ancho, 12, negrita);
   y -= 15;
   derecha(d.titulo, margen + ancho, 9, normal, gris);
@@ -98,6 +102,8 @@ export async function generarRecibo(d: DatosRecibo): Promise<Uint8Array> {
   texto(`Atendido por: ${d.atendidoPor}`, margen, 8, normal, gris);
   y -= 12;
   texto("Este documento es un recibo; no es una factura electrónica.", margen, 7, normal, gris);
+  y -= 10;
+  texto(CREDITO_DOCUMENTOS, margen, 7, normal, gris);
 
   if (d.anulado) {
     page.drawText("ANULADO", {

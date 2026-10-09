@@ -58,30 +58,27 @@ describe("xlsx", () => {
     expect(archivos.get("xl/workbook.xml")).toContain('name="Libro 2026-09"');
   });
 
-  it("con encabezado pone el logo arriba y corre la tabla hacia abajo", () => {
-    // Solo la cabecera de un PNG de 400 x 100.
-    const logo = new Uint8Array(24);
-    new DataView(logo.buffer).setUint32(16, 400);
-    new DataView(logo.buffer).setUint32(20, 100);
+  it("con encabezado pone las líneas de título arriba, corre la tabla y agrega el pie", () => {
     const archivos = leerZip(
       generarXlsx({
         nombre: "Ventas",
         columnas: [{ titulo: "Cliente" }, { titulo: "Mortalidad", tipo: "porcentaje" }],
         filas: [["Tienda", 2.5]],
-        encabezado: { logo, lineas: ["Ventas por cliente", "Del 01/10/2026 al 08/10/2026"] },
+        encabezado: { lineas: ["Granja de prueba", "Ventas por cliente", "Del 01/10/2026 al 08/10/2026"] },
+        pie: "Generado con RP Software",
       }),
     );
     const hoja = archivos.get("xl/worksheets/sheet1.xml")!;
-    // 3 filas de logo, 2 de título y una vacía: los títulos de columna quedan en la fila 7.
-    expect(hoja).toContain('<row r="1" ht="18" customHeight="1"/>');
-    expect(hoja).toContain('<c r="A4" s="1" t="inlineStr"><is><t xml:space="preserve">Ventas por cliente</t></is></c>');
-    expect(hoja).toContain('<row r="7"><c r="A7" s="1"');
-    expect(hoja).toContain('<c r="B8" s="6"><v>2.5</v></c>');
-    expect(hoja).toContain('ySplit="7" topLeftCell="A8"');
-    expect(hoja).toContain('<drawing r:id="rId1"/>');
-    expect(archivos.get("xl/drawings/drawing1.xml")).toContain(`<xdr:ext cx="${256 * 9525}" cy="${64 * 9525}"/>`);
-    expect(archivos.get("xl/drawings/_rels/drawing1.xml.rels")).toContain('Target="../media/logo.png"');
-    expect(archivos.has("xl/media/logo.png")).toBe(true);
-    expect(archivos.get("[Content_Types].xml")).toContain("/xl/drawings/drawing1.xml");
+    // 3 líneas de título y una vacía: los títulos de columna quedan en la fila 5.
+    expect(hoja).toContain('<c r="A1" s="1" t="inlineStr"><is><t xml:space="preserve">Granja de prueba</t></is></c>');
+    expect(hoja).toContain('<c r="A2" s="1" t="inlineStr"><is><t xml:space="preserve">Ventas por cliente</t></is></c>');
+    expect(hoja).toContain('<c r="A3" s="0" t="inlineStr"><is><t xml:space="preserve">Del 01/10/2026 al 08/10/2026</t></is></c>');
+    expect(hoja).toContain('<row r="5"><c r="A5" s="1"');
+    expect(hoja).toContain('<c r="B6" s="6"><v>2.5</v></c>');
+    expect(hoja).toContain('ySplit="5" topLeftCell="A6"');
+    // Una fila vacía después de la tabla y el pie.
+    expect(hoja).toContain('<row r="8"><c r="A8" s="0" t="inlineStr"><is><t xml:space="preserve">Generado con RP Software</t></is></c></row>');
+    // Sin imágenes en el archivo.
+    expect([...archivos.keys()].some((k) => k.includes("drawing") || k.includes("media"))).toBe(false);
   });
 });

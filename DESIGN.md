@@ -230,7 +230,7 @@ Totalmente plano. No hay ninguna sombra en el código y no debe haberla. La prof
 
 ## Shapes
 
-Una sola esquina para todo: apenas redondeada (4px), en botones, campos, tarjetas, tablas, alertas, etiquetas y opciones. Las únicas excepciones son imágenes de marca: el logo de la pantalla de entrada (8px) y el icono de Acerca de (16px). Bordes siempre de 1px sólidos; el estado vacío usa borde punteado. Las pestañas no tienen caja: solo una línea de 2px debajo de la activa.
+Una sola esquina para todo: apenas redondeada (4px), en botones, campos, tarjetas, tablas, alertas, etiquetas y opciones. La única excepción es el ícono del software en Acerca de (16px). Bordes siempre de 1px sólidos; el estado vacío usa borde punteado. Las pestañas no tienen caja: solo una línea de 2px debajo de la activa.
 
 ## Components
 
@@ -302,6 +302,7 @@ Texto centrado en tinta tenue dentro de un borde punteado de 1px, 24px de rellen
 - **Don't** poner texto blanco sobre ámbar: da 3.2:1.
 - **Don't** usar ámbar para avisos, etiquetas, texto o cifras.
 - **Don't** usar la terracota ni la crema del logo en la interfaz.
+- **Don't** poner el logo ni el nombre de RP Software como si fueran de la empresa: el encabezado de la app, el inicio de sesión, los recibos y los reportes llevan el nombre de la empresa (`nombreEmpresa()` de `src/lib/marca.ts`); el software solo firma con "Generado con RP Software" al pie de los documentos y conserva su ícono, "Acerca de" y el pie de la app.
 - **Don't** usar animaciones, transiciones ni desplazamiento suave: la regla global de `globals.css` las anula y no se quita.
 - **Don't** agregar librerías de componentes de UI; solo HTML y Tailwind.
 - **Don't** usar sombras, degradados ni fondos con textura.

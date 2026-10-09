@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PieCreditos } from "@/components/creditos";
+import { NOMBRE_SOFTWARE, nombreEmpresa } from "@/lib/marca";
 import { MenuPrincipal, type EntradaMenu } from "@/components/menu-principal";
 import { OcultarEn } from "@/components/ocultar-en";
 import { ETIQUETA_OPERACION, puede, type Permiso } from "@/lib/permisos";
@@ -31,9 +32,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <>
       <header className="border-b border-stone-200 bg-white">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
-            <img src="/icons/svg/icono.svg" alt="" width={32} height={32} className="rounded" />
-            RP Software
+          {/* La app es de la empresa: su nombre va arriba. El software se ve en el pie y en "Acerca de". */}
+          <Link href="/" className="inline-flex min-h-11 items-center text-lg font-semibold">
+            {nombreEmpresa() || NOMBRE_SOFTWARE}
           </Link>
           {/* Cambiar y Salir miden 44px de alto para tocarlos con el pulgar. */}
           <div className="flex flex-wrap items-center gap-x-3">

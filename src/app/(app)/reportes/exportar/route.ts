@@ -1,6 +1,6 @@
 import { diaUTC, formatoDia, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
-import { leerLogo } from "@/lib/logo";
+import { CREDITO_DOCUMENTOS, nombreEmpresa } from "@/lib/marca";
 import { generarReporte, leerParametros } from "@/lib/reportes";
 import { respuestaPdf } from "@/lib/respuesta-pdf";
 import { requerir } from "@/lib/sesion";
@@ -26,7 +26,8 @@ export async function GET(req: Request) {
     columnas: reporte.columnas.map((c, i) => ({ titulo: c.titulo, tipo: c.tipo, ancho: i === 0 ? 32 : 15 })),
     filas,
     negrilla: reporte.total ? [reporte.filas.length] : [],
-    encabezado: { logo: await leerLogo(), lineas: [reporte.titulo, subtitulo] },
+    encabezado: { lineas: [nombreEmpresa(), reporte.titulo, subtitulo].filter(Boolean) },
+    pie: CREDITO_DOCUMENTOS,
   });
   return new Response(Buffer.from(archivo), {
     headers: {

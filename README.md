@@ -17,7 +17,7 @@ El plan completo está en el documento del proyecto (`plan-rp-software.md`). Est
 - **Menú:** Inicio, Mi ruta (solo repartidor), **Pedidos** (pestañas Pedidos, Rutas y liquidación, Resumen del reparto), **Contabilidad** (Ingresos, Egresos, Precios, Caja y cierre, Cartera, Por pagar, Reportes), Inventario y **Usuarios** (Clientes, Proveedores, Empleados). Usuarios es solo para crear, ver y editar; lo que debe cada cliente se abre desde Contabilidad > Cartera (con buscador) y lo que se le debe a cada proveedor desde Contabilidad > Por pagar.
 - **Fase 4b · Gallinaza y compras a terceros:** la gallinaza se vende por bulto, kilo o viaje (se elige en Precios). Huevo comprado a proveedores, clasificado o por clasificar (se clasifica después en Clasificación), de contado (sale de la caja) o a crédito (cuenta por pagar con abonos).
 - **Fase 5 · Aves:** galpones con las aves que tienen (raza, fecha y edad de ingreso, etapa); novedades (muerte, descarte, paso a venta y traslado entre galpones); la clasificación se registra por galpón para calcular la postura diaria y la mortalidad acumulada. El paso a venta suma gallinas al inventario. Cada entrada de aves a un galpón queda guardada como un grupo de aves (tabla `GrupoAves`), así el galpón conserva el historial de las aves que tuvo.
-- **Fase 6 · Panel, reportes y WhatsApp:** Inicio muestra ventas del día, cartera y vencida, cuentas por pagar, efectivo en caja, producción y postura, inventario, y alertas (existencias bajo el mínimo, deudas vencidas, cajas sin cerrar, transferencias sin verificar, rutas sin liquidar, compras vencidas, huevo por clasificar). **Reportes** por rango de fechas (ventas por cliente y por producto, producción propia y comprada, galpones, cartera, compras) con descarga en Excel (.xlsx) y en PDF, con el logo arriba. **Libro mensual** en Excel (.xlsx) con fecha, concepto, ingreso, egreso y saldo de cada cobro, ingreso, egreso y diferencia de cierre de caja; se descarga por mes o por un periodo con fecha inicial y final, solo si todas las cajas de esas fechas están cerradas (lo que incluya hoy sale hasta hoy). Mensajes listos para WhatsApp con enlaces `wa.me` (el usuario revisa y pulsa Enviar): confirmación de pedido, recibo, estado de cuenta, recordatorio de deuda vencida y "va en camino".
+- **Fase 6 · Panel, reportes y WhatsApp:** Inicio muestra ventas del día, cartera y vencida, cuentas por pagar, efectivo en caja, producción y postura, inventario, y alertas (existencias bajo el mínimo, deudas vencidas, cajas sin cerrar, transferencias sin verificar, rutas sin liquidar, compras vencidas, huevo por clasificar). **Reportes** por rango de fechas (ventas por cliente y por producto, producción propia y comprada, galpones, cartera, compras) con descarga en Excel (.xlsx) y en PDF, con el nombre de la empresa arriba. **Libro mensual** en Excel (.xlsx) con fecha, concepto, ingreso, egreso y saldo de cada cobro, ingreso, egreso y diferencia de cierre de caja; se descarga por mes o por un periodo con fecha inicial y final, solo si todas las cajas de esas fechas están cerradas (lo que incluya hoy sale hasta hoy). Mensajes listos para WhatsApp con enlaces `wa.me` (el usuario revisa y pulsa Enviar): confirmación de pedido, recibo, estado de cuenta, recordatorio de deuda vencida y "va en camino".
 
 ## Stack
 
@@ -59,7 +59,7 @@ La app corre en el servidor propio con Docker Compose y se publica con un túnel
 
 1. En el servidor (Linux con Docker y Docker Compose) descarga este repositorio.
 2. En Cloudflare: **Zero Trust > Networks > Tunnels > Create a tunnel** (tipo Cloudflared), copia el token que aparece en la opción Docker. En **Public Hostname** agrega el dominio (por ejemplo `app.tuempresa.com`) con servicio `HTTP` y URL `app:3000`.
-3. Copia `produccion.env.example` como `produccion.env` y llena las claves y el token.
+3. Copia `produccion.env.example` como `produccion.env` y llena las claves, el token y `EMPRESA_NOMBRE` (el nombre de la empresa que usa el software).
 4. Arranca todo:
 
    ```bash
@@ -104,5 +104,7 @@ src/lib/                  sesión, permisos, base de datos, formatos
 src/modules/              reglas de negocio puras con pruebas (cartera, precios, inventario, rutas, aves, mensajes)
 src/components/           componentes de interfaz (HTML + Tailwind)
 ```
+
+Identidad: el software es **RP Software** (ícono de la app, "Acerca de" y pie de página); la empresa que lo usa se configura con `EMPRESA_NOMBRE` y su nombre sale en el encabezado de la app, el inicio de sesión, los recibos y los reportes, que solo llevan al pie "Generado con RP Software". Los textos de marca están en `src/lib/marca.ts`.
 
 Reglas de diseño: el dinero se guarda en pesos enteros; inventario, ventas y pagos no se borran, se anulan; el inventario de huevos se lleva en huevos y se muestra en cubetas de 30.

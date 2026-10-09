@@ -1,6 +1,6 @@
 import "server-only";
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
-import { leerLogo } from "@/lib/logo";
+import { CREDITO_DOCUMENTOS, nombreEmpresa } from "@/lib/marca";
 import { formatoCelda, type Reporte } from "@/lib/reportes";
 
 /** Las fuentes estándar del PDF solo tienen caracteres latinos; el resto se reemplaza. */
@@ -48,7 +48,11 @@ export async function generarTablaPdf(r: Reporte, subtitulo: string): Promise<Ui
     y -= alto;
   };
   const linea = () => page.drawLine({ start: { x: margen, y: y + alto - 3 }, end: { x: margen + ancho, y: y + alto - 3 }, thickness: 0.5, color: gris });
-  const pie = () => page.drawText(`Página ${numeroPagina}`, { x: W - margen - 40, y: margen / 2, size: 7, font: normal, color: gris });
+  // Pie de cada página: el crédito del software a la izquierda y el número de página a la derecha.
+  const pie = () => {
+    page.drawText(CREDITO_DOCUMENTOS, { x: margen, y: margen / 2, size: 7, font: normal, color: gris });
+    page.drawText(`Página ${numeroPagina}`, { x: W - margen - 40, y: margen / 2, size: 7, font: normal, color: gris });
+  };
   const encabezado = () => {
     fila(
       r.columnas.map((c) => c.titulo),
@@ -57,10 +61,9 @@ export async function generarTablaPdf(r: Reporte, subtitulo: string): Promise<Ui
     linea();
   };
 
-  // Encabezado de la primera página: logo a la izquierda; título y período a la derecha.
-  const logo = await pdf.embedPng(await leerLogo());
-  const altoLogo = 36;
-  page.drawImage(logo, { x: margen, y: y + 10 - altoLogo, height: altoLogo, width: (logo.width / logo.height) * altoLogo });
+  // Encabezado de la primera página: la empresa a la izquierda; título y período a la derecha.
+  const empresa = nombreEmpresa();
+  if (empresa) page.drawText(recortar(empresa, ancho * 0.45, negrita, 13), { x: margen, y: y - 2, size: 13, font: negrita });
   const derecha = (t: string, size: number, font: PDFFont, color = rgb(0, 0, 0)) =>
     page.drawText(limpiar(t), { x: margen + ancho - font.widthOfTextAtSize(limpiar(t), size), y, size, font, color });
   derecha(r.titulo, 11, negrita);

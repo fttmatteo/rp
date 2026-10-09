@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { PieCreditos } from "@/components/creditos";
 import { Formulario } from "@/components/formulario";
 import { Boton, Campo } from "@/components/ui";
+import { NOMBRE_SOFTWARE, nombreEmpresa } from "@/lib/marca";
 import { obtenerSesion } from "@/lib/sesion";
 import { iniciarSesion } from "./acciones";
 
@@ -10,8 +11,9 @@ export default async function LoginPage() {
   return (
     <>
       <main className="mx-auto mt-16 max-w-sm px-4">
-        <img src="/icons/svg/logo-horizontal.svg" alt="" width={1200} height={400} className="mb-4 w-full rounded-lg" />
-        <h1 className="mb-6 text-center text-2xl font-semibold">Inicio de sesión</h1>
+        {/* La puerta de entrada es de la empresa; RP Software firma abajo, en el pie. */}
+        <h1 className="text-center text-2xl font-semibold">{nombreEmpresa() || NOMBRE_SOFTWARE}</h1>
+        <p className="mb-6 text-center text-stone-600">Inicio de sesión</p>
         <Formulario accion={iniciarSesion}>
           <Campo etiqueta="Usuario">
             {/* Sin autocorrector: el celular no debe cambiar el usuario mientras se escribe. */}
