@@ -28,6 +28,14 @@ export function BotonLink({ variante = "primario", className = "", ...props }: C
   return <Link className={`${BASE_BOTON} ${VARIANTES[variante]} ${className}`} {...props} />;
 }
 
+/**
+ * Acción en forma de enlace dentro de una fila o un texto (Anular, Ya llegó al banco). Mide 44px de alto
+ * para tocarla con el pulgar; `peligro` la pone en rojo de deuda.
+ */
+export function BotonTexto({ peligro = false, className = "", ...props }: ComponentProps<"button"> & { peligro?: boolean }) {
+  return <button className={`inline-flex min-h-11 items-center underline ${peligro ? "text-red-700" : ""} ${className}`} {...props} />;
+}
+
 export function Campo({ etiqueta, ayuda, children }: { etiqueta: string; ayuda?: string; children: ReactNode }) {
   return (
     <div className="space-y-1">
@@ -93,6 +101,14 @@ export function Etiqueta({ children, color = "gris" }: { children: ReactNode; co
     azul: "bg-blue-100 text-blue-800",
   }[color];
   return <span className={`inline-block rounded px-2 py-0.5 text-sm font-medium ${estilos}`}>{children}</span>;
+}
+
+/**
+ * Cliente, proveedor o empleado que ya no está activo. Gris en todas partes: es un estado, no una deuda ni un
+ * error (el rojo queda para lo vencido, lo anulado y los errores).
+ */
+export function EtiquetaInactivo() {
+  return <Etiqueta>Inactivo</Etiqueta>;
 }
 
 export type Vista = { clave: string; texto: string };

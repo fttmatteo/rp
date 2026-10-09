@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Alerta, BotonLink, Etiqueta, Tabla, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Etiqueta, Tabla, Titulo } from "@/components/ui";
 import { totalesCajaRango } from "@/lib/caja-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoPesos, hoyISO, sumarDias } from "@/lib/formato";
@@ -66,13 +66,13 @@ export default async function ReporteCajaPage({ searchParams }: { searchParams: 
           Hasta
           <input type="date" name="hasta" defaultValue={hastaISO} max={hoy} className="mt-1" />
         </label>
-        <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+        <Boton type="submit" variante="secundario">
           Ver
-        </button>
+        </Boton>
       </form>
-      <p className="mb-4 text-sm text-stone-600">
+      <p className="mb-4 text-stone-600">
         Suma de los cierres diarios del {formatoDia(desde)} al {formatoDia(fin)}
-        {abiertas > 0 && <strong className="text-amber-800"> · {abiertas} días sin cerrar</strong>}.
+        {abiertas > 0 && <strong className="text-blue-800"> · {abiertas} días sin cerrar</strong>}.
       </p>
       {recortado && (
         <div className="mb-4">
@@ -83,16 +83,17 @@ export default async function ReporteCajaPage({ searchParams }: { searchParams: 
       )}
       <Tabla>
         <thead>
+          {/* Hasta 1024px quedan Día, Esperado, Contado y Diferencia; el detalle aparece en pantallas anchas. */}
           <tr>
             <th>Día</th>
-            <th className="text-right">Base</th>
-            <th className="text-right">Cobros efectivo</th>
-            <th className="text-right">Otros ingresos</th>
-            <th className="text-right">Gastos</th>
+            <th className="hidden lg:table-cell text-right">Base</th>
+            <th className="hidden lg:table-cell text-right">Cobros efectivo</th>
+            <th className="hidden lg:table-cell text-right">Otros ingresos</th>
+            <th className="hidden lg:table-cell text-right">Gastos</th>
             <th className="text-right">Esperado</th>
             <th className="text-right">Contado</th>
             <th className="text-right">Diferencia</th>
-            <th className="text-right">Transferencias</th>
+            <th className="hidden lg:table-cell text-right">Transferencias</th>
           </tr>
         </thead>
         <tbody>
@@ -106,27 +107,27 @@ export default async function ReporteCajaPage({ searchParams }: { searchParams: 
                   </Link>{" "}
                   {!cerrada && <Etiqueta color="azul">Abierta</Etiqueta>}
                 </td>
-                <td className="text-right">{formatoPesos(t.base)}</td>
-                <td className="text-right">{formatoPesos(t.cobrosEfectivo)}</td>
-                <td className="text-right">{formatoPesos(t.ingresosEfectivo)}</td>
-                <td className="text-right">{formatoPesos(t.egresosEfectivo)}</td>
-                <td className="text-right">{formatoPesos(cerrada ? (caja?.esperado ?? 0) : efectivoEsperado(t))}</td>
-                <td className="text-right">{cerrada ? formatoPesos(caja?.contado ?? 0) : "—"}</td>
-                <td className={`text-right ${caja?.diferencia ? "text-red-700" : ""}`}>{cerrada ? formatoPesos(caja?.diferencia ?? 0) : "—"}</td>
-                <td className="text-right">{formatoPesos(totalTransferencias(t))}</td>
+                <td className="hidden lg:table-cell text-right tabular-nums">{formatoPesos(t.base)}</td>
+                <td className="hidden lg:table-cell text-right tabular-nums">{formatoPesos(t.cobrosEfectivo)}</td>
+                <td className="hidden lg:table-cell text-right tabular-nums">{formatoPesos(t.ingresosEfectivo)}</td>
+                <td className="hidden lg:table-cell text-right tabular-nums">{formatoPesos(t.egresosEfectivo)}</td>
+                <td className="text-right tabular-nums">{formatoPesos(cerrada ? (caja?.esperado ?? 0) : efectivoEsperado(t))}</td>
+                <td className="text-right tabular-nums">{cerrada ? formatoPesos(caja?.contado ?? 0) : "—"}</td>
+                <td className={`text-right tabular-nums ${caja?.diferencia ? "text-red-700" : ""}`}>{cerrada ? formatoPesos(caja?.diferencia ?? 0) : "—"}</td>
+                <td className="hidden lg:table-cell text-right tabular-nums">{formatoPesos(totalTransferencias(t))}</td>
               </tr>
             );
           })}
           <tr className="font-semibold">
             <td>Total</td>
+            <td className="hidden lg:table-cell" />
+            <td className="hidden lg:table-cell text-right tabular-nums">{formatoPesos(totales.cobrosEfectivo)}</td>
+            <td className="hidden lg:table-cell text-right tabular-nums">{formatoPesos(totales.ingresos)}</td>
+            <td className="hidden lg:table-cell text-right tabular-nums">{formatoPesos(totales.egresos)}</td>
             <td />
-            <td className="text-right">{formatoPesos(totales.cobrosEfectivo)}</td>
-            <td className="text-right">{formatoPesos(totales.ingresos)}</td>
-            <td className="text-right">{formatoPesos(totales.egresos)}</td>
             <td />
-            <td />
-            <td className={`text-right ${totales.diferencia ? "text-red-700" : ""}`}>{formatoPesos(totales.diferencia)}</td>
-            <td className="text-right">{formatoPesos(totales.transferencias)}</td>
+            <td className={`text-right tabular-nums ${totales.diferencia ? "text-red-700" : ""}`}>{formatoPesos(totales.diferencia)}</td>
+            <td className="hidden lg:table-cell text-right tabular-nums">{formatoPesos(totales.transferencias)}</td>
           </tr>
         </tbody>
       </Tabla>

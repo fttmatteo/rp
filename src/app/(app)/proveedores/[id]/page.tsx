@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Boton, BotonLink, Etiqueta, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, BotonLink, EtiquetaInactivo, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { requerir } from "@/lib/sesion";
 import { actualizarProveedor } from "../acciones";
@@ -22,7 +22,7 @@ export default async function ProveedorPage({ params }: { params: Promise<{ id: 
           </BotonLink>
         }
       >
-        {proveedor.nombre} {!proveedor.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
+        {proveedor.nombre} {!proveedor.activo && <EtiquetaInactivo />}
       </Titulo>
       <div className="max-w-2xl">
         <Tarjeta id="datos" titulo="Datos del proveedor">

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion } from "@/components/paginacion";
-import { Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, BotonLink, BotonTexto, Campo, claseBoton, Etiqueta, EtiquetaInactivo, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoFecha, formatoHuevos, formatoPesos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
@@ -53,14 +53,14 @@ export default async function PorPagarProveedorPage({
           </BotonLink>
         }
       >
-        {proveedor.nombre} {!proveedor.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
+        {proveedor.nombre} {!proveedor.activo && <EtiquetaInactivo />}
       </Titulo>
-      <div className="mb-6 flex flex-wrap items-baseline gap-x-6 gap-y-2">
+      <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2">
         <p>
-          <span className="text-sm text-stone-600">Le debemos: </span>
-          <span className={`text-2xl font-semibold ${saldo > 0 ? "text-red-700" : ""}`}>{formatoPesos(saldo)}</span>
+          <span className="text-stone-600">Le debemos: </span>
+          <span className={`text-2xl font-semibold tabular-nums ${saldo > 0 ? "text-red-700" : ""}`}>{formatoPesos(saldo)}</span>
         </p>
-        <Link href={`/proveedores/${id}`} className="text-sm underline">
+        <Link href={`/proveedores/${id}`} className={claseBoton("secundario")}>
           Editar datos del proveedor
         </Link>
       </div>
@@ -68,7 +68,7 @@ export default async function PorPagarProveedorPage({
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <Tarjeta id="por-pagar" titulo="Cuentas por pagar">
           {deudas.length === 0 ? (
-            <p className="text-sm text-stone-500">No le debemos nada.</p>
+            <p className="text-stone-500">No le debemos nada.</p>
           ) : (
             <Tabla>
               <thead>
@@ -87,7 +87,7 @@ export default async function PorPagarProveedorPage({
                     <td>
                       {d.vence ? formatoDia(d.vence) : "—"} {d.vence && d.vence < hoy && <Etiqueta color="rojo">Vencida</Etiqueta>}
                     </td>
-                    <td className="text-right">{formatoPesos(d.saldo)}</td>
+                    <td className="whitespace-nowrap text-right tabular-nums">{formatoPesos(d.saldo)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -126,7 +126,7 @@ export default async function PorPagarProveedorPage({
         </Tarjeta>
 
         <Tarjeta id="movimientos" titulo="Movimientos">
-          <ul className="divide-y divide-stone-100 text-sm">
+          <ul className="divide-y divide-stone-100">
             {[...compras.map((c) => ({ fecha: c.fecha, c })), ...pagos.map((p) => ({ fecha: p.fecha, p }))]
               .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
               .slice(hastaAqui - MOVIMIENTOS, hastaAqui)
@@ -137,7 +137,7 @@ export default async function PorPagarProveedorPage({
                       {formatoFecha(m.fecha)} · Compra #{m.c.id} ({formatoHuevos(m.c.huevos)},{" "}
                       {m.c.formaPago === "CONTADO" ? "contado" : "crédito"}) {m.c.anulada && <Etiqueta color="rojo">Anulada</Etiqueta>}
                     </span>
-                    <span>{formatoPesos(m.c.total)}</span>
+                    <span className="whitespace-nowrap tabular-nums">{formatoPesos(m.c.total)}</span>
                   </li>
                 ) : (
                   <li key={`p${m.p.id}`} className="flex flex-wrap justify-between gap-2 py-2">
@@ -146,16 +146,16 @@ export default async function PorPagarProveedorPage({
                       {m.p.anulado && <Etiqueta color="rojo">Anulado</Etiqueta>}
                     </span>
                     <span className="flex items-center gap-2">
-                      <span className="text-green-700">−{formatoPesos(m.p.valor)}</span>
+                      <span className="whitespace-nowrap text-green-700 tabular-nums">−{formatoPesos(m.p.valor)}</span>
                       {!m.p.anulado && puede(sesion.operacion, "anular") && (
                         <Formulario
                           accion={anularPagoProveedor.bind(null, m.p.id)}
                           confirmar="¿Anular este abono? El dinero vuelve a la caja."
                           className="inline"
                         >
-                          <button type="submit" className="text-xs text-red-700 underline">
+                          <BotonTexto type="submit" peligro>
                             Anular
-                          </button>
+                          </BotonTexto>
                         </Formulario>
                       )}
                     </span>

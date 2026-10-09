@@ -185,7 +185,7 @@ Papel y tinta cálidos (la familia `stone` de Tailwind), el ámbar como única v
 
 **La Regla de la Tinta sobre Ámbar.** Sobre ámbar el texto es siempre tinta (`stone-900`) en peso 500 o más. El blanco sobre ámbar da 3.2:1 y no se usa.
 
-**La Regla del Aviso Azul.** El aviso es azul, nunca ámbar, para que no se confunda con lo que se toca. `Alerta tipo="aviso"`, `Etiqueta color="azul"` y el bloque "Para revisar" del inicio ya son azules. *Pendiente en el código:* el aviso de inventario y los textos `text-amber-700`/`text-amber-800` de caja y reporte de caja tienen clases ámbar propias; pasan a azul.
+**La Regla del Aviso Azul.** El aviso es azul, nunca ámbar, para que no se confunda con lo que se toca. En el código ya no queda ningún aviso en ámbar: `Alerta tipo="aviso"`, `Etiqueta color="azul"`, el bloque "Para revisar" del inicio, el "Comprado por clasificar" de Inventario y los avisos de Caja son azules. El ámbar solo aparece en el botón principal, la pestaña activa, la opción elegida, las casillas y el foco.
 
 **La Regla de la Deuda que Habla.** El rojo de la deuda nunca va solo: siempre acompaña una palabra ("Debe", "Vencida", "Anular", "Bajo el mínimo"). Un número rojo sin rótulo es un error de diseño.
 
@@ -206,7 +206,7 @@ Papel y tinta cálidos (la familia `stone` de Tailwind), el ámbar como única v
 - **Dato** (400, 14px, 1.43): solo para datos secundarios dentro de tablas densas de oficina (columnas de reportes, fecha y usuario de un movimiento) y para etiquetas de estado. Nunca para el texto principal de una fila ni para nada en Mi ruta.
 
 ### Named Rules
-**La Regla de los 16.** Lo que se lee o se toca va en 16px o más. 14px solo para el dato secundario de una tabla de oficina. 12px no se usa. Los componentes de `ui.tsx` (botones, rótulos, ayudas, alertas, pestañas, etiquetas, estado vacío) ya cumplen. Mi ruta, el inicio, el menú principal y el selector de día también. *Pendiente en el código:* las demás páginas todavía tienen muchos `text-sm` y `text-xs` propios (totales, tablas, encabezado); se suben al tocar cada pantalla.
+**La Regla de los 16.** Lo que se lee o se toca va en 16px o más. 14px solo para el dato secundario de una tabla de oficina. 12px no se usa. Los componentes de `ui.tsx` (botones, rótulos, ayudas, alertas, pestañas, etiquetas, estado vacío) ya cumplen. Mi ruta, el inicio, Pedidos, Contabilidad, Inventario, el menú principal y el selector de día también. *Pendiente en el código:* las demás páginas todavía tienen muchos `text-sm` y `text-xs` propios (totales, tablas, encabezado); se suben al tocar cada pantalla.
 
 **La Regla de una Cifra Grande.** En una tarjeta del inicio hay una sola cifra en Display. Lo demás es Body o Dato. Si la cifra pide atención, se marca con la etiqueta azul "Para revisar" debajo, no pintando la cifra. Las cifras van en números tabulares (`tabular-nums`). El enlace de cada tarjeta va abajo (44px), alineado entre las tarjetas de una misma fila.
 
@@ -242,13 +242,14 @@ Firmes y sin adornos, como un sello. Altura de 44px, texto en Label.
 - **Secundario:** hoja blanca, tinta, borde de campo; hover en renglón suave. Para "Ver", "Cancelar" y acciones al lado de la principal.
 - **Peligro:** hoja blanca, texto rojo de deuda y borde de deuda; hover en fondo de deuda. Solo para anular.
 - **Enlace de texto:** subrayado, en tinta: "Cambiar", "Salir", "Ver todo", y los `summary` que abren opciones menos frecuentes.
+- **Acción de texto** (`BotonTexto`): un botón con forma de enlace subrayado, de 44px de alto, para acciones dentro de una fila ("Ya llegó al banco", "Quitar"); con `peligro` va en rojo de deuda ("Anular").
 
 ### Chips (opciones de "Qué vas a registrar")
 - **Style:** hoja blanca, borde de campo, esquina de 4px, 8px por 12px de relleno.
 - **State:** la elegida lleva borde ámbar hondo, fondo ámbar claro y peso 600, con `aria-current`. Solo una a la vez; muestran un formulario a la vez.
 
 ### Etiquetas de estado
-Pequeñas píldoras rectangulares (esquina de 4px, 2px por 8px) en Dato con peso 500: gris (renglón suave y tinta firme), verde (`green-100` con `green-800`), rojo (`red-100` con `red-800`) y azul (`blue-100` con `blue-800`). Marcan estados (Pendiente, Entregado, Anulado, Vencida, Sin verificar), nunca acciones. No hay etiqueta ámbar.
+Pequeñas píldoras rectangulares (esquina de 4px, 2px por 8px) en Dato con peso 500: gris (renglón suave y tinta firme), verde (`green-100` con `green-800`), rojo (`red-100` con `red-800`) y azul (`blue-100` con `blue-800`). Marcan estados (Pendiente, Entregado, Anulado, Vencida, Sin verificar), nunca acciones. No hay etiqueta ámbar. "Inactivo" (clientes, proveedores, empleados) es siempre gris y sale de un solo componente, `EtiquetaInactivo`: es un estado, no una deuda; el rojo queda para lo vencido, lo anulado y los errores. "Vacío" y "Fuera de uso" de los galpones también son grises.
 
 ### Cards / Containers
 - **Corner Style:** 4px.
@@ -274,7 +275,7 @@ Caja con borde de 1px y fondo de estado, esquina de 4px, 8px por 12px: error (ro
 Dentro de una hoja con borde y desplazamiento lateral propio. Cabecera en renglón suave con texto en tinta media y peso 500; filas separadas por una línea muy tenue; celdas de 8px por 12px. Columnas secundarias se esconden en el celular y aparecen desde 640px; lo que no puede perderse baja como segunda línea en tinta media dentro de la columna principal (en Pedidos, el número y la fecha debajo del cliente), para que la tabla quepa sin desplazar de lado. El nombre de la fila es el enlace a su detalle. Las cifras van a la derecha en números tabulares.
 
 ### Franja de totales (signature)
-Arriba de cada lista de dinero: una franja en renglón suave con tres datos (Efectivo, Transferencia, Total), rótulo en tinta media encima de cada valor y el Total en peso 600. Es la forma de "cuadrar" de un vistazo y se repite en Ingresos, Egresos, Caja y Reparto.
+Arriba de cada lista de dinero (`FranjaTotales` en `src/components/dinero.tsx`): una franja en renglón suave con tres datos (Efectivo, Transferencia, Total), rótulo en tinta media encima de cada valor, cifras tabulares y el Total en peso 600. En el celular el Total baja a su propia fila; desde 640px van los tres en una. Es la forma de "cuadrar" de un vistazo y se repite en Ingresos, Egresos, Caja y Reparto.
 
 ### Parada de Mi ruta (signature)
 Una hoja por cliente: nombre en Title, dirección y zona en tinta media, deuda en rojo con "Debe" o en verde con "No debe nada", botones de llamar, WhatsApp y Maps, y el botón ámbar de entregar a todo el ancho. Lo menos frecuente (fiado, transferencia, entrega parcial, no entregado, solo abono) va escondido en `details` debajo, para que la parada se resuelva con un toque.

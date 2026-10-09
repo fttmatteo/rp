@@ -91,7 +91,7 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
         </label>
       </SelectorDia>
       {rutaElegida && (
-        <p className="mb-4 text-sm">
+        <p className="mb-4">
           La liquidación de esta ruta (efectivo entregado y devoluciones) está en{" "}
           <Link href={`/rutas/${rutaElegida.id}`} className="underline">
             la ruta de {rutaElegida.repartidor.nombre}
@@ -100,7 +100,7 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
         </p>
       )}
       {fecha > hoy && (
-        <p className="mb-4 text-sm text-stone-600">Reparto programado: son los pedidos creados para esa fecha. Se entregan y cobran ese día.</p>
+        <p className="mb-4 text-stone-600">Reparto programado: son los pedidos creados para esa fecha. Se entregan y cobran ese día.</p>
       )}
 
       {filas.length === 0 ? (
@@ -113,21 +113,21 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
           </h2>
           <div className="mb-6 grid gap-4 lg:grid-cols-[2fr_3fr]">
             <Tarjeta titulo="Valores" className="self-start">
-              <dl className="grid grid-cols-2 gap-y-1 text-sm">
+              <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 [&_dd]:text-right [&_dd]:whitespace-nowrap [&_dd]:tabular-nums">
                 <dt>Valor entregado</dt>
-                <dd className="text-right">{formatoPesos(cierre.valorEntregado)}</dd>
+                <dd>{formatoPesos(cierre.valorEntregado)}</dd>
                 <dt>Pagado en efectivo</dt>
-                <dd className="text-right">{formatoPesos(cierre.pagadoEfectivo)}</dd>
+                <dd>{formatoPesos(cierre.pagadoEfectivo)}</dd>
                 <dt>Pagado por transferencia</dt>
-                <dd className="text-right">{formatoPesos(cierre.pagadoTransferencia)}</dd>
+                <dd>{formatoPesos(cierre.pagadoTransferencia)}</dd>
                 <dt className="font-semibold">Valor pagado</dt>
-                <dd className="text-right font-semibold">{formatoPesos(cierre.pagado)}</dd>
+                <dd className="font-semibold">{formatoPesos(cierre.pagado)}</dd>
                 <dt className="font-semibold">Valor pendiente</dt>
-                <dd className={`text-right font-semibold ${cierre.pendiente > 0 ? "text-red-700" : ""}`}>{formatoPesos(cierre.pendiente)}</dd>
+                <dd className={`font-semibold ${cierre.pendiente > 0 ? "text-red-700" : ""}`}>{formatoPesos(cierre.pendiente)}</dd>
                 {cierre.valorPorEntregar > 0 && (
                   <>
                     <dt className="text-stone-500">Falta por entregar</dt>
-                    <dd className="text-right text-stone-500">{formatoPesos(cierre.valorPorEntregar)}</dd>
+                    <dd className="text-stone-500">{formatoPesos(cierre.valorPorEntregar)}</dd>
                   </>
                 )}
               </dl>
@@ -147,15 +147,15 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
                   {porProducto.map((c) => (
                     <tr key={c.productoId}>
                       <td>{nombres.get(c.productoId)}</td>
-                      <td className="text-right">{c.entregado}</td>
-                      <td className="text-right">{c.devuelto}</td>
-                      <td className="text-right">{c.porEntregar}</td>
-                      <td className="text-right">{formatoPesos(c.valorEntregado)}</td>
+                      <td className="text-right tabular-nums">{c.entregado}</td>
+                      <td className="text-right tabular-nums">{c.devuelto}</td>
+                      <td className="text-right tabular-nums">{c.porEntregar}</td>
+                      <td className="whitespace-nowrap text-right tabular-nums">{formatoPesos(c.valorEntregado)}</td>
                     </tr>
                   ))}
                 </tbody>
               </Tabla>
-              <p className="mt-2 text-xs text-stone-500">Cubetas de 30 huevos; gallinas por unidad. Devuelto: entregas parciales y pedidos no entregados.</p>
+              <p className="mt-2 text-sm text-stone-500">Cubetas de 30 huevos; gallinas por unidad. Devuelto: entregas parciales y pedidos no entregados.</p>
             </Tarjeta>
           </div>
           <h2 id="pedidos" className="mb-3 text-lg font-semibold">
@@ -166,11 +166,12 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
             <Tabla>
               <thead>
                 <tr>
+                  {/* En el celular quedan Cliente (con la zona y lo fiado debajo), Valor y Estado, para no desplazar de lado. */}
                   <th>Cliente</th>
-                  <th>Clasificación y cantidad</th>
+                  <th className="hidden sm:table-cell">Clasificación y cantidad</th>
                   <th className="text-right">Valor</th>
-                  <th className="text-right">Pagado</th>
-                  <th className="text-right">Pendiente</th>
+                  <th className="hidden text-right sm:table-cell">Pagado</th>
+                  <th className="hidden text-right sm:table-cell">Pendiente</th>
                   <th>Estado</th>
                 </tr>
               </thead>
@@ -181,14 +182,17 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
                       <Link href={`/pedidos/${p.id}`} className="underline">
                         {p.cliente.nombre}
                       </Link>
-                      {p.cliente.zona && <span className="block text-xs text-stone-500">{p.cliente.zona}</span>}
+                      {p.cliente.zona && <span className="block text-stone-600">{p.cliente.zona}</span>}
+                      {reparto.entregado && valores.pendiente > 0 && (
+                        <span className="block font-medium whitespace-nowrap text-red-700 sm:hidden">Fiado {formatoPesos(valores.pendiente)}</span>
+                      )}
                     </td>
-                    <td className="text-stone-600">
+                    <td className="hidden text-stone-600 sm:table-cell">
                       {p.detalles.map((d) => `${reparto.entregado ? (d.cantidadEntregada ?? d.cantidad) : d.cantidad} ${nombres.get(d.productoId)}`).join(", ")}
                     </td>
-                    <td className="text-right">{formatoPesos(valores.valor)}</td>
-                    <td className="text-right">{reparto.entregado ? formatoPesos(valores.pagado) : "–"}</td>
-                    <td className={`text-right ${valores.pendiente > 0 ? "text-red-700" : ""}`}>
+                    <td className="whitespace-nowrap text-right tabular-nums">{formatoPesos(valores.valor)}</td>
+                    <td className="hidden whitespace-nowrap text-right tabular-nums sm:table-cell">{reparto.entregado ? formatoPesos(valores.pagado) : "–"}</td>
+                    <td className={`hidden whitespace-nowrap text-right tabular-nums sm:table-cell ${valores.pendiente > 0 ? "text-red-700" : ""}`}>
                       {reparto.entregado ? formatoPesos(valores.pendiente) : "–"}
                     </td>
                     <td>
@@ -206,7 +210,7 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
             </Tabla>
           )}
           <Paginacion ruta="/reparto" params={{ fecha, ruta: rutaParam, q }} pagina={pagina} total={lista.length} ancla="pedidos" />
-          <p className="mt-2 text-xs text-stone-500">
+          <p className="mt-2 text-sm text-stone-500">
             Pagado es lo que el cliente pagó el día de la entrega. Lo que no pagó queda como pendiente (fiado) y se ve en su cartera.
           </p>
 

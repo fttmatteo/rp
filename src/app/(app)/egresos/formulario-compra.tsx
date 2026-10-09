@@ -8,7 +8,7 @@ import { registrarCompra } from "./compras";
 export function FormularioCompra({ proveedores, tipos }: { proveedores: Proveedor[]; tipos: Producto[] }) {
   if (proveedores.length === 0)
     return (
-      <p className="text-sm text-stone-600">
+      <p className="text-stone-600">
         Primero crea el proveedor en{" "}
         <Link href="/proveedores" className="underline">
           Proveedores
@@ -29,7 +29,7 @@ export function FormularioCompra({ proveedores, tipos }: { proveedores: Proveedo
       </Campo>
 
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-stone-700">¿Cómo llegó el huevo?</legend>
+        <legend className="font-medium text-stone-700">¿Cómo llegó el huevo?</legend>
         <label className="flex items-center gap-2 font-normal">
           <input type="radio" name="ingreso" value="CLASIFICADA" defaultChecked /> Ya clasificado: suma directo al inventario por
           tipo
@@ -40,7 +40,7 @@ export function FormularioCompra({ proveedores, tipos }: { proveedores: Proveedo
       </fieldset>
 
       <details open className="rounded border border-stone-200 p-3">
-        <summary className="cursor-pointer text-sm font-medium">Si llegó clasificado: cantidad por tipo</summary>
+        <summary className="block cursor-pointer py-2.5 font-medium">Si llegó clasificado: cantidad por tipo</summary>
         <Tabla>
           <thead>
             <tr>
@@ -65,7 +65,7 @@ export function FormularioCompra({ proveedores, tipos }: { proveedores: Proveedo
         </Tabla>
       </details>
       <details className="rounded border border-stone-200 p-3">
-        <summary className="cursor-pointer text-sm font-medium">Si llegó sin clasificar: cantidad total</summary>
+        <summary className="block cursor-pointer py-2.5 font-medium">Si llegó sin clasificar: cantidad total</summary>
         <div className="mt-2 grid grid-cols-2 gap-3">
           <Campo etiqueta="Cubetas">
             <input name="cubetas" inputMode="numeric" placeholder="0" />
@@ -80,7 +80,7 @@ export function FormularioCompra({ proveedores, tipos }: { proveedores: Proveedo
         <input name="total" inputMode="numeric" required />
       </Campo>
       <fieldset className="space-y-2">
-        <legend className="text-sm font-medium text-stone-700">Pago al proveedor</legend>
+        <legend className="font-medium text-stone-700">Pago al proveedor</legend>
         <label className="flex items-center gap-2 font-normal">
           <input type="radio" name="formaPago" value="CONTADO" defaultChecked /> De contado: sale de la caja de hoy
         </label>

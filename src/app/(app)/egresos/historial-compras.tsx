@@ -2,7 +2,7 @@ import type { Operacion } from "@/lib/permisos";
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { Paginacion, rango } from "@/components/paginacion";
-import { Etiqueta, Tabla, Tarjeta, Vacio } from "@/components/ui";
+import { BotonTexto, Etiqueta, Tabla, Tarjeta, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatoFecha, formatoHuevos, formatoPesos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
@@ -41,10 +41,11 @@ export async function HistorialCompras({
           <Tabla>
             <thead>
               <tr>
+                {/* En el celular el huevo y el pago se esconden; la forma de pago y lo que falta por clasificar bajan debajo del proveedor. */}
                 <th>Compra</th>
                 <th>Proveedor</th>
-                <th>Huevo</th>
-                <th>Pago</th>
+                <th className="hidden sm:table-cell">Huevo</th>
+                <th className="hidden sm:table-cell">Pago</th>
                 <th className="text-right">Total</th>
               </tr>
             </thead>
@@ -58,8 +59,16 @@ export async function HistorialCompras({
                     <Link href={`/por-pagar/${c.proveedorId}`} className="underline">
                       {c.proveedor.nombre}
                     </Link>
+                    <span className="block text-stone-600 sm:hidden">
+                      {c.formaPago === "CONTADO" ? "De contado" : `A crédito · debe ${formatoPesos(c.saldo)}`}
+                    </span>
+                    {!c.anulada && !c.clasificada && c.porClasificar > 0 && (
+                      <span className="mt-1 block sm:hidden">
+                        <Etiqueta color="azul">Faltan {formatoHuevos(c.porClasificar)} por clasificar</Etiqueta>
+                      </span>
+                    )}
                   </td>
-                  <td>
+                  <td className="hidden sm:table-cell">
                     {c.clasificada
                       ? c.detalles.map((d) => `${d.producto.nombre}: ${formatoHuevos(d.cantidad)}`).join(" · ")
                       : `Sin clasificar: ${formatoHuevos(c.huevos)}`}
@@ -71,17 +80,17 @@ export async function HistorialCompras({
                     )}
                     {c.nota && <span className="text-stone-500"> · {c.nota}</span>}
                   </td>
-                  <td className="text-stone-600">{c.formaPago === "CONTADO" ? "De contado" : `A crédito · debe ${formatoPesos(c.saldo)}`}</td>
+                  <td className="hidden text-stone-600 sm:table-cell">{c.formaPago === "CONTADO" ? "De contado" : `A crédito · debe ${formatoPesos(c.saldo)}`}</td>
                   <td className="text-right">
-                    <strong>{formatoPesos(c.total)}</strong>
+                    <strong className="whitespace-nowrap tabular-nums">{formatoPesos(c.total)}</strong>
                     {!c.anulada && puede(operacion, "anular") && (
                       <Formulario
                         accion={anularCompra.bind(null, c.id)}
                         confirmar="¿Anular esta compra? Sale del inventario y se devuelve el dinero a la caja."
                       >
-                        <button type="submit" className="text-xs text-red-700 underline">
+                        <BotonTexto type="submit" peligro>
                           Anular
-                        </button>
+                        </BotonTexto>
                       </Formulario>
                     )}
                   </td>

@@ -75,7 +75,7 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
               ))}
             </tbody>
           </Tabla>
-          <p className="text-sm text-stone-600">
+          <p className="text-stone-600">
             El precio sugerido se propone al configurar los precios especiales de un cliente. Cada cliente puede tener el suyo. Un producto
             que no está en venta no aparece en pedidos ni en la clasificación. La gallinaza se vende, se clasifica y se cuenta en la unidad
             elegida; si cambias la unidad, ajusta su inventario. Si las existencias bajan del mínimo, Inicio muestra una alerta (déjalo vacío
@@ -86,9 +86,9 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
 
         <Tarjeta id="cambios" titulo="Cambios de precio">
           {historial.length === 0 ? (
-            <p className="text-sm text-stone-500">Sin cambios todavía.</p>
+            <p className="text-stone-500">Sin cambios todavía.</p>
           ) : (
-            <ul className="space-y-1 text-sm">
+            <ul className="space-y-1">
               {historial.map((h) => (
                 <li key={h.id}>
                   {formatoFechaHora(h.fecha)} · {h.producto.nombre}

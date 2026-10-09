@@ -42,15 +42,17 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
           const cantidad = stock.get(p.id) ?? 0;
           return (
             <div key={p.id} className="rounded border border-stone-200 bg-white p-3">
-              <p className="text-sm text-stone-600">{p.nombre}</p>
-              <p className={`font-semibold ${cantidad < 0 ? "text-red-700" : ""}`}>{formatoCantidad(p.tipo, cantidad, p.unidad)}</p>
+              <p className="text-stone-600">{p.nombre}</p>
+              <p className={`font-semibold tabular-nums ${cantidad < 0 ? "text-red-700" : ""}`}>{formatoCantidad(p.tipo, cantidad, p.unidad)}</p>
+              {/* El rojo nunca va solo: dice por qué. */}
+              {cantidad < 0 && <p className="text-sm font-medium text-red-700">Bajo cero</p>}
             </div>
           );
         })}
         {sinClasificar > 0 && (
-          <div className="rounded border border-amber-300 bg-amber-50 p-3">
-            <p className="text-sm text-stone-600">Comprado por clasificar</p>
-            <p className="font-semibold">{formatoHuevos(sinClasificar)}</p>
+          <div className="rounded border border-blue-300 bg-blue-50 p-3 text-blue-800">
+            <p>Comprado por clasificar</p>
+            <p className="font-semibold tabular-nums">{formatoHuevos(sinClasificar)}</p>
           </div>
         )}
       </div>
@@ -101,32 +103,41 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
       )}
 
       <div>
-        <h2 id="movimientos" className="mb-2 font-semibold">
+        <h2 id="movimientos" className="mb-2 text-lg font-semibold">
           Movimientos
         </h2>
         <Tabla>
           <thead>
             <tr>
-              <th>Fecha</th>
+              {/* En el celular quedan Producto (con la fecha, el tipo y el detalle debajo) y Cantidad. */}
+              <th className="hidden sm:table-cell">Fecha</th>
               <th>Producto</th>
-              <th>Tipo</th>
+              <th className="hidden sm:table-cell">Tipo</th>
               <th className="text-right">Cantidad</th>
-              <th>Detalle</th>
+              <th className="hidden sm:table-cell">Detalle</th>
             </tr>
           </thead>
           <tbody>
             {movimientos.map((m) => (
               <tr key={m.id}>
-                <td className="whitespace-nowrap">{formatoFechaHora(m.fecha)}</td>
-                <td>{m.producto.nombre}</td>
-                <td>{TIPO[m.tipo]}</td>
-                <td className={`whitespace-nowrap text-right ${m.cantidad < 0 ? "text-red-700" : "text-green-700"}`}>
+                <td className="hidden whitespace-nowrap sm:table-cell">{formatoFechaHora(m.fecha)}</td>
+                <td>
+                  {m.producto.nombre}
+                  <span className="block text-stone-600 sm:hidden">
+                    {formatoFechaHora(m.fecha)} · {TIPO[m.tipo]}
+                  </span>
+                  <span className="block text-stone-600 sm:hidden">
+                    {m.venta ? m.venta.cliente.nombre : m.compra && !m.nota ? `Compra #${m.compra.id} a ${m.compra.proveedor.nombre}` : m.nota}
+                  </span>
+                </td>
+                <td className="hidden sm:table-cell">{TIPO[m.tipo]}</td>
+                <td className={`whitespace-nowrap text-right tabular-nums ${m.cantidad < 0 ? "text-red-700" : "text-green-700"}`}>
                   {m.cantidad > 0 ? "+" : ""}
                   {formatoCantidad(m.producto.tipo, m.cantidad, m.producto.unidad)}
                 </td>
-                <td className="text-stone-600">
+                <td className="hidden text-stone-600 sm:table-cell">
                   {m.venta ? m.venta.cliente.nombre : m.compra && !m.nota ? `Compra #${m.compra.id} a ${m.compra.proveedor.nombre}` : m.nota}
-                  {m.usuario && <span className="text-stone-400"> · {m.usuario.nombre}</span>}
+                  {m.usuario && <span className="text-stone-500"> · {m.usuario.nombre}</span>}
                 </td>
               </tr>
             ))}

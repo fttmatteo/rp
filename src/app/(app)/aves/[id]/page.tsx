@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion, paginar } from "@/components/paginacion";
-import { Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo, Vacio, Vistas, vistaElegida } from "@/components/ui";
+import { Boton, BotonLink, BotonTexto, Campo, Etiqueta, Tabla, Tarjeta, Titulo, Vacio, vistaElegida, Vistas } from "@/components/ui";
 import { huevosPorGrupoYDia, novedadesDe } from "@/lib/aves-db";
 import { db } from "@/lib/db";
 import { ETAPA_AVES, TIPO_NOVEDAD } from "@/lib/etiquetas-aves";
@@ -103,7 +103,7 @@ export default async function GalponPage({
               <Campo etiqueta="Nota">
                 <input name="nota" />
               </Campo>
-              <p className="text-xs text-stone-500">
+              <p className="text-sm text-stone-500">
                 Paso a venta: las gallinas salen del galpón y suman al inventario para venderlas en los pedidos. Cuando salen todas las aves, el galpón queda vacío.
               </p>
               <Boton type="submit">Registrar</Boton>
@@ -136,11 +136,12 @@ export default async function GalponPage({
           <Tabla>
             <thead>
               <tr>
+                {/* En el celular quedan Entraron, Aves y Muertes; lo que pasó a venta y la salida, desde 640px. */}
                 <th>Entraron</th>
                 <th className="text-right">Aves</th>
                 <th className="text-right">Muertes</th>
-                <th className="text-right">A venta</th>
-                <th>Salieron</th>
+                <th className="hidden text-right sm:table-cell">A venta</th>
+                <th className="hidden sm:table-cell">Salieron</th>
               </tr>
             </thead>
             <tbody>
@@ -152,12 +153,12 @@ export default async function GalponPage({
                   <tr key={l.id}>
                     <td>
                       {formatoDia(l.fechaIngreso)}
-                      {l.raza && <span className="block text-xs text-stone-500">{l.raza}</span>}
+                      {l.raza && <span className="block text-stone-600">{l.raza}</span>}
                     </td>
-                    <td className="text-right">{avesQueEntraron(l, propias).toLocaleString("es-CO")}</td>
-                    <td className="text-right">{bajas.MUERTE.toLocaleString("es-CO")}</td>
-                    <td className="text-right">{bajas.VENTA.toLocaleString("es-CO")}</td>
-                    <td>{ultima ? formatoDia(ultima) : "—"}</td>
+                    <td className="text-right tabular-nums">{avesQueEntraron(l, propias).toLocaleString("es-CO")}</td>
+                    <td className="text-right tabular-nums">{bajas.MUERTE.toLocaleString("es-CO")}</td>
+                    <td className="hidden text-right tabular-nums sm:table-cell">{bajas.VENTA.toLocaleString("es-CO")}</td>
+                    <td className="hidden sm:table-cell">{ultima ? formatoDia(ultima) : "—"}</td>
                   </tr>
                 );
               })}
@@ -219,22 +220,22 @@ function Resumen({ grupo, novedades, hoy, capacidad }: { grupo: GrupoAves; noved
   return (
     <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
       <Tarjeta>
-        <p className="text-sm text-stone-600">Aves vivas</p>
-        <p className="text-2xl font-semibold">{vivas.toLocaleString("es-CO")}</p>
-        {capacidad && <p className="text-xs text-stone-500">de {capacidad.toLocaleString("es-CO")} que caben</p>}
+        <p className="text-stone-600">Aves vivas</p>
+        <p className="text-2xl font-semibold tabular-nums">{vivas.toLocaleString("es-CO")}</p>
+        {capacidad && <p className="text-sm text-stone-500">de {capacidad.toLocaleString("es-CO")} que caben</p>}
       </Tarjeta>
       <Tarjeta>
-        <p className="text-sm text-stone-600">Edad</p>
-        <p className="text-2xl font-semibold">{edadSemanas(grupo.fechaIngreso, grupo.edadIngresoSemanas, hoy)} sem.</p>
+        <p className="text-stone-600">Edad</p>
+        <p className="text-2xl font-semibold tabular-nums">{edadSemanas(grupo.fechaIngreso, grupo.edadIngresoSemanas, hoy)} sem.</p>
       </Tarjeta>
       <Tarjeta>
-        <p className="text-sm text-stone-600">Etapa</p>
-        <p className="text-2xl font-semibold">{ETAPA_AVES[grupo.etapa]}</p>
+        <p className="text-stone-600">Etapa</p>
+        <p className="text-2xl font-semibold tabular-nums">{ETAPA_AVES[grupo.etapa]}</p>
       </Tarjeta>
       <Tarjeta>
-        <p className="text-sm text-stone-600">Mortalidad acumulada</p>
-        <p className="text-2xl font-semibold">{mortalidad}%</p>
-        <p className="text-xs text-stone-500">
+        <p className="text-stone-600">Mortalidad acumulada</p>
+        <p className="text-2xl font-semibold tabular-nums">{mortalidad}%</p>
+        <p className="text-sm text-stone-500">
           {bajas.MUERTE} muertes · {bajas.DESCARTE} descartes · {bajas.VENTA} a venta
         </p>
       </Tarjeta>
@@ -273,9 +274,9 @@ function Produccion({ grupo, novedades, huevos, hoy }: { grupo: GrupoAves; noved
         {produccion.map((p) => (
           <tr key={p.dia.getTime()}>
             <td>{formatoDia(p.dia)}</td>
-            <td className="text-right">{p.total?.toLocaleString("es-CO")}</td>
-            <td className="text-right">{p.aves.toLocaleString("es-CO")}</td>
-            <td className="text-right">{p.postura === null ? "—" : `${p.postura}%`}</td>
+            <td className="text-right tabular-nums">{p.total?.toLocaleString("es-CO")}</td>
+            <td className="text-right tabular-nums">{p.aves.toLocaleString("es-CO")}</td>
+            <td className="text-right tabular-nums">{p.postura === null ? "—" : `${p.postura}%`}</td>
           </tr>
         ))}
       </tbody>
@@ -300,12 +301,12 @@ async function Novedades({ galponId, grupo, novedades, pagina, anular }: { galpo
   return (
     <Tarjeta>
       {grupo.cantidadInicial > 0 && (
-        <p className="mb-2 text-sm text-stone-600">
+        <p className="mb-2 text-stone-600">
           Entraron {grupo.cantidadInicial.toLocaleString("es-CO")} aves el {formatoDia(grupo.fechaIngreso)}
           {grupo.raza && ` · ${grupo.raza}`}.
         </p>
       )}
-      <ul className="divide-y divide-stone-100 text-sm">
+      <ul className="divide-y divide-stone-100">
         {lista.map((n) => {
           const entrada = n.grupoDestinoId === grupo.id;
           return (
@@ -314,18 +315,18 @@ async function Novedades({ galponId, grupo, novedades, pagina, anular }: { galpo
                 {formatoDia(n.fecha)} · {entrada ? `Traslado desde ${galponDe.get(n.grupoId)}` : TIPO_NOVEDAD[n.tipo]}
                 {!entrada && n.grupoDestinoId && ` a ${galponDe.get(n.grupoDestinoId)}`}
                 {n.nota && <span className="text-stone-500"> · {n.nota}</span>}
-                <span className="text-stone-400"> · {nombreUsuario.get(n.usuarioId)}</span> {n.anulada && <Etiqueta color="rojo">Anulada</Etiqueta>}
+                <span className="text-stone-500"> · {nombreUsuario.get(n.usuarioId)}</span> {n.anulada && <Etiqueta color="rojo">Anulada</Etiqueta>}
               </span>
               <span className="flex items-center gap-2">
-                <span className={n.anulada ? "text-stone-400 line-through" : entrada ? "text-green-700" : "text-red-700"}>
+                <span className={`tabular-nums ${n.anulada ? "text-stone-500 line-through" : entrada ? "text-green-700" : "text-red-700"}`}>
                   {entrada ? "+" : "−"}
                   {n.cantidad}
                 </span>
                 {!n.anulada && !entrada && anular && (
                   <Formulario accion={anularNovedad.bind(null, n.id)} confirmar="¿Anular esta novedad?" className="inline">
-                    <button type="submit" className="text-xs text-red-700 underline">
+                    <BotonTexto type="submit" peligro>
                       Anular
-                    </button>
+                    </BotonTexto>
                   </Formulario>
                 )}
               </span>

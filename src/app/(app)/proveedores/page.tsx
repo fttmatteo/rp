@@ -3,7 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
 import { PestanasUsuarios } from "@/components/secciones";
-import { Boton, Etiqueta, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { Boton, EtiquetaInactivo, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { requerir } from "@/lib/sesion";
 import { crearProveedor } from "./acciones";
@@ -31,9 +31,9 @@ export default async function ProveedoresPage({ searchParams }: { searchParams: 
         <div>
           <form className="mb-4 flex flex-wrap gap-2">
             <input name="q" type="search" defaultValue={q} placeholder="Buscar por nombre o teléfono" className="max-w-sm" />
-            <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+            <Boton type="submit" variante="secundario">
               Buscar
-            </button>
+            </Boton>
           </form>
           {proveedores.length === 0 ? (
             <Vacio>{q ? "Ningún proveedor coincide con esa búsqueda." : "Todavía no hay proveedores."}</Vacio>
@@ -41,21 +41,30 @@ export default async function ProveedoresPage({ searchParams }: { searchParams: 
             <Tabla>
               <thead>
                 <tr>
+                  {/* En el celular el teléfono y los días de crédito bajan debajo del nombre, que abre la ficha. */}
                   <th>Proveedor</th>
-                  <th>Teléfono</th>
-                  <th>Días de crédito</th>
-                  <th></th>
+                  <th className="hidden sm:table-cell">Teléfono</th>
+                  <th className="hidden sm:table-cell">Días de crédito</th>
+                  <th className="hidden sm:table-cell">
+                    <span className="sr-only">Abrir</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {proveedores.map((p) => (
                   <tr key={p.id}>
                     <td>
-                      {p.nombre} {!p.activo && <Etiqueta>Inactivo</Etiqueta>}
+                      <Link href={`/proveedores/${p.id}`} className="underline">
+                        {p.nombre}
+                      </Link>{" "}
+                      {!p.activo && <EtiquetaInactivo />}
+                      <span className="block text-stone-600 sm:hidden">
+                        {[p.telefono, `${p.diasCredito} días de crédito`].filter(Boolean).join(" · ")}
+                      </span>
                     </td>
-                    <td>{p.telefono ?? "—"}</td>
-                    <td>{p.diasCredito}</td>
-                    <td className="text-right">
+                    <td className="hidden sm:table-cell">{p.telefono ?? "—"}</td>
+                    <td className="hidden tabular-nums sm:table-cell">{p.diasCredito}</td>
+                    <td className="hidden text-right sm:table-cell">
                       <Link href={`/proveedores/${p.id}`} className="underline">
                         Editar
                       </Link>

@@ -3,10 +3,10 @@ import { ETIQUETA_OPERACION, OPERACIONES } from "@/lib/permisos";
 
 export function CamposAccesos({ actuales = [] }: { actuales?: string[] }) {
   return (
-    <fieldset className="space-y-2">
-      <legend className="text-sm font-medium text-stone-700">Accesos</legend>
+    <fieldset>
+      <legend className="font-medium text-stone-700">Accesos</legend>
       {OPERACIONES.map((op) => (
-        <label key={op} className="flex items-center gap-2 font-normal">
+        <label key={op} className="flex min-h-11 items-center gap-2 font-normal">
           <input type="checkbox" name="accesos" value={op} defaultChecked={actuales.includes(op)} />
           {ETIQUETA_OPERACION[op]}
         </label>

@@ -35,7 +35,7 @@ export default async function RutasPage({ searchParams }: { searchParams: Promis
       <SelectorDia ruta="/rutas" fecha={fecha} etiqueta="Fecha de entrega" />
       {/* Primero las rutas (pocas y es lo que se revisa); debajo, a todo el ancho, los pedidos que nadie ha tomado. */}
       <section id="rutas" className="mb-6">
-        <h2 className="mb-2 font-semibold">Rutas ({rutas.length})</h2>
+        <h2 className="mb-2 text-lg font-semibold">Rutas ({rutas.length})</h2>
         {rutas.length === 0 ? (
           <Vacio>Todavía no hay rutas para ese día.</Vacio>
         ) : (
@@ -49,8 +49,8 @@ export default async function RutasPage({ searchParams }: { searchParams: Promis
                     <strong>{r.repartidor.nombre}</strong>
                     <Etiqueta color={ESTADO_RUTA[r.estado].color}>{ESTADO_RUTA[r.estado].texto}</Etiqueta>
                   </span>
-                  <span className="block text-sm text-stone-600">
-                    {r.pedidos.length} paradas · {pendientes} por entregar · {formatoPesos(valor)}
+                  <span className="mt-1 block text-stone-600">
+                    {r.pedidos.length} paradas · {pendientes} por entregar · <span className="tabular-nums">{formatoPesos(valor)}</span>
                   </span>
                 </Link>
               );
@@ -61,7 +61,7 @@ export default async function RutasPage({ searchParams }: { searchParams: Promis
 
       <Tarjeta id="sin-tomar" titulo={`Pedidos sin tomar (${sinRuta.length})`}>
         {sinRuta.length === 0 ? (
-          <p className="text-sm text-stone-500">Los repartidores ya tomaron todos los pedidos pendientes de ese día.</p>
+          <p className="text-stone-500">Los repartidores ya tomaron todos los pedidos pendientes de ese día.</p>
         ) : (
           <>
             <div className="mb-3">
@@ -70,9 +70,10 @@ export default async function RutasPage({ searchParams }: { searchParams: Promis
             <Tabla>
               <thead>
                 <tr>
+                  {/* En el celular la zona baja debajo del cliente y los productos se esconden, para no desplazar de lado. */}
                   <th>Cliente</th>
-                  <th>Zona</th>
-                  <th>Productos</th>
+                  <th className="hidden sm:table-cell">Zona</th>
+                  <th className="hidden sm:table-cell">Productos</th>
                   <th className="text-right">Valor</th>
                 </tr>
               </thead>
@@ -83,15 +84,16 @@ export default async function RutasPage({ searchParams }: { searchParams: Promis
                       <Link href={`/pedidos/${p.id}`} className="underline">
                         {p.cliente.nombre}
                       </Link>
+                      {p.cliente.zona && <span className="block text-stone-600 sm:hidden">{p.cliente.zona}</span>}
                     </td>
-                    <td className="text-stone-600">{p.cliente.zona ?? "—"}</td>
-                    <td className="text-stone-600">{p.detalles.map((d) => `${d.cantidad} ${d.producto.nombre}`).join(", ")}</td>
-                    <td className="text-right">{formatoPesos(totalPedido(p.detalles))}</td>
+                    <td className="hidden text-stone-600 sm:table-cell">{p.cliente.zona ?? "—"}</td>
+                    <td className="hidden text-stone-600 sm:table-cell">{p.detalles.map((d) => `${d.cantidad} ${d.producto.nombre}`).join(", ")}</td>
+                    <td className="whitespace-nowrap text-right tabular-nums">{formatoPesos(totalPedido(p.detalles))}</td>
                   </tr>
                 ))}
               </tbody>
             </Tabla>
-            <p className="mt-2 text-xs text-stone-500">Cada repartidor toma los pedidos que va a llevar desde Mi ruta, el mismo día de la entrega.</p>
+            <p className="mt-2 text-sm text-stone-500">Cada repartidor toma los pedidos que va a llevar desde Mi ruta, el mismo día de la entrega.</p>
           </>
         )}
       </Tarjeta>

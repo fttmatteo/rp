@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PestanasContabilidad } from "@/components/secciones";
-import { Etiqueta, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { EtiquetaInactivo, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { diaUTC, formatoFecha, formatoPesos, hoyISO } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
@@ -39,12 +39,12 @@ export default async function PorPagarPage() {
       <PestanasContabilidad actual="/por-pagar" operacion={sesion.operacion} />
       <div className="mb-4 grid max-w-md grid-cols-2 gap-3">
         <Tarjeta>
-          <p className="text-sm text-stone-600">Total por pagar</p>
-          <p className="text-lg font-semibold">{formatoPesos(total)}</p>
+          <p className="text-stone-600">Total por pagar</p>
+          <p className="text-lg font-semibold tabular-nums">{formatoPesos(total)}</p>
         </Tarjeta>
         <Tarjeta>
-          <p className="text-sm text-stone-600">Vencido</p>
-          <p className={`text-lg font-semibold ${vencido > 0 ? "text-red-700" : ""}`}>{formatoPesos(vencido)}</p>
+          <p className="text-stone-600">Vencido</p>
+          <p className={`text-lg font-semibold tabular-nums ${vencido > 0 ? "text-red-700" : ""}`}>{formatoPesos(vencido)}</p>
         </Tarjeta>
       </div>
       {filas.length === 0 ? (
@@ -53,9 +53,10 @@ export default async function PorPagarPage() {
         <Tabla>
           <thead>
             <tr>
+              {/* En el celular quedan Proveedor, Vencido y Le debemos; el resto baja debajo del proveedor. */}
               <th>Proveedor</th>
-              <th>Compras por pagar</th>
-              <th>Más antigua</th>
+              <th className="hidden sm:table-cell">Compras por pagar</th>
+              <th className="hidden sm:table-cell">Más antigua</th>
               <th className="text-right">Vencido</th>
               <th className="text-right">Le debemos</th>
             </tr>
@@ -67,12 +68,15 @@ export default async function PorPagarPage() {
                   <Link href={`/por-pagar/${p.id}`} className="underline">
                     {p.nombre}
                   </Link>{" "}
-                  {!p.activo && <Etiqueta>Inactivo</Etiqueta>}
+                  {!p.activo && <EtiquetaInactivo />}
+                  <span className="block text-stone-600 sm:hidden">
+                    {p.deuda ? `${p.deuda.compras} por pagar · desde ${formatoFecha(p.deuda.masAntigua)}` : "Al día"}
+                  </span>
                 </td>
-                <td>{p.deuda?.compras ?? 0}</td>
-                <td>{p.deuda ? formatoFecha(p.deuda.masAntigua) : "Al día"}</td>
-                <td className={`text-right ${p.deuda?.vencido ? "text-red-700" : "text-stone-500"}`}>{formatoPesos(p.deuda?.vencido ?? 0)}</td>
-                <td className="text-right font-semibold">{formatoPesos(p.deuda?.saldo ?? 0)}</td>
+                <td className="hidden sm:table-cell">{p.deuda?.compras ?? 0}</td>
+                <td className="hidden sm:table-cell">{p.deuda ? formatoFecha(p.deuda.masAntigua) : "Al día"}</td>
+                <td className={`whitespace-nowrap text-right tabular-nums ${p.deuda?.vencido ? "text-red-700" : "text-stone-500"}`}>{formatoPesos(p.deuda?.vencido ?? 0)}</td>
+                <td className="whitespace-nowrap text-right font-semibold tabular-nums">{formatoPesos(p.deuda?.saldo ?? 0)}</td>
               </tr>
             ))}
           </tbody>

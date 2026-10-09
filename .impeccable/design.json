@@ -460,7 +460,7 @@
       },
       {
         "name": "La Regla del Aviso Azul",
-        "body": "El aviso es azul, nunca ámbar, para que no se confunda con lo que se toca. `Alerta tipo=\"aviso\"`, `Etiqueta color=\"azul\"` y el bloque \"Para revisar\" del inicio ya son azules. *Pendiente en el código:* el aviso de inventario y los textos `text-amber-700`/`text-amber-800` de caja y reporte de caja tienen clases ámbar propias; pasan a azul.",
+        "body": "El aviso es azul, nunca ámbar, para que no se confunda con lo que se toca. En el código ya no queda ningún aviso en ámbar: `Alerta tipo=\"aviso\"`, `Etiqueta color=\"azul\"`, el bloque \"Para revisar\" del inicio, el \"Comprado por clasificar\" de Inventario y los avisos de Caja son azules. El ámbar solo aparece en el botón principal, la pestaña activa, la opción elegida, las casillas y el foco.",
         "section": "colors"
       },
       {
@@ -470,7 +470,7 @@
       },
       {
         "name": "La Regla de los 16",
-        "body": "Lo que se lee o se toca va en 16px o más. 14px solo para el dato secundario de una tabla de oficina. 12px no se usa. Los componentes de `ui.tsx` (botones, rótulos, ayudas, alertas, pestañas, etiquetas, estado vacío) ya cumplen. Mi ruta, el inicio, el menú principal y el selector de día también. *Pendiente en el código:* las demás páginas todavía tienen muchos `text-sm` y `text-xs` propios (totales, tablas, encabezado); se suben al tocar cada pantalla.",
+        "body": "Lo que se lee o se toca va en 16px o más. 14px solo para el dato secundario de una tabla de oficina. 12px no se usa. Los componentes de `ui.tsx` (botones, rótulos, ayudas, alertas, pestañas, etiquetas, estado vacío) ya cumplen. Mi ruta, el inicio, Pedidos, Contabilidad, Inventario, el menú principal y el selector de día también. *Pendiente en el código:* las demás páginas todavía tienen muchos `text-sm` y `text-xs` propios (totales, tablas, encabezado); se suben al tocar cada pantalla.",
         "section": "typography"
       },
       {

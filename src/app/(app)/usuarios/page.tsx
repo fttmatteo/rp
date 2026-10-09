@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
-import { Boton, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, Campo, EtiquetaInactivo, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { ETIQUETA_OPERACION, esOperacion } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
@@ -34,7 +34,7 @@ export default async function UsuariosPage() {
                   {!u.activo && (
                     <>
                       {" "}
-                      <Etiqueta color="rojo">Inactivo</Etiqueta>
+                      <EtiquetaInactivo />
                     </>
                   )}
                 </td>

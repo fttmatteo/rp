@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { paginar, Paginacion } from "@/components/paginacion";
-import { Etiqueta, Tabla, Tarjeta } from "@/components/ui";
-import type { FilaDinero } from "@/components/dinero";
+import { Boton, Etiqueta, Tabla, Tarjeta } from "@/components/ui";
+import { FranjaTotales, type FilaDinero } from "@/components/dinero";
 import { diaUTC, formatoFechaHora, formatoPesos, hoyISO } from "@/lib/formato";
 import { leerMes, mesesEntre, nombreMes, rangoMes } from "@/modules/libro";
 
@@ -46,7 +46,7 @@ export function FiltrosHistorial({
   extra?: { nombre: string; etiqueta: string; valor: string; opciones: Opcion[] };
 }) {
   return (
-    <form action={ruta} className="mb-3 flex flex-wrap items-end gap-2 text-sm">
+    <form action={ruta} className="mb-3 flex flex-wrap items-end gap-2">
       <input type="hidden" name="dia" value={diaISO} />
       <input type="hidden" name="registrar" value="historial" />
       <label className="flex flex-col gap-1">
@@ -81,9 +81,9 @@ export function FiltrosHistorial({
           </select>
         </label>
       )}
-      <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+      <Boton type="submit" variante="secundario">
         Ver
-      </button>
+      </Boton>
     </form>
   );
 }
@@ -106,49 +106,39 @@ export function HistorialDinero({
   pagina: number;
   nota?: ReactNode;
 }) {
-  const vigentes = filas.filter((f) => !f.anulado);
-  const total = (medio: FilaDinero["medio"]) => vigentes.filter((f) => f.medio === medio).reduce((s, f) => s + f.valor, 0);
+  const vigentes = filas.filter((f) => !f.anulado).length;
   return (
-    <Tarjeta id="historial" titulo={`${titulo} (${vigentes.length})`}>
-      <dl className="mb-3 grid grid-cols-3 gap-2 rounded bg-stone-50 p-2 text-sm">
-        <div>
-          <dt className="text-stone-600">Efectivo</dt>
-          <dd>{formatoPesos(total("EFECTIVO"))}</dd>
-        </div>
-        <div>
-          <dt className="text-stone-600">Transferencia</dt>
-          <dd>{formatoPesos(total("TRANSFERENCIA"))}</dd>
-        </div>
-        <div>
-          <dt className="text-stone-600">Total</dt>
-          <dd className="font-semibold">{formatoPesos(total("EFECTIVO") + total("TRANSFERENCIA"))}</dd>
-        </div>
-      </dl>
-      {nota && <p className="mb-3 text-xs text-stone-500">{nota}</p>}
+    <Tarjeta id="historial" titulo={`${titulo} (${vigentes})`}>
+      <FranjaTotales filas={filas} />
+      {nota && <p className="mb-3 text-sm text-stone-500">{nota}</p>}
       {filas.length === 0 ? (
-        <p className="text-sm text-stone-500">{vacio}</p>
+        <p className="text-stone-500">{vacio}</p>
       ) : (
         <Tabla>
           <thead>
             <tr>
-              <th>Fecha</th>
+              {/* En el celular la fecha y el medio bajan debajo del detalle, para no desplazar de lado. */}
+              <th className="hidden sm:table-cell">Fecha</th>
               <th>Tipo</th>
               <th>Detalle</th>
-              <th>Medio</th>
+              <th className="hidden sm:table-cell">Medio</th>
               <th className="text-right">Valor</th>
             </tr>
           </thead>
           <tbody>
             {paginar(filas, pagina).map((f) => (
               <tr key={f.clave}>
-                <td className="whitespace-nowrap text-stone-600">{formatoFechaHora(f.fecha)}</td>
+                <td className="hidden whitespace-nowrap text-stone-600 sm:table-cell">{formatoFechaHora(f.fecha)}</td>
                 <td className="whitespace-nowrap font-medium">{f.origen}</td>
                 <td>
                   {f.detalle}
-                  <span className="text-stone-400"> · {f.usuario}</span> {f.anulado && <Etiqueta color="rojo">Anulado</Etiqueta>}
+                  <span className="text-stone-500"> · {f.usuario}</span> {f.anulado && <Etiqueta color="rojo">Anulado</Etiqueta>}
+                  <span className="block text-stone-600 sm:hidden">
+                    {formatoFechaHora(f.fecha)} · {f.medio === "EFECTIVO" ? "efectivo" : "transferencia"}
+                  </span>
                 </td>
-                <td>{f.medio === "EFECTIVO" ? "Efectivo" : "Transferencia"}</td>
-                <td className={`text-right ${f.anulado ? "text-stone-400 line-through" : ""}`}>{formatoPesos(f.valor)}</td>
+                <td className="hidden sm:table-cell">{f.medio === "EFECTIVO" ? "Efectivo" : "Transferencia"}</td>
+                <td className={`whitespace-nowrap text-right tabular-nums ${f.anulado ? "text-stone-500 line-through" : ""}`}>{formatoPesos(f.valor)}</td>
               </tr>
             ))}
           </tbody>

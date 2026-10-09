@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
-import { BotonLink, Etiqueta, Tabla, Titulo, Vacio } from "@/components/ui";
+import { Boton, BotonLink, Etiqueta, EtiquetaInactivo, Tabla, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
@@ -46,12 +46,12 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
       <PestanasUsuarios actual="/clientes" operacion={sesion.operacion} />
       <form className="mb-4 flex flex-wrap gap-2">
         <input name="q" defaultValue={q} placeholder="Buscar por nombre, teléfono o zona" className="max-w-sm" />
-        <label className="flex items-center gap-2 font-normal">
+        <label className="flex min-h-11 items-center gap-2 font-normal">
           <input type="checkbox" name="inactivos" value="1" defaultChecked={Boolean(inactivos)} /> Incluir inactivos
         </label>
-        <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+        <Boton type="submit" variante="secundario">
           Buscar
-        </button>
+        </Boton>
       </form>
       {clientes.length === 0 ? (
         <Vacio>No hay clientes{q ? " con esa búsqueda" : " todavía"}.</Vacio>
@@ -59,23 +59,31 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
         <Tabla>
           <thead>
             <tr>
+              {/* En el celular el teléfono y la zona bajan debajo del nombre, que abre la ficha. */}
               <th>Cliente</th>
-              <th>Teléfono</th>
-              <th>Zona</th>
-              <th></th>
+              <th className="hidden sm:table-cell">Teléfono</th>
+              <th className="hidden sm:table-cell">Zona</th>
+              <th className="hidden sm:table-cell">
+                <span className="sr-only">Abrir</span>
+              </th>
             </tr>
           </thead>
           <tbody>
             {clientes.map((c) => (
               <tr key={c.id}>
                 <td>
-                  {c.nombre}{" "}
+                  <Link href={`/clientes/${c.id}`} className="underline">
+                    {c.nombre}
+                  </Link>{" "}
                   {c._count.precios > 0 && <Etiqueta color="azul">Precio especial</Etiqueta>}{" "}
-                  {!c.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
+                  {!c.activo && <EtiquetaInactivo />}
+                  {(c.telefono || c.zona) && (
+                    <span className="block text-stone-600 sm:hidden">{[c.telefono, c.zona].filter(Boolean).join(" · ")}</span>
+                  )}
                 </td>
-                <td>{c.telefono}</td>
-                <td>{c.zona}</td>
-                <td className="text-right">
+                <td className="hidden sm:table-cell">{c.telefono}</td>
+                <td className="hidden sm:table-cell">{c.zona}</td>
+                <td className="hidden text-right sm:table-cell">
                   <Link href={`/clientes/${c.id}`} className="underline">
                     {editar ? "Editar" : "Ver"}
                   </Link>

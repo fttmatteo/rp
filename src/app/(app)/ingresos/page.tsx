@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { leerPagina } from "@/components/paginacion";
 import { ElegirRegistro, ListaDinero, registroElegido, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
-import { Alerta, Boton, Campo, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonTexto, Campo, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { obtenerCaja } from "@/lib/caja-db";
 import { saldosPorCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
@@ -61,9 +61,9 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
         m,
         abierta && !m.anulado && !m.rutaId ? (
           <Formulario accion={anularMovimientoCaja.bind(null, m.id)} className="inline" confirmar="¿Anular este ingreso?">
-            <button type="submit" className="text-xs text-red-700 underline">
+            <BotonTexto type="submit" peligro>
               Anular
-            </button>
+            </BotonTexto>
           </Formulario>
         ) : undefined,
       ),
@@ -74,7 +74,7 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
     <>
       <Titulo accion={<SelectorDiaCaja ruta="/ingresos" diaISO={diaISO} />}>Ingresos del {formatoDia(dia)}</Titulo>
       <PestanasContabilidad actual="/ingresos" operacion={op} dia={diaISO} />
-      <p className="mb-4 text-sm text-stone-600">
+      <p className="mb-4 text-stone-600">
         Ventas, abonos de clientes y otros ingresos. Los cobros de los repartidores llegan solos desde{" "}
         <Link href="/rutas" className="underline">
           Rutas
@@ -98,7 +98,7 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
             {elegido === "venta" && (
               <Tarjeta id="venta" titulo="Venta en el punto">
                 <Formulario accion={registrarVentaDirecta} className="space-y-3">
-                  <p className="text-xs text-stone-500">
+                  <p className="text-sm text-stone-500">
                     Para el cliente que se lleva el producto ahora: queda entregada con su recibo. Los pedidos para repartir se crean en{" "}
                     <Link href="/pedidos/nuevo" className="underline">
                       Pedidos
@@ -135,7 +135,7 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
                       ))}
                     </tbody>
                   </Tabla>
-                  <p className="text-xs text-stone-500">Si el cliente tiene precio especial, se usa ese.</p>
+                  <p className="text-sm text-stone-500">Si el cliente tiene precio especial, se usa ese.</p>
                   <div className="grid grid-cols-2 gap-3">
                     <Campo etiqueta="Valor pagado" ayuda="Vacío = paga todo. 0 = queda fiado.">
                       <input name="pagado" inputMode="numeric" />
@@ -158,7 +158,7 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
             {elegido === "abono" && (
               <Tarjeta id="abono" titulo="Abono de cliente">
                 {deudores.length === 0 ? (
-                  <p className="text-sm text-stone-500">Ningún cliente debe dinero.</p>
+                  <p className="text-stone-500">Ningún cliente debe dinero.</p>
                 ) : (
                   <Formulario accion={registrarAbonoCliente} className="space-y-3">
                     <Campo etiqueta="Cliente" ayuda="Se aplica a la deuda más antigua. Para abonar a un recibo en particular, hazlo desde la cartera del cliente.">

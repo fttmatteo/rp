@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion } from "@/components/paginacion";
-import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, BotonTexto, Campo, claseBoton, Etiqueta, EtiquetaInactivo, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { rangoAntiguedad, superaCupo } from "@/modules/cartera";
 import { enlaceMaps, enlaceWhatsApp } from "@/modules/contacto";
 import { mensajeEstadoCuenta } from "@/modules/mensajes";
@@ -78,36 +78,36 @@ export default async function CarteraClientePage({
           </div>
         }
       >
-        {cliente.nombre} {!cliente.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
+        {cliente.nombre} {!cliente.activo && <EtiquetaInactivo />}
       </Titulo>
-      <div className="mb-6 flex flex-wrap items-baseline gap-x-6 gap-y-2">
+      <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2">
         <p>
-          <span className="text-sm text-stone-600">Debe: </span>
-          <span className={`text-2xl font-semibold ${saldo > 0 ? "text-red-700" : ""}`}>{formatoPesos(saldo)}</span>
+          <span className="text-stone-600">Debe: </span>
+          <span className={`text-2xl font-semibold tabular-nums ${saldo > 0 ? "text-red-700" : ""}`}>{formatoPesos(saldo)}</span>
         </p>
         {cliente.cupoCredito !== null && (
-          <p className="text-sm text-stone-600">
+          <p className="text-stone-600">
             Cupo: {formatoPesos(cliente.cupoCredito)}{" "}
             {superaCupo(cliente.cupoCredito, saldo, 0) && <Etiqueta color="rojo">Supera el cupo</Etiqueta>}
           </p>
         )}
         {whatsapp && (
-          <a className="text-sm underline" href={whatsapp} target="_blank" rel="noreferrer">
+          <a className={`${claseBoton("secundario")} grow sm:grow-0`} href={whatsapp} target="_blank" rel="noreferrer">
             WhatsApp {cliente.telefono}
           </a>
         )}
         {estadoCuenta && (
-          <a className="text-sm underline" href={estadoCuenta} target="_blank" rel="noreferrer">
+          <a className={`${claseBoton("secundario")} grow sm:grow-0`} href={estadoCuenta} target="_blank" rel="noreferrer">
             Enviar estado de cuenta
           </a>
         )}
         {puede(op, "clientes.editar") && (
-          <Link className="text-sm underline" href={`/clientes/${id}`}>
+          <Link className={`${claseBoton("secundario")} grow sm:grow-0`} href={`/clientes/${id}`}>
             Editar datos del cliente
           </Link>
         )}
         {maps && (
-          <a className="text-sm underline" href={maps} target="_blank" rel="noreferrer">
+          <a className={`${claseBoton("secundario")} grow sm:grow-0`} href={maps} target="_blank" rel="noreferrer">
             Ver en Maps
           </a>
         )}
@@ -117,14 +117,15 @@ export default async function CarteraClientePage({
         <div className="space-y-6">
         <Tarjeta id="deudas" titulo="Deudas pendientes">
           {deudas.length === 0 ? (
-            <p className="text-sm text-stone-500">No debe nada.</p>
+            <p className="text-stone-500">No debe nada.</p>
           ) : (
             <Tabla>
               <thead>
                 <tr>
+                  {/* En el celular la fecha y el vencimiento bajan debajo del recibo. */}
                   <th>Recibo</th>
-                  <th>Fecha</th>
-                  <th>Vence</th>
+                  <th className="hidden sm:table-cell">Fecha</th>
+                  <th className="hidden sm:table-cell">Vence</th>
                   <th>Días</th>
                   <th className="text-right">Saldo</th>
                 </tr>
@@ -137,16 +138,19 @@ export default async function CarteraClientePage({
                         {formatoConsecutivo("RP", d.consecutivo)}
                       </Link>
                       {d.tipo === "SALDO_INICIAL" && <span className="text-stone-500"> (saldo inicial)</span>}
+                      <span className="block text-stone-600 sm:hidden">
+                        {formatoFecha(d.fecha)} · vence {formatoDia(d.vence)}
+                      </span>
                       {d.tipo === "SALDO_INICIAL" && d.saldo === d.total && puede(op, "anular") && (
                         <Formulario accion={anularVenta.bind(null, d.id)} className="inline" confirmar="¿Anular este saldo inicial?">
-                          <button type="submit" className="ml-2 text-xs text-red-700 underline">
+                          <BotonTexto type="submit" peligro>
                             Anular
-                          </button>
+                          </BotonTexto>
                         </Formulario>
                       )}
                     </td>
-                    <td>{formatoFecha(d.fecha)}</td>
-                    <td>{formatoDia(d.vence)}</td>
+                    <td className="hidden sm:table-cell">{formatoFecha(d.fecha)}</td>
+                    <td className="hidden sm:table-cell">{formatoDia(d.vence)}</td>
                     <td>
                       {rangoAntiguedad(d.fecha, hoy)}
                       {d.vence < hoy && (
@@ -156,7 +160,7 @@ export default async function CarteraClientePage({
                         </>
                       )}
                     </td>
-                    <td className="text-right">{formatoPesos(d.saldo)}</td>
+                    <td className="whitespace-nowrap text-right tabular-nums">{formatoPesos(d.saldo)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -223,9 +227,9 @@ export default async function CarteraClientePage({
         </div>
         <Tarjeta id="movimientos" titulo="Movimientos">
           {historial.length === 0 ? (
-            <p className="text-sm text-stone-500">Sin compras ni pagos todavía.</p>
+            <p className="text-stone-500">Sin compras ni pagos todavía.</p>
           ) : (
-            <ul className="divide-y divide-stone-100 text-sm">
+            <ul className="divide-y divide-stone-100">
               {historial.map((h) =>
                 h.tipo === "venta" ? (
                   <li key={`v${h.v.id}`} className="flex justify-between gap-2 py-2">
@@ -236,7 +240,7 @@ export default async function CarteraClientePage({
                       </Link>{" "}
                       {h.v.anulada && <Etiqueta color="rojo">Anulada</Etiqueta>}
                     </span>
-                    <span>{formatoPesos(h.v.total)}</span>
+                    <span className="whitespace-nowrap tabular-nums">{formatoPesos(h.v.total)}</span>
                   </li>
                 ) : (
                   <li key={`p${h.p.id}`} className="flex flex-wrap justify-between gap-2 py-2">
@@ -249,12 +253,12 @@ export default async function CarteraClientePage({
                       {h.p.anulado && <Etiqueta color="rojo">Anulado</Etiqueta>}
                     </span>
                     <span className="flex items-center gap-2">
-                      <span className="text-green-700">−{formatoPesos(h.p.valor)}</span>
+                      <span className="whitespace-nowrap text-green-700 tabular-nums">−{formatoPesos(h.p.valor)}</span>
                       {puede(op, "anular") && !h.p.anulado && (
                         <Formulario accion={anularPago.bind(null, h.p.id)} confirmar="¿Anular este pago? Su valor vuelve a quedar como deuda." className="inline">
-                          <button type="submit" className="text-xs text-red-700 underline">
+                          <BotonTexto type="submit" peligro>
                             Anular
-                          </button>
+                          </BotonTexto>
                         </Formulario>
                       )}
                     </span>

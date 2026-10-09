@@ -1,6 +1,6 @@
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
-import { Boton, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Boton, BotonTexto, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatoCantidad, formatoDia, formatoHuevos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
@@ -100,18 +100,18 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
             <Campo etiqueta="Nota">
               <input name="nota" />
             </Campo>
-            <p className="text-xs text-stone-500">Las gallinas para vender se registran en Aves, en el galpón del que salen (novedad «Paso a venta»).</p>
+            <p className="text-sm text-stone-500">Las gallinas para vender se registran en Aves, en el galpón del que salen (novedad «Paso a venta»).</p>
             <Boton type="submit">Guardar</Boton>
           </Formulario>
         </Tarjeta>
 
         <div>
-          <h2 id="registros" className="mb-2 font-semibold">
+          <h2 id="registros" className="mb-2 text-lg font-semibold">
             Registros
           </h2>
           <ul className="space-y-2">
             {registros.map((r) => (
-              <li key={r.id} className="rounded border border-stone-200 bg-white p-3 text-sm">
+              <li key={r.id} className="rounded border border-stone-200 bg-white p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <strong>
                     {formatoDia(r.fecha)}
@@ -129,9 +129,9 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
                 {r.nota && <p className="text-stone-500">{r.nota}</p>}
                 {puede(sesion.operacion, "anular") && r.movimientos.length === 0 && (
                   <Formulario accion={anularClasificacion.bind(null, r.id)} confirmar="¿Anular este registro? Sus cantidades salen del inventario." className="mt-1">
-                    <button type="submit" className="text-xs text-red-700 underline">
+                    <BotonTexto type="submit" peligro>
                       Anular registro
-                    </button>
+                    </BotonTexto>
                   </Formulario>
                 )}
               </li>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { leerPagina, Paginacion, paginar } from "@/components/paginacion";
-import { Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { Boton, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { diaUTC, formatoPesos, hoyISO } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
@@ -72,23 +72,23 @@ export default async function CarteraPage({ searchParams }: { searchParams: Prom
       <PestanasContabilidad actual="/cartera" operacion={sesion.operacion} />
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Tarjeta>
-          <p className="text-sm text-stone-600">Total por cobrar</p>
-          <p className="text-lg font-semibold">{formatoPesos(total)}</p>
+          <p className="text-stone-600">Total por cobrar</p>
+          <p className="text-lg font-semibold tabular-nums">{formatoPesos(total)}</p>
         </Tarjeta>
         {RANGOS_ANTIGUEDAD.map((r) => (
           <Tarjeta key={r}>
-            <p className="text-sm text-stone-600">{r} días</p>
-            <p className={`text-lg font-semibold ${r === "+60" && resumen[r] > 0 ? "text-red-700" : ""}`}>{formatoPesos(resumen[r])}</p>
+            <p className="text-stone-600">{r} días</p>
+            <p className={`text-lg font-semibold tabular-nums ${r === "+60" && resumen[r] > 0 ? "text-red-700" : ""}`}>{formatoPesos(resumen[r])}</p>
           </Tarjeta>
         ))}
       </div>
       <form className="mb-4 flex flex-wrap gap-2">
         <input name="q" type="search" defaultValue={q} placeholder="Buscar cliente por nombre, teléfono o zona" className="max-w-sm" />
-        <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+        <Boton type="submit" variante="secundario">
           Buscar
-        </button>
+        </Boton>
         {q && (
-          <Link href="/cartera" className="self-center text-sm underline">
+          <Link href="/cartera" className="inline-flex min-h-11 items-center underline">
             Ver todos los que deben
           </Link>
         )}
@@ -99,11 +99,14 @@ export default async function CarteraPage({ searchParams }: { searchParams: Prom
         <Tabla>
           <thead>
             <tr>
+              {/* En el celular quedan Cliente y Debe; la antigüedad, lo vencido y el recordatorio bajan debajo del cliente. */}
               <th>Cliente</th>
-              <th>Deuda más antigua</th>
-              <th className="text-right">Vencido</th>
+              <th className="hidden sm:table-cell">Deuda más antigua</th>
+              <th className="hidden text-right sm:table-cell">Vencido</th>
               <th className="text-right">Debe</th>
-              <th></th>
+              <th className="hidden sm:table-cell">
+                <span className="sr-only">Recordatorio</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -113,11 +116,27 @@ export default async function CarteraPage({ searchParams }: { searchParams: Prom
                   <Link href={`/cartera/${id}`} className="underline">
                     {c.nombre}
                   </Link>
+                  <span className="block text-stone-600 sm:hidden">
+                    {c.deuda ? `Hace ${dias(c.deuda.masAntigua, hoy)} días` : "Al día"}
+                    {!!c.deuda?.vencido && (
+                      <>
+                        {" "}
+                        · <span className="font-medium whitespace-nowrap text-red-700">vencido {formatoPesos(c.deuda.vencido)}</span>
+                      </>
+                    )}
+                  </span>
+                  {c.deuda && (
+                    <span className="block sm:hidden">
+                      <Recordatorio c={{ ...c.deuda, nombre: c.nombre, telefono: c.telefono }} hoy={hoy} />
+                    </span>
+                  )}
                 </td>
-                <td>{c.deuda ? `hace ${dias(c.deuda.masAntigua, hoy)} días` : "Al día"}</td>
-                <td className={`text-right ${c.deuda?.vencido ? "text-red-700" : "text-stone-500"}`}>{formatoPesos(c.deuda?.vencido ?? 0)}</td>
-                <td className="text-right font-semibold">{formatoPesos(c.deuda?.saldo ?? 0)}</td>
-                <td>{c.deuda && <Recordatorio c={{ ...c.deuda, nombre: c.nombre, telefono: c.telefono }} hoy={hoy} />}</td>
+                <td className="hidden sm:table-cell">{c.deuda ? `hace ${dias(c.deuda.masAntigua, hoy)} días` : "Al día"}</td>
+                <td className={`hidden whitespace-nowrap text-right tabular-nums sm:table-cell ${c.deuda?.vencido ? "text-red-700" : "text-stone-500"}`}>
+                  {formatoPesos(c.deuda?.vencido ?? 0)}
+                </td>
+                <td className="whitespace-nowrap text-right font-semibold tabular-nums">{formatoPesos(c.deuda?.saldo ?? 0)}</td>
+                <td className="hidden sm:table-cell">{c.deuda && <Recordatorio c={{ ...c.deuda, nombre: c.nombre, telefono: c.telefono }} hoy={hoy} />}</td>
               </tr>
             ))}
           </tbody>
@@ -133,7 +152,7 @@ function Recordatorio({ c, hoy }: { c: { nombre: string; telefono: string | null
   const enlace = enlaceWhatsApp(c.telefono, mensajeRecordatorio({ cliente: c.nombre, vencido: c.vencido, dias: dias(c.vencidaDesde, hoy) }));
   if (!enlace) return null;
   return (
-    <a href={enlace} target="_blank" rel="noreferrer" className="text-sm underline">
+    <a href={enlace} target="_blank" rel="noreferrer" className="inline-flex min-h-11 items-center underline">
       Recordar por WhatsApp
     </a>
   );

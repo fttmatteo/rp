@@ -211,7 +211,7 @@ export default async function PedidoPage({
                 <Campo etiqueta="Nueva fecha de entrega" ayuda="Se crea un pedido nuevo con los mismos productos y precios.">
                   <input type="date" name="fechaEntrega" defaultValue={hoyISO()} min={hoyISO()} required />
                 </Campo>
-                <Boton type="submit" variante="secundario">
+                <Boton type="submit">
                   Reprogramar pedido
                 </Boton>
               </Formulario>

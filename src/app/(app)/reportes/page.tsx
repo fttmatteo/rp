@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { leerPagina, Paginacion, paginar } from "@/components/paginacion";
-import { Alerta, BotonLink, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Tabla, Tarjeta, Titulo, Vacio } from "@/components/ui";
 import { diaUTC, formatoDia, hoyISO } from "@/lib/formato";
 import { diasSinCerrar, primerMesLibro } from "@/lib/libro-db";
 import { formatoCelda, generarReporte, leerParametros, REPORTES } from "@/lib/reportes";
@@ -67,9 +67,9 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
               ))}
             </select>
           </label>
-          <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+          <Boton type="submit" variante="secundario">
             Descargar Excel del mes
-          </button>
+          </Boton>
         </form>
         <form action="/reportes/libro" className="flex flex-wrap items-end gap-2">
           <label>
@@ -80,9 +80,9 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
             Hasta
             <input type="date" name="hasta" defaultValue={pedido && !pedido.mes ? pedido.hasta : p.hasta} max={hoy} required className="mt-1" />
           </label>
-          <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+          <Boton type="submit" variante="secundario">
             Descargar Excel del periodo
-          </button>
+          </Boton>
         </form>
         </div>
       </Tarjeta>
@@ -105,15 +105,15 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
           Hasta
           <input type="date" name="hasta" defaultValue={p.hasta} className="mt-1" />
         </label>
-        <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+        <Boton type="submit" variante="secundario">
           Ver
-        </button>
+        </Boton>
       </form>
 
       <div id="reporte" className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-semibold">{reporte.titulo}</h2>
+        <h2 className="text-lg font-semibold">{reporte.titulo}</h2>
         {/* Descargan solo este reporte con los filtros elegidos; el libro mensual tiene su propio botón abajo. */}
-        <span className="flex gap-2">
+        <span className="flex flex-wrap gap-2">
           <BotonLink href={`/reportes/exportar?${consulta}&formato=xlsx`} variante="secundario" prefetch={false}>
             Descargar este reporte en Excel
           </BotonLink>

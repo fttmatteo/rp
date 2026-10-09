@@ -55,7 +55,7 @@ export function FormularioMovimiento({ diaISO, tipo }: { diaISO: string; tipo: "
           </div>
         </div>
       )}
-      <Boton type="submit" variante="secundario">
+      <Boton type="submit">
         {ingreso ? "Registrar ingreso" : "Registrar gasto"}
       </Boton>
     </Formulario>

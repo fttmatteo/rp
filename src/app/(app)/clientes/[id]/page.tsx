@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Alerta, Boton, BotonLink, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, EtiquetaInactivo, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatoFecha, formatoPesos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
@@ -37,7 +37,7 @@ export default async function ClientePage({
           </BotonLink>
         }
       >
-        {cliente.nombre} {!cliente.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
+        {cliente.nombre} {!cliente.activo && <EtiquetaInactivo />}
       </Titulo>
       {creado && (
         <div className="mb-4">
@@ -70,13 +70,13 @@ export default async function ClientePage({
           {puede(op, "clientes.editar") ? (
             <Formulario accion={actualizarCliente.bind(null, id)}>
               <CamposCliente c={cliente} />
-              <label className="flex items-center gap-2 font-normal">
+              <label className="flex min-h-11 items-center gap-2 font-normal">
                 <input type="checkbox" name="activo" defaultChecked={cliente.activo} /> Cliente activo
               </label>
               <Boton type="submit">Guardar</Boton>
             </Formulario>
           ) : (
-            <dl className="space-y-1 text-sm">
+            <dl className="space-y-1">
               <div>Dirección: {cliente.direccion ?? "—"}</div>
               <div>Zona: {cliente.zona ?? "—"}</div>
               <div>Notas: {cliente.notas ?? "—"}</div>
@@ -99,7 +99,7 @@ export default async function ClientePage({
                   {productos.map((p) => (
                     <tr key={p.id}>
                       <td>{p.nombre}</td>
-                      <td>{formatoPesos(p.precioGeneral)}</td>
+                      <td className="whitespace-nowrap tabular-nums">{formatoPesos(p.precioGeneral)}</td>
                       <td>
                         <input
                           name={`precio_${p.id}`}
@@ -112,11 +112,11 @@ export default async function ClientePage({
                   ))}
                 </tbody>
               </Tabla>
-              <p className="text-xs text-stone-500">Vacío = paga el precio general.</p>
+              <p className="text-sm text-stone-500">Vacío = paga el precio general.</p>
               <Boton type="submit">Guardar precios</Boton>
             </Formulario>
           ) : (
-            <ul className="text-sm">
+            <ul className="space-y-1">
               {productos.map((p) => (
                 <li key={p.id}>
                   {p.nombre}: {formatoPesos(especiales.get(p.id) ?? p.precioGeneral)}
@@ -128,7 +128,7 @@ export default async function ClientePage({
         </Tarjeta>
 
       </div>
-      <p className="mt-6 text-xs text-stone-500">Cliente desde {formatoFecha(cliente.creadoEn)}</p>
+      <p className="mt-6 text-sm text-stone-500">Cliente desde {formatoFecha(cliente.creadoEn)}</p>
     </>
   );
 }

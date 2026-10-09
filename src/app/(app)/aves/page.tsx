@@ -51,12 +51,13 @@ export default async function AvesPage() {
             <Tabla>
               <thead>
                 <tr>
+                  {/* En el celular quedan Galpón (con etapa y edad debajo), Aves y Postura hoy. */}
                   <th>Galpón</th>
-                  <th>Etapa</th>
-                  <th className="text-right">Edad</th>
+                  <th className="hidden sm:table-cell">Etapa</th>
+                  <th className="hidden text-right sm:table-cell">Edad</th>
                   <th className="text-right">Aves</th>
                   <th className="text-right">Postura hoy</th>
-                  <th className="text-right">Postura 7 días</th>
+                  <th className="hidden text-right sm:table-cell">Postura 7 días</th>
                 </tr>
               </thead>
               <tbody>
@@ -71,7 +72,11 @@ export default async function AvesPage() {
                     return (
                       <tr key={g.id}>
                         <td>{nombre}</td>
-                        <td colSpan={5}>
+                        {/* Una celda por diseño: en el celular solo quedan dos columnas después del galpón. */}
+                        <td colSpan={2} className="sm:hidden">
+                          <Etiqueta>{g.activo ? "Vacío" : "Fuera de uso"}</Etiqueta>
+                        </td>
+                        <td colSpan={5} className="hidden sm:table-cell">
                           <Etiqueta>{g.activo ? "Vacío" : "Fuera de uso"}</Etiqueta>
                         </td>
                       </tr>
@@ -83,19 +88,24 @@ export default async function AvesPage() {
                   const semanaP = promedio === null ? null : porcentajePostura(promedio, aves);
                   return (
                     <tr key={g.id}>
-                      <td>{nombre}</td>
-                      <td>{ETAPA_AVES[l.etapa]}</td>
-                      <td className="text-right">{edadSemanas(l.fechaIngreso, l.edadIngresoSemanas, hoy)} sem.</td>
-                      <td className="text-right">{aves.toLocaleString("es-CO")}</td>
-                      <td className="text-right">{hoyP === null ? "—" : `${hoyP}%`}</td>
-                      <td className="text-right">{semanaP === null ? "—" : `${semanaP}%`}</td>
+                      <td>
+                        {nombre}
+                        <span className="block text-stone-600 sm:hidden">
+                          {ETAPA_AVES[l.etapa]} · {edadSemanas(l.fechaIngreso, l.edadIngresoSemanas, hoy)} sem.
+                        </span>
+                      </td>
+                      <td className="hidden sm:table-cell">{ETAPA_AVES[l.etapa]}</td>
+                      <td className="hidden text-right tabular-nums sm:table-cell">{edadSemanas(l.fechaIngreso, l.edadIngresoSemanas, hoy)} sem.</td>
+                      <td className="text-right tabular-nums">{aves.toLocaleString("es-CO")}</td>
+                      <td className="text-right tabular-nums">{hoyP === null ? "—" : `${hoyP}%`}</td>
+                      <td className="hidden text-right tabular-nums sm:table-cell">{semanaP === null ? "—" : `${semanaP}%`}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </Tabla>
           )}
-          <p className="text-xs text-stone-500">
+          <p className="text-sm text-stone-500">
             Entra a un galpón para registrar muertes, ventas o traslados. La postura sale de la clasificación diaria: huevos clasificados más rotos ÷ aves
             vivas.
           </p>
@@ -111,7 +121,7 @@ export default async function AvesPage() {
                 <input name="capacidad" inputMode="numeric" />
               </Campo>
             </div>
-            <p className="text-sm text-stone-600">Si ya tiene aves, escribe cuántas. Si no, déjalo vacío y regístralas cuando lleguen.</p>
+            <p className="text-stone-600">Si ya tiene aves, escribe cuántas. Si no, déjalo vacío y regístralas cuando lleguen.</p>
             <CamposEntrada obligatoria={false} />
             <Boton type="submit">Crear galpón</Boton>
           </Formulario>

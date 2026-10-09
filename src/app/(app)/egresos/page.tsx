@@ -1,7 +1,7 @@
 import { Formulario } from "@/components/formulario";
 import { leerPagina } from "@/components/paginacion";
 import { ElegirRegistro, ListaDinero, registroElegido, SelectorDiaCaja, type FilaDinero } from "@/components/dinero";
-import { Alerta, Boton, Campo, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonTexto, Campo, Tarjeta, Titulo } from "@/components/ui";
 import { obtenerCaja } from "@/lib/caja-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
@@ -56,9 +56,9 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
       m,
       abierta && !m.anulado && !m.rutaId && !m.compraId && !m.pagoProveedorId ? (
         <Formulario accion={anularMovimientoCaja.bind(null, m.id)} className="inline" confirmar="¿Anular este gasto?">
-          <button type="submit" className="text-xs text-red-700 underline">
+          <BotonTexto type="submit" peligro>
             Anular
-          </button>
+          </BotonTexto>
         </Formulario>
       ) : undefined,
     ),
@@ -68,7 +68,7 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
     <>
       <Titulo accion={<SelectorDiaCaja ruta="/egresos" diaISO={diaISO} />}>Egresos del {formatoDia(dia)}</Titulo>
       <PestanasContabilidad actual="/egresos" operacion={sesion.operacion} dia={diaISO} />
-      <p className="mb-4 text-sm text-stone-600">Compras de huevo, pagos a proveedores y gastos.</p>
+      <p className="mb-4 text-stone-600">Compras de huevo, pagos a proveedores y gastos.</p>
       {!abierta && (
         <div className="mb-4">
           <Alerta tipo="aviso">La caja de este día está cerrada. Para registrar algo, el administrador debe reabrirla.</Alerta>
@@ -100,7 +100,7 @@ export default async function EgresosPage({ searchParams }: { searchParams: Prom
             {elegido === "pago" && (
               <Tarjeta id="pago" titulo="Pago a proveedor">
                 {porPagar.length === 0 ? (
-                  <p className="text-sm text-stone-500">No le debemos a ningún proveedor.</p>
+                  <p className="text-stone-500">No le debemos a ningún proveedor.</p>
                 ) : (
                   <Formulario accion={registrarPagoProveedor} className="space-y-3">
                     <Campo etiqueta="Proveedor" ayuda="Se aplica a la compra más antigua. Para pagar una compra en particular, hazlo desde Por pagar.">
