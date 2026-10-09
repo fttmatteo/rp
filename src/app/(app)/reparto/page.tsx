@@ -197,7 +197,7 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
                       ) : reparto.noEntregado ? (
                         <Etiqueta color="rojo">No entregado</Etiqueta>
                       ) : (
-                        <Etiqueta color="ambar">Por entregar</Etiqueta>
+                        <Etiqueta color="azul">Por entregar</Etiqueta>
                       )}
                     </td>
                   </tr>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Tarjeta, Titulo } from "@/components/ui";
+import { Etiqueta, Tarjeta, Titulo } from "@/components/ui";
 import { avesPorGrupo, huevosPorGrupoYDia } from "@/lib/aves-db";
 import { obtenerCaja, totalesCaja } from "@/lib/caja-db";
 import { db } from "@/lib/db";
@@ -18,12 +18,21 @@ const cuenta = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno
 
 const SIN_VERIFICAR = { medio: "TRANSFERENCIA", anulado: false, verificadoEn: null } as const;
 
+/**
+ * Una tarjeta del inicio: una cifra grande, su detalle y a dónde ir. Si la cifra pide atención se marca con
+ * una etiqueta de aviso al lado, no pintando la cifra. El enlace va siempre abajo, alineado entre tarjetas.
+ */
 function Dato({ titulo, valor, detalle, href, enlace, alerta }: { titulo: string; valor: ReactNode; detalle?: ReactNode; href: string; enlace: string; alerta?: boolean }) {
   return (
-    <Tarjeta titulo={titulo}>
-      <p className={`text-2xl font-semibold ${alerta ? "text-amber-700" : ""}`}>{valor}</p>
-      {detalle && <p className="text-sm text-stone-600">{detalle}</p>}
-      <Link href={href} className="text-sm underline">
+    <Tarjeta titulo={titulo} className="flex flex-col">
+      <p className="text-2xl font-semibold tabular-nums">{valor}</p>
+      {alerta && (
+        <p className="mt-1">
+          <Etiqueta color="azul">Para revisar</Etiqueta>
+        </p>
+      )}
+      {detalle && <p className="mt-1 text-stone-600">{detalle}</p>}
+      <Link href={href} className="mt-auto inline-flex min-h-11 items-center self-start pt-2 underline">
         {enlace}
       </Link>
     </Tarjeta>
@@ -120,18 +129,22 @@ export default async function InicioPage() {
     <>
       <Titulo>Inicio</Titulo>
       {alertas.length > 0 && (
-        <div id="revisar" className="mb-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm">
-          <p className="mb-1 font-semibold text-amber-900">Para revisar</p>
-          <ul className="space-y-1">
+        // Aviso en azul: el ámbar es solo para lo que se toca. Con mouse la lista va apretada y en dos columnas
+        // desde 640px; en pantallas táctiles cada pendiente mide 44px de alto para tocarlo con el pulgar.
+        <section id="revisar" aria-labelledby="revisar-titulo" className="mb-4 rounded border border-blue-300 bg-blue-50 px-3 py-2 text-blue-800">
+          <h2 id="revisar-titulo" className="mb-1 font-semibold">
+            Para revisar ({alertas.length})
+          </h2>
+          <ul className="sm:grid sm:grid-cols-2 sm:gap-x-6">
             {alertas.map((a) => (
               <li key={a.texto}>
-                <Link href={a.href} className="text-amber-900 underline">
+                <Link href={a.href} className="block py-0.5 underline pointer-coarse:py-2.5">
                   {a.texto}
                 </Link>
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
       <div id="resumen" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {miRuta !== undefined && (
@@ -156,7 +169,7 @@ export default async function InicioPage() {
           <Dato
             titulo="Cartera por cobrar"
             valor={formatoPesos(cartera._sum.saldo ?? 0)}
-            detalle={vencida?._sum.saldo ? `${formatoPesos(vencida._sum.saldo)} vencida` : "Nada vencido"}
+            detalle={vencida?._sum.saldo ? <span className="font-medium text-red-700">{formatoPesos(vencida._sum.saldo)} vencida</span> : "Nada vencido"}
             href="/cartera"
             enlace="Ver cartera"
           />
@@ -188,14 +201,18 @@ export default async function InicioPage() {
         )}
         {productos && stock && (
           <Tarjeta id="inventario" titulo="Inventario" className="sm:col-span-2 lg:col-span-3">
-            <ul className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
-              {productos.map((p) => (
-                <li key={p.id}>
-                  <span className="text-stone-600">{p.nombre}</span>
-                  <br />
-                  <strong className={bajas.some((b) => b.id === p.id) ? "text-red-700" : ""}>{formatoCantidad(p.tipo, stock.get(p.id) ?? 0, p.unidad)}</strong>
-                </li>
-              ))}
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {productos.map((p) => {
+                const baja = bajas.some((b) => b.id === p.id);
+                return (
+                  <li key={p.id}>
+                    <span className="block text-stone-600">{p.nombre}</span>
+                    <strong className={`block tabular-nums ${baja ? "text-red-700" : ""}`}>{formatoCantidad(p.tipo, stock.get(p.id) ?? 0, p.unidad)}</strong>
+                    {/* El rojo nunca va solo: dice por qué. */}
+                    {baja && <span className="block text-sm font-medium text-red-700">Bajo el mínimo</span>}
+                  </li>
+                );
+              })}
             </ul>
           </Tarjeta>
         )}

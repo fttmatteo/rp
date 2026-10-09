@@ -11,10 +11,11 @@ export default async function LoginPage() {
     <>
       <main className="mx-auto mt-16 max-w-sm px-4">
         <img src="/icons/svg/logo-horizontal.svg" alt="" width={1200} height={400} className="mb-4 w-full rounded-lg" />
-        <h1 className="mb-1 text-2xl font-semibold text-center">Inicio de sesión</h1>
+        <h1 className="mb-6 text-center text-2xl font-semibold">Inicio de sesión</h1>
         <Formulario accion={iniciarSesion}>
           <Campo etiqueta="Usuario">
-            <input name="usuario" autoComplete="username" autoCapitalize="none" required />
+            {/* Sin autocorrector: el celular no debe cambiar el usuario mientras se escribe. */}
+            <input name="usuario" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required />
           </Campo>
           <Campo etiqueta="Clave">
             <input name="clave" type="password" autoComplete="current-password" required />

@@ -1,0 +1,518 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-09T00:00:00Z",
+  "title": "Design System: RP Software",
+  "extensions": {
+    "colorMeta": {
+      "ambar": {
+        "role": "primary",
+        "displayName": "Ámbar",
+        "canonical": "#FE9A00",
+        "tailwind": "amber-500",
+        "tonalRamp": [
+          "#7B3306",
+          "#973C00",
+          "#BB4D00",
+          "#E17100",
+          "#FE9A00",
+          "#FFB900",
+          "#FEF3C6",
+          "#FFFBEB"
+        ]
+      },
+      "ambar-hondo": {
+        "role": "primary",
+        "displayName": "Ámbar hondo",
+        "canonical": "#E17100",
+        "tailwind": "amber-600",
+        "tonalRamp": [
+          "#7B3306",
+          "#973C00",
+          "#BB4D00",
+          "#E17100",
+          "#FE9A00",
+          "#FFB900",
+          "#FEF3C6",
+          "#FFFBEB"
+        ]
+      },
+      "ambar-foco": {
+        "role": "primary",
+        "displayName": "Ámbar de foco",
+        "canonical": "#BB4D00",
+        "tailwind": "amber-700",
+        "tonalRamp": [
+          "#7B3306",
+          "#973C00",
+          "#BB4D00",
+          "#E17100",
+          "#FE9A00",
+          "#FFB900",
+          "#FEF3C6",
+          "#FFFBEB"
+        ]
+      },
+      "ambar-claro": {
+        "role": "primary",
+        "displayName": "Ámbar claro",
+        "canonical": "#FFFBEB",
+        "tailwind": "amber-50",
+        "tonalRamp": [
+          "#7B3306",
+          "#973C00",
+          "#BB4D00",
+          "#E17100",
+          "#FE9A00",
+          "#FFB900",
+          "#FEF3C6",
+          "#FFFBEB"
+        ]
+      },
+      "terracota-logo": {
+        "role": "secondary",
+        "displayName": "Terracota del logo",
+        "canonical": "#A63F1C",
+        "tonalRamp": [
+          "#26160E",
+          "#4A1A0B",
+          "#6E2410",
+          "#A63F1C",
+          "#C8784A",
+          "#E3A57A",
+          "#F0D3BC",
+          "#F4E7CF"
+        ]
+      },
+      "crema-logo": {
+        "role": "secondary",
+        "displayName": "Crema del logo",
+        "canonical": "#F4E7CF",
+        "tonalRamp": [
+          "#26160E",
+          "#4A1A0B",
+          "#6E2410",
+          "#A63F1C",
+          "#C8784A",
+          "#E3A57A",
+          "#F0D3BC",
+          "#F4E7CF"
+        ]
+      },
+      "papel": {
+        "role": "neutral",
+        "displayName": "Papel",
+        "canonical": "#FAFAF9",
+        "tailwind": "stone-50",
+        "tonalRamp": [
+          "#1C1917",
+          "#292524",
+          "#44403B",
+          "#57534D",
+          "#79716B",
+          "#D6D3D1",
+          "#F5F5F4",
+          "#FAFAF9"
+        ]
+      },
+      "hoja": {
+        "role": "neutral",
+        "displayName": "Hoja",
+        "canonical": "#FFFFFF",
+        "tailwind": "white"
+      },
+      "renglon-suave": {
+        "role": "neutral",
+        "displayName": "Renglón suave",
+        "canonical": "#F5F5F4",
+        "tailwind": "stone-100"
+      },
+      "renglon": {
+        "role": "neutral",
+        "displayName": "Renglón",
+        "canonical": "#E7E5E4",
+        "tailwind": "stone-200"
+      },
+      "borde-campo": {
+        "role": "neutral",
+        "displayName": "Borde de campo",
+        "canonical": "#D6D3D1",
+        "tailwind": "stone-300"
+      },
+      "tinta-tenue": {
+        "role": "neutral",
+        "displayName": "Tinta tenue",
+        "canonical": "#79716B",
+        "tailwind": "stone-500"
+      },
+      "tinta-media": {
+        "role": "neutral",
+        "displayName": "Tinta media",
+        "canonical": "#57534D",
+        "tailwind": "stone-600"
+      },
+      "tinta-firme": {
+        "role": "neutral",
+        "displayName": "Tinta firme",
+        "canonical": "#44403B",
+        "tailwind": "stone-700"
+      },
+      "tinta": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "#1C1917",
+        "tailwind": "stone-900",
+        "tonalRamp": [
+          "#1C1917",
+          "#292524",
+          "#44403B",
+          "#57534D",
+          "#79716B",
+          "#D6D3D1",
+          "#F5F5F4",
+          "#FAFAF9"
+        ]
+      },
+      "deuda": {
+        "role": "status",
+        "displayName": "Deuda",
+        "canonical": "#C10007",
+        "tailwind": "red-700",
+        "tonalRamp": [
+          "#82181A",
+          "#9F0712",
+          "#C10007",
+          "#E7000B",
+          "#FF6467",
+          "#FFC9C9",
+          "#FFE2E2",
+          "#FEF2F2"
+        ]
+      },
+      "deuda-fondo": {
+        "role": "status",
+        "displayName": "Fondo de deuda",
+        "canonical": "#FEF2F2",
+        "tailwind": "red-50"
+      },
+      "deuda-borde": {
+        "role": "status",
+        "displayName": "Borde de deuda",
+        "canonical": "#FFA2A2",
+        "tailwind": "red-300"
+      },
+      "al-dia": {
+        "role": "status",
+        "displayName": "Al día",
+        "canonical": "#008236",
+        "tailwind": "green-700",
+        "tonalRamp": [
+          "#0D542B",
+          "#016630",
+          "#008236",
+          "#00A63E",
+          "#05DF72",
+          "#B9F8CF",
+          "#DCFCE7",
+          "#F0FDF4"
+        ]
+      },
+      "al-dia-fondo": {
+        "role": "status",
+        "displayName": "Fondo al día",
+        "canonical": "#F0FDF4",
+        "tailwind": "green-50"
+      },
+      "al-dia-borde": {
+        "role": "status",
+        "displayName": "Borde al día",
+        "canonical": "#7BF1A8",
+        "tailwind": "green-300"
+      },
+      "aviso": {
+        "role": "status",
+        "displayName": "Azul aviso",
+        "canonical": "#193CB8",
+        "tailwind": "blue-800",
+        "tonalRamp": [
+          "#1C398E",
+          "#193CB8",
+          "#1447E6",
+          "#155DFC",
+          "#51A2FF",
+          "#BEDBFF",
+          "#DBEAFE",
+          "#EFF6FF"
+        ]
+      },
+      "aviso-fondo": {
+        "role": "status",
+        "displayName": "Fondo de aviso",
+        "canonical": "#EFF6FF",
+        "tailwind": "blue-50"
+      },
+      "aviso-borde": {
+        "role": "status",
+        "displayName": "Borde de aviso",
+        "canonical": "#8EC5FF",
+        "tailwind": "blue-300"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Cifra grande",
+        "purpose": "El número de cada tarjeta del inicio. Una por tarjeta."
+      },
+      "headline": {
+        "displayName": "Título de página",
+        "purpose": "Un título por pantalla (Titulo)."
+      },
+      "title": {
+        "displayName": "Título de bloque",
+        "purpose": "Cliente en cada parada de Mi ruta, diálogos."
+      },
+      "body": {
+        "displayName": "Texto",
+        "purpose": "Todo lo que se lee: filas, alertas, valores en campos. 16px mínimo."
+      },
+      "label": {
+        "displayName": "Rótulo",
+        "purpose": "Rótulos de campos, botones, pestañas y menú."
+      },
+      "dato": {
+        "displayName": "Dato secundario",
+        "purpose": "Solo columnas secundarias de tablas de oficina y etiquetas de estado. Nunca en Mi ruta."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "ninguno",
+        "value": "none",
+        "purpose": "Sin animaciones ni transiciones: globals.css las anula con !important."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ],
+    "contrast": [
+      {
+        "pair": "tinta sobre ambar",
+        "ratio": 8.15
+      },
+      {
+        "pair": "tinta sobre ambar-hondo (hover)",
+        "ratio": 5.48
+      },
+      {
+        "pair": "blanco sobre ambar-hondo (no usar)",
+        "ratio": 3.19
+      },
+      {
+        "pair": "ambar-hondo sobre hoja (solo líneas)",
+        "ratio": 3.19
+      },
+      {
+        "pair": "ambar-foco sobre hoja",
+        "ratio": 5.05
+      },
+      {
+        "pair": "ambar-foco sobre papel",
+        "ratio": 4.84
+      },
+      {
+        "pair": "tinta sobre ambar-claro",
+        "ratio": 16.87
+      },
+      {
+        "pair": "aviso sobre aviso-fondo",
+        "ratio": 8.11
+      },
+      {
+        "pair": "aviso sobre hoja",
+        "ratio": 8.84
+      },
+      {
+        "pair": "deuda sobre hoja",
+        "ratio": 6.42
+      },
+      {
+        "pair": "al-dia sobre hoja",
+        "ratio": 4.94
+      },
+      {
+        "pair": "tinta-tenue sobre hoja",
+        "ratio": 4.81
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botón primario",
+      "kind": "button",
+      "refersTo": "boton-primario",
+      "description": "La acción principal de cada formulario: ámbar con texto en tinta. Una por formulario; a todo el ancho en Mi ruta.",
+      "html": "<button class=\"ds-boton-primario\">Entregar y cobrar</button>",
+      "css": ".ds-boton-primario { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 4px; font: 500 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; cursor: pointer; border: 1px solid #E17100; background: #FE9A00; color: #1C1917; } .ds-boton-primario:hover, .ds-boton-primario:active { background: #E17100; } .ds-boton-primario:focus-visible { outline: 2px solid #BB4D00; outline-offset: 2px; } .ds-boton-primario:disabled { opacity: .5; }"
+    },
+    {
+      "name": "Botón secundario",
+      "kind": "button",
+      "refersTo": "boton-secundario",
+      "description": "Acciones al lado de la principal: Ver, Cancelar.",
+      "html": "<button class=\"ds-boton-sec\">Ver</button>",
+      "css": ".ds-boton-sec { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 4px; font: 500 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; cursor: pointer; border: 1px solid #D6D3D1; background: #fff; color: #1C1917; } .ds-boton-sec:hover { background: #F5F5F4; } .ds-boton-sec:focus-visible { outline: 2px solid #BB4D00; outline-offset: 2px; }"
+    },
+    {
+      "name": "Botón de peligro",
+      "kind": "button",
+      "refersTo": "boton-peligro",
+      "description": "Solo para anular.",
+      "html": "<button class=\"ds-boton-peligro\">Anular</button>",
+      "css": ".ds-boton-peligro { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 16px; border-radius: 4px; font: 500 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; cursor: pointer; border: 1px solid #FFA2A2; background: #fff; color: #C10007; } .ds-boton-peligro:hover { background: #FEF2F2; } .ds-boton-peligro:focus-visible { outline: 2px solid #BB4D00; outline-offset: 2px; }"
+    },
+    {
+      "name": "Campo",
+      "kind": "input",
+      "refersTo": "campo",
+      "description": "Rótulo arriba, campo a todo el ancho, ayuda debajo.",
+      "html": "<div class=\"ds-campo\"><label>Efectivo recibido<input type=\"text\" inputmode=\"numeric\" value=\"$ 120.000\"></label><p class=\"ds-campo-ayuda\">Lo que el cliente pagó en la entrega.</p></div>",
+      "css": ".ds-campo { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; max-width: 320px; } .ds-campo label { display: block; font-size: 16px; font-weight: 500; line-height: 1.5; color: #44403B; } .ds-campo input { display: block; width: 100%; margin-top: 4px; min-height: 44px; padding: 8px 12px; border: 1px solid #D6D3D1; border-radius: 4px; background: #fff; color: #1C1917; font: 400 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; box-sizing: border-box; } .ds-campo input:focus { outline: 2px solid #BB4D00; outline-offset: 1px; } .ds-campo-ayuda { margin: 4px 0 0; font-size: 14px; color: #79716B; }"
+    },
+    {
+      "name": "Pestañas",
+      "kind": "nav",
+      "refersTo": "pestana-activa",
+      "description": "Agrupan las páginas de una sección o las vistas de una página larga; la activa con subrayado ámbar hondo.",
+      "html": "<nav class=\"ds-pestanas\"><a href=\"#\" aria-current=\"page\">Ingresos</a><a href=\"#\">Egresos</a><a href=\"#\">Caja y cierre</a><a href=\"#\">Cartera</a></nav>",
+      "css": ".ds-pestanas { display: flex; gap: 4px; border-bottom: 1px solid #E7E5E4; font: 500 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; overflow-x: auto; white-space: nowrap; } .ds-pestanas a { display: block; margin-bottom: -1px; padding: 10px 12px; border-bottom: 2px solid transparent; color: #57534D; text-decoration: none; } .ds-pestanas a:hover { color: #1C1917; } .ds-pestanas a[aria-current] { border-bottom-color: #E17100; color: #1C1917; font-weight: 600; } .ds-pestanas a:focus-visible { outline: 2px solid #BB4D00; outline-offset: 1px; }"
+    },
+    {
+      "name": "Opciones de registro",
+      "kind": "chip",
+      "refersTo": "opcion-elegida",
+      "description": "Elegir qué se registra; se muestra un formulario a la vez.",
+      "html": "<nav class=\"ds-opciones\"><a href=\"#\" aria-current=\"true\">Venta en la granja</a><a href=\"#\">Abono de cliente</a><a href=\"#\">Otro ingreso</a></nav>",
+      "css": ".ds-opciones { display: flex; flex-wrap: wrap; gap: 8px; font: 400 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; } .ds-opciones a { display: inline-flex; align-items: center; padding: 8px 12px; min-height: 44px; box-sizing: border-box; border: 1px solid #D6D3D1; border-radius: 4px; background: #fff; color: #1C1917; text-decoration: none; } .ds-opciones a:hover { background: #F5F5F4; } .ds-opciones a[aria-current] { border-color: #E17100; background: #FFFBEB; font-weight: 600; } .ds-opciones a:focus-visible { outline: 2px solid #BB4D00; outline-offset: 1px; }"
+    },
+    {
+      "name": "Etiquetas de estado",
+      "kind": "chip",
+      "refersTo": "etiqueta",
+      "description": "Marcan el estado de un pedido, pago o compra; nunca son acciones. No hay etiqueta ámbar.",
+      "html": "<div class=\"ds-etiquetas\"><span class=\"ds-et\">Pendiente</span><span class=\"ds-et ds-et-verde\">Entregado</span><span class=\"ds-et ds-et-rojo\">Vencida</span><span class=\"ds-et ds-et-azul\">Sin verificar</span></div>",
+      "css": ".ds-etiquetas { display: flex; gap: 8px; flex-wrap: wrap; } .ds-et { display: inline-block; padding: 2px 8px; border-radius: 4px; font: 500 14px/1.43 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; background: #F5F5F4; color: #44403B; } .ds-et-verde { background: #DCFCE7; color: #016630; } .ds-et-rojo { background: #FFE2E2; color: #9F0712; } .ds-et-azul { background: #DBEAFE; color: #193CB8; }"
+    },
+    {
+      "name": "Tarjeta con cifra",
+      "kind": "card",
+      "refersTo": "tarjeta",
+      "description": "Tarjeta del inicio: título, una cifra grande, detalle y enlace.",
+      "html": "<section class=\"ds-tarjeta\"><h2>Cartera</h2><p class=\"ds-cifra\">$ 4.380.000</p><p class=\"ds-detalle\">Vencida: <strong>$ 920.000</strong> · 12 clientes</p><a href=\"#\">Ver cartera</a></section>",
+      "css": ".ds-tarjeta { max-width: 300px; padding: 16px; border: 1px solid #E7E5E4; border-radius: 4px; background: #fff; color: #1C1917; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; } .ds-tarjeta h2 { margin: 0 0 12px; font-size: 18px; font-weight: 600; line-height: 1.5; } .ds-cifra { margin: 0; font-size: 24px; font-weight: 600; line-height: 1.33; } .ds-detalle { margin: 0; font-size: 16px; color: #57534D; } .ds-detalle strong { color: #C10007; } .ds-tarjeta a { font-size: 16px; color: #1C1917; } .ds-tarjeta a:focus-visible { outline: 2px solid #BB4D00; outline-offset: 2px; }"
+    },
+    {
+      "name": "Franja de totales",
+      "kind": "custom",
+      "refersTo": "tarjeta",
+      "description": "Arriba de cada lista de dinero: efectivo, transferencia y total.",
+      "html": "<dl class=\"ds-totales\"><div><dt>Efectivo</dt><dd>$ 1.240.000</dd></div><div><dt>Transferencia</dt><dd>$ 860.000</dd></div><div><dt>Total</dt><dd class=\"ds-total\">$ 2.100.000</dd></div></dl>",
+      "css": ".ds-totales { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; padding: 8px; border-radius: 4px; background: #F5F5F4; font: 400 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: #1C1917; max-width: 420px; } .ds-totales dt { color: #57534D; } .ds-totales dd { margin: 0; } .ds-total { font-weight: 600; }"
+    },
+    {
+      "name": "Aviso Para revisar",
+      "kind": "custom",
+      "refersTo": "aviso",
+      "description": "Aviso azul del inicio con los pendientes del día como enlaces.",
+      "html": "<div class=\"ds-aviso\"><p class=\"ds-aviso-t\">Para revisar</p><ul><li><a href=\"#\">Caja de ayer sin cerrar</a></li><li><a href=\"#\">1 ruta con precierre por aprobar</a></li><li><a href=\"#\">Jumbo bajo el mínimo</a></li></ul></div>",
+      "css": ".ds-aviso { max-width: 420px; padding: 12px; border: 1px solid #8EC5FF; border-radius: 4px; background: #EFF6FF; color: #193CB8; font: 400 16px/1.5 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; } .ds-aviso-t { margin: 0 0 4px; font-weight: 600; } .ds-aviso ul { margin: 0; padding-left: 20px; } .ds-aviso a { color: #193CB8; } .ds-aviso a:focus-visible { outline: 2px solid #BB4D00; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El cuaderno de la granja",
+    "overview": "Lo que antes se anotaba a mano en un cuaderno, ahora en hojas blancas, con renglones claros y números que cuadran. La interfaz es papel y tinta: fondo casi blanco, hojas blancas con un borde fino, texto en tinta cálida (grises piedra) y un solo color de acento, el ámbar, reservado para lo que se toca y para marcar dónde se está. Como el subrayador amarillo sobre la página: señala, no decora. No hay sombras, ni degradados, ni movimiento: cada pantalla aparece completa y quieta, como una página que se abre.\n\nLa densidad es la de un cuaderno contable bien llevado: listas, tablas y totales a la vista, sin decoración que compita con los números. El dinero, la deuda y lo que falta por revisar se marcan con color de estado (rojo deuda, verde al día, azul aviso), siempre acompañado de palabras, nunca solo con color. La misma página sirve en el computador de la oficina y en el celular del repartidor en la calle, con sol: por eso el texto es grande, el contraste alto y los controles se pueden tocar con el pulgar. El ámbar lleno con texto en tinta oscura es de lo más visible bajo el sol.\n\nEste documento fija el sistema hacia donde va el código. Los componentes de `src/components/ui.tsx` y `globals.css` ya siguen este sistema. Quedan dos deudas que se pagan al tocar cada pantalla: algunas páginas todavía pintan avisos en ámbar con clases propias, y mucho texto está en 14px y 12px en vez del mínimo de 16px.",
+    "keyCharacteristics": [
+      "Plano: hojas blancas con borde fino de 1px sobre fondo papel; cero sombras.",
+      "Un solo acento (ámbar) para botón principal, pestaña activa, opción elegida y foco.",
+      "Sobre ámbar, siempre texto en tinta oscura; nunca blanco.",
+      "Color de estado solo para el dinero, el inventario y los pendientes, siempre con texto.",
+      "Fuente del sistema, 16px mínimo para leer y tocar.",
+      "Esquinas apenas redondeadas (4px) en todo.",
+      "Sin animaciones ni transiciones, por regla global en `src/app/globals.css`.",
+      "Solo HTML y Tailwind; los componentes viven en `src/components/ui.tsx`."
+    ],
+    "rules": [
+      {
+        "name": "La Regla del Ámbar que se Toca",
+        "body": "El ámbar solo va en lo que se puede tocar o en lo que marca dónde estás: botón principal, pestaña activa, opción elegida y foco. Nunca en texto, nunca en un número, nunca en avisos ni de fondo decorativo.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla de la Tinta sobre Ámbar",
+        "body": "Sobre ámbar el texto es siempre tinta (`stone-900`) en peso 500 o más. El blanco sobre ámbar da 3.2:1 y no se usa.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla del Aviso Azul",
+        "body": "El aviso es azul, nunca ámbar, para que no se confunda con lo que se toca. `Alerta tipo=\"aviso\"`, `Etiqueta color=\"azul\"` y el bloque \"Para revisar\" del inicio ya son azules. *Pendiente en el código:* el aviso de inventario y los textos `text-amber-700`/`text-amber-800` de caja y reporte de caja tienen clases ámbar propias; pasan a azul.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla de la Deuda que Habla",
+        "body": "El rojo de la deuda nunca va solo: siempre acompaña una palabra (\"Debe\", \"Vencida\", \"Anular\", \"Bajo el mínimo\"). Un número rojo sin rótulo es un error de diseño.",
+        "section": "colors"
+      },
+      {
+        "name": "La Regla de los 16",
+        "body": "Lo que se lee o se toca va en 16px o más. 14px solo para el dato secundario de una tabla de oficina. 12px no se usa. Los componentes de `ui.tsx` (botones, rótulos, ayudas, alertas, pestañas, etiquetas, estado vacío) ya cumplen. Mi ruta, el inicio, el menú principal y el selector de día también. *Pendiente en el código:* las demás páginas todavía tienen muchos `text-sm` y `text-xs` propios (totales, tablas, encabezado); se suben al tocar cada pantalla.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla de una Cifra Grande",
+        "body": "En una tarjeta del inicio hay una sola cifra en Display. Lo demás es Body o Dato. Si la cifra pide atención, se marca con la etiqueta azul \"Para revisar\" debajo, no pintando la cifra. Las cifras van en números tabulares (`tabular-nums`). El enlace de cada tarjeta va abajo (44px), alineado entre las tarjetas de una misma fila.",
+        "section": "typography"
+      },
+      {
+        "name": "La Regla del Pulgar",
+        "body": "En el celular, todo lo que se toca mide al menos 44px de alto. Las acciones principales de Mi ruta (entregar, tomar pedidos, precierre) van a todo el ancho. `Boton`, campos, pestañas, menú principal, atajos del selector de día y todo Mi ruta ya miden 44px o más; en cada parada, la acción \"Entregado y pagó\" mide 56px. El encabezado también.",
+        "section": "layout"
+      },
+      {
+        "name": "La Regla de la Hoja sobre el Papel",
+        "body": "Una superficie se distingue por su borde fino y su fondo, nunca por una sombra ni por un degradado. Si algo necesita destacarse, se le da color de estado o se sube en la página, no se levanta.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** usar ámbar solo para el botón principal, la pestaña activa, la opción elegida, las casillas marcadas (`accent-amber-600`) y el foco.",
+      "**Do** poner texto en tinta (`stone-900`) sobre ámbar, en peso 500 o más.",
+      "**Do** usar ámbar hondo (`amber-600`) o más oscuro cuando el ámbar es una línea sobre blanco, y ámbar de foco (`amber-700`) para el contorno de foco.",
+      "**Do** marcar los avisos en azul (`blue-800` sobre `blue-50`).",
+      "**Do** escribir 16px o más todo lo que se lee o se toca; 14px solo para el dato secundario de una tabla de oficina.",
+      "**Do** dar al menos 44px de alto a todo lo que se toca en el celular, y a todo el ancho a las acciones principales de Mi ruta.",
+      "**Do** acompañar cada color de estado con una palabra: \"Debe\", \"Vencida\", \"Bajo el mínimo\", \"No debe nada\", \"Sin verificar\".",
+      "**Do** poner los totales arriba de la lista, en la franja de totales.",
+      "**Do** separar superficies con borde de 1px y cambio de tono, siempre con esquina de 4px.",
+      "**Do** reutilizar `Boton`, `Campo`, `Tarjeta`, `Alerta`, `Tabla`, `Vacio`, `Etiqueta` y `Pestanas` de `src/components/ui.tsx` antes de escribir clases nuevas.",
+      "**Do** esconder en `details` lo poco frecuente, para que la acción común quede a un toque."
+    ],
+    "donts": [
+      "**Don't** poner texto blanco sobre ámbar: da 3.2:1.",
+      "**Don't** usar ámbar para avisos, etiquetas, texto o cifras.",
+      "**Don't** usar la terracota ni la crema del logo en la interfaz.",
+      "**Don't** usar animaciones, transiciones ni desplazamiento suave: la regla global de `globals.css` las anula y no se quita.",
+      "**Don't** agregar librerías de componentes de UI; solo HTML y Tailwind.",
+      "**Don't** usar sombras, degradados ni fondos con textura.",
+      "**Don't** usar texto de 12px (`text-xs`) ni gris más claro que la tinta tenue (`stone-400` da 2.6:1 sobre blanco).",
+      "**Don't** poner un número rojo sin rótulo.",
+      "**Don't** esconder el menú en una hamburguesa ni cambiar de fuente; la fuente es la del sistema.",
+      "**Don't** apilar varios formularios largos en una página: uno a la vez, con opciones o vistas."
+    ]
+  }
+}

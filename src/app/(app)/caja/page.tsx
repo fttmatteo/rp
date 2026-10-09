@@ -35,7 +35,7 @@ function Verificacion({ entidad, id, verificadoEn }: { entidad: "Pago" | "Movimi
     </Formulario>
   ) : (
     <Formulario accion={verificarTransferencia.bind(null, entidad, id, true)} className="inline">
-      <Etiqueta color="ambar">Sin verificar</Etiqueta>{" "}
+      <Etiqueta color="azul">Sin verificar</Etiqueta>{" "}
       <button type="submit" className="text-xs underline">
         Ya llegó al banco
       </button>
@@ -111,7 +111,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
         }
       >
         Caja del {formatoDia(dia)}{" "}
-        <Etiqueta color={abierta ? "ambar" : "verde"}>{abierta ? "Abierta" : "Cerrada"}</Etiqueta>
+        <Etiqueta color={abierta ? "azul" : "verde"}>{abierta ? "Abierta" : "Cerrada"}</Etiqueta>
       </Titulo>
       <PestanasContabilidad actual="/caja" operacion={sesion.operacion} dia={diaISO} />
 

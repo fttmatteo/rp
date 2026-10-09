@@ -104,7 +104,7 @@ export default async function ReporteCajaPage({ searchParams }: { searchParams: 
                   <Link href={`/caja?dia=${dia.toISOString().slice(0, 10)}`} className="underline">
                     {formatoDia(dia)}
                   </Link>{" "}
-                  {!cerrada && <Etiqueta color="ambar">Abierta</Etiqueta>}
+                  {!cerrada && <Etiqueta color="azul">Abierta</Etiqueta>}
                 </td>
                 <td className="text-right">{formatoPesos(t.base)}</td>
                 <td className="text-right">{formatoPesos(t.cobrosEfectivo)}</td>

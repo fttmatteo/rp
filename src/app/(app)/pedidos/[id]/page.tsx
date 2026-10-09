@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Campo, claseBoton, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { saldoCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
 import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
@@ -88,16 +88,16 @@ export default async function PedidoPage({
               {pedido.cliente.nombre}
             </Link>
           </p>
-          <p className="text-sm text-stone-600">
+          <p className="text-stone-600">
             {[pedido.cliente.direccion, pedido.cliente.zona, pedido.cliente.telefono].filter(Boolean).join(" · ")}
           </p>
-          <p className="mt-2 text-sm">
+          <p className="mt-2">
             Entrega: <strong>{formatoDia(pedido.fechaEntrega)}</strong> · Creado por {pedido.creadoPor.nombre} el{" "}
             {formatoFechaHora(pedido.creadoEn)}
           </p>
-          {pedido.nota && <p className="mt-1 text-sm text-stone-600">Nota: {pedido.nota}</p>}
+          {pedido.nota && <p className="mt-1 text-stone-600">Nota: {pedido.nota}</p>}
           {pedido.ruta && (
-            <p className="mt-1 text-sm">
+            <p className="mt-1">
               Ruta:{" "}
               {puede(op, "rutas") ? (
                 <Link href={`/rutas/${pedido.ruta.id}`} className="underline">
@@ -109,9 +109,10 @@ export default async function PedidoPage({
               {pedido.ordenEnRuta && ` · parada ${pedido.ordenEnRuta}`}
             </p>
           )}
-          {pedido.motivoNoEntrega && <p className="mt-1 text-sm text-red-700">No se entregó: {pedido.motivoNoEntrega}</p>}
+          {pedido.motivoNoEntrega && <p className="mt-1 text-red-700">No se entregó: {pedido.motivoNoEntrega}</p>}
           {whatsapp && (
-            <a href={whatsapp} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm underline">
+            // Es una acción: se ve y se toca como botón.
+            <a href={whatsapp} target="_blank" rel="noreferrer" className={`${claseBoton("secundario")} mt-3`}>
               {pedido.estado === "PENDIENTE" ? "Confirmar el pedido por WhatsApp" : "Enviar el recibo por WhatsApp"}
             </a>
           )}
@@ -178,7 +179,7 @@ export default async function PedidoPage({
                   </Campo>
                 </div>
                 <details>
-                  <summary className="cursor-pointer text-sm underline">Entrega parcial (no recibió todo)</summary>
+                  <summary className="block cursor-pointer py-2.5 underline">Entrega parcial (no recibió todo)</summary>
                   <div className="mt-2 grid grid-cols-2 gap-3">
                     {pedido.detalles.map((d) => (
                       <Campo key={d.id} etiqueta={`${nombreProducto(d.producto)} (pidió ${d.cantidad})`}>
@@ -186,12 +187,12 @@ export default async function PedidoPage({
                       </Campo>
                     ))}
                   </div>
-                  <p className="mt-1 text-xs text-stone-500">Escribe solo lo que cambió. Se cobra lo entregado; ajusta también lo pagado.</p>
+                  <p className="mt-1 text-sm text-stone-500">Escribe solo lo que cambió. Se cobra lo entregado; ajusta también lo pagado.</p>
                 </details>
                 <Boton type="submit">Confirmar entrega</Boton>
               </Formulario>
               <details className="mt-4">
-                <summary className="cursor-pointer text-sm underline">No se pudo entregar</summary>
+                <summary className="block cursor-pointer py-2.5 underline">No se pudo entregar</summary>
                 <Formulario accion={marcarNoEntregado.bind(null, pedido.id)} className="mt-2 space-y-3">
                   <Campo etiqueta="Motivo">
                     <input name="motivo" required placeholder="Ej.: local cerrado, no lo recibió" />
@@ -234,8 +235,9 @@ export default async function PedidoPage({
                 </a>{" "}
                 {venta.anulada && <Etiqueta color="rojo">Anulada</Etiqueta>}
               </p>
-              <p className="text-sm">
-                Pagado: {formatoPesos(pagado)} · Pendiente: {formatoPesos(venta.saldo)}
+              <p>
+                Pagado: {formatoPesos(pagado)} · Pendiente:{" "}
+                <strong className={venta.saldo > 0 && !venta.anulada ? "text-red-700" : ""}>{formatoPesos(venta.saldo)}</strong>
               </p>
               {!venta.anulada && puede(op, "anular") && (
                 <Formulario accion={anularVenta.bind(null, venta.id)} confirmar="¿Anular esta venta? La mercancía vuelve al inventario y la deuda se elimina." className="mt-3">

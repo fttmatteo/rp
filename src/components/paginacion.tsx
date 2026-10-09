@@ -51,27 +51,27 @@ export function Paginacion({
   const desde = (actual - 1) * porPagina + 1;
   const hasta = Math.min(actual * porPagina, total);
   return (
-    <nav aria-label="Páginas" className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm">
+    <nav aria-label="Páginas" className="mt-3 flex flex-wrap items-center justify-between gap-2">
       <span className="text-stone-600">
         {desde}–{hasta} de {total}
       </span>
       <span className="flex items-center gap-2">
         {actual > 1 ? (
-          <Link href={enlace(actual - 1)} className="rounded border border-stone-300 bg-white px-3 py-1.5">
+          <Link href={enlace(actual - 1)} className="inline-flex min-h-11 items-center rounded border border-stone-300 bg-white px-4 hover:bg-stone-100">
             Anterior
           </Link>
         ) : (
-          <span className="rounded border border-stone-200 px-3 py-1.5 text-stone-400">Anterior</span>
+          <span className="inline-flex min-h-11 items-center rounded border border-stone-200 px-4 text-stone-500">Anterior</span>
         )}
         <span>
           Página {actual} de {paginas}
         </span>
         {actual < paginas ? (
-          <Link href={enlace(actual + 1)} className="rounded border border-stone-300 bg-white px-3 py-1.5">
+          <Link href={enlace(actual + 1)} className="inline-flex min-h-11 items-center rounded border border-stone-300 bg-white px-4 hover:bg-stone-100">
             Siguiente
           </Link>
         ) : (
-          <span className="rounded border border-stone-200 px-3 py-1.5 text-stone-400">Siguiente</span>
+          <span className="inline-flex min-h-11 items-center rounded border border-stone-200 px-4 text-stone-500">Siguiente</span>
         )}
       </span>
     </nav>

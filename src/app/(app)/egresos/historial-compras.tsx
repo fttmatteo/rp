@@ -66,7 +66,7 @@ export async function HistorialCompras({
                     {!c.anulada && !c.clasificada && c.porClasificar > 0 && (
                       <>
                         {" "}
-                        <Etiqueta color="ambar">Faltan {formatoHuevos(c.porClasificar)} por clasificar</Etiqueta>
+                        <Etiqueta color="azul">Faltan {formatoHuevos(c.porClasificar)} por clasificar</Etiqueta>
                       </>
                     )}
                     {c.nota && <span className="text-stone-500"> · {c.nota}</span>}

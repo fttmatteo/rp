@@ -19,21 +19,21 @@
   input,
   select,
   textarea {
-    @apply w-full rounded border border-stone-300 bg-white px-3 py-2 text-base;
+    @apply min-h-11 w-full rounded border border-stone-300 bg-white px-3 py-2 text-base;
   }
   input[type="checkbox"],
   input[type="radio"] {
-    @apply w-auto;
+    @apply min-h-0 w-auto accent-amber-600;
   }
   input:focus,
   select:focus,
   textarea:focus,
   button:focus-visible,
   a:focus-visible {
-    @apply outline-2 outline-offset-1 outline-amber-600;
+    @apply outline-2 outline-offset-1 outline-amber-700;
   }
   label {
-    @apply block text-sm font-medium text-stone-700;
+    @apply block text-base font-medium text-stone-700;
   }
   dialog::backdrop {
     background: rgb(0 0 0 / 0.4);

@@ -41,11 +41,15 @@ export function Formulario({
     startTransition(() => enviar(datos));
   }
 
+  // El espaciado (space-y-*) del formulario solo alcanza a sus hijos directos: la alerta y el fieldset. Para que
+  // también separe los campos, el fieldset lo repite; si no hay espaciado (formularios en línea) no ocupa caja.
+  const espaciado = className.match(/\bspace-y-\S+/)?.[0];
+
   return (
     <form ref={ref} id={id} action={enviar} onSubmit={alEnviar} className={className}>
       {estado?.error && <Alerta>{estado.error}</Alerta>}
       {estado?.ok && <Alerta tipo="ok">{estado.ok}</Alerta>}
-      <fieldset disabled={enviando} className="contents">
+      <fieldset disabled={enviando} className={espaciado ? `min-w-0 ${espaciado}` : "contents"}>
         {children}
       </fieldset>
     </form>

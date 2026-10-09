@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
-import { Alerta, Boton, BotonLink, Campo, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { deudasDeClientes } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoPesos, hoyISO, nombreProducto } from "@/lib/formato";
@@ -29,9 +29,9 @@ export default async function NuevoPedidoPage({ searchParams }: { searchParams: 
         <Titulo accion={<BotonLink href="/pedidos" variante="secundario">Volver</BotonLink>}>Nuevo pedido: elige el cliente</Titulo>
         <form className="mb-4 flex gap-2">
           <input name="q" defaultValue={q} placeholder="Buscar cliente" className="max-w-sm" autoFocus />
-          <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+          <Boton type="submit" variante="secundario">
             Buscar
-          </button>
+          </Boton>
         </form>
         <ul className="divide-y divide-stone-100 rounded border border-stone-200 bg-white">
           {clientes.map((c) => (
@@ -41,7 +41,7 @@ export default async function NuevoPedidoPage({ searchParams }: { searchParams: 
               </Link>
             </li>
           ))}
-          {clientes.length === 0 && <li className="px-4 py-3 text-sm text-stone-500">Sin resultados.</li>}
+          {clientes.length === 0 && <li className="px-4 py-3 text-stone-500">Sin resultados.</li>}
         </ul>
         <Paginacion ruta="/pedidos/nuevo" params={{ q }} pagina={pagina} total={total} />
       </>
@@ -92,9 +92,15 @@ export default async function NuevoPedidoPage({ searchParams }: { searchParams: 
                   return (
                     <tr key={p.id}>
                       <td className="font-medium">{nombreProducto(p)}</td>
-                      <td>
+                      <td className="tabular-nums">
                         {formatoPesos(precio)}
-                        {especiales.has(p.id) && <span className="text-xs text-amber-700"> especial</span>}
+                        {/* Igual que en la lista de clientes: el ámbar es solo para lo que se toca. */}
+                        {especiales.has(p.id) && (
+                          <>
+                            {" "}
+                            <Etiqueta color="azul">Precio especial</Etiqueta>
+                          </>
+                        )}
                       </td>
                       <td>
                         <input name={`cantidad_${p.id}`} inputMode="numeric" placeholder="0" />

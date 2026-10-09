@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Buscador } from "@/components/buscador";
 import { Formulario } from "@/components/formulario";
 import { leerFecha, SelectorDia } from "@/components/selector-dia";
-import { Alerta, Boton, Campo, Etiqueta, Titulo, Vacio, Vistas, vistaElegida } from "@/components/ui";
+import { Alerta, Boton, Campo, claseBoton, Etiqueta, Titulo, Vacio, Vistas, vistaElegida } from "@/components/ui";
 import { deudasDeClientes, type DeudaCliente } from "@/lib/cartera-db";
 import { db } from "@/lib/db";
 import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
@@ -31,18 +31,25 @@ function SelectMedio() {
 }
 
 function Deuda({ deuda, hoy }: { deuda: DeudaCliente | undefined; hoy: Date }) {
-  if (!deuda || deuda.saldo === 0) return <p className="text-sm text-green-700">No debe nada.</p>;
+  if (!deuda || deuda.saldo === 0) return <p className="text-green-700">No debe nada.</p>;
   return (
-    <details className="text-sm">
-      <summary className="cursor-pointer">
-        Debe <strong className="text-red-700">{formatoPesos(deuda.saldo)}</strong>
-        {deuda.vencido > 0 && <> · vencido {formatoPesos(deuda.vencido)}</>}
+    <details>
+      <summary className="cursor-pointer py-2.5">
+        Debe <strong className="whitespace-nowrap text-red-700">{formatoPesos(deuda.saldo)}</strong>
+        {deuda.vencido > 0 && (
+          <>
+            {" "}
+            · vencido <span className="whitespace-nowrap">{formatoPesos(deuda.vencido)}</span>
+          </>
+        )}
         {deuda.masAntigua && <> · la más antigua de hace {dias(deuda.masAntigua, hoy)} días</>}
       </summary>
+      {/* Los valores no se parten entre el signo y el número en pantallas angostas. */}
       <ul className="mt-1 space-y-0.5 text-stone-600">
         {deuda.deudas.map((d) => (
           <li key={d.id}>
-            {formatoConsecutivo("RP", d.consecutivo)} · {formatoFecha(d.fecha)} · {dias(d.fecha, hoy)} días · {formatoPesos(d.saldo)}
+            {formatoConsecutivo("RP", d.consecutivo)} · {formatoFecha(d.fecha)} · {dias(d.fecha, hoy)} días ·{" "}
+            <span className="whitespace-nowrap">{formatoPesos(d.saldo)}</span>
             {d.vence < hoy && " · vencida"}
           </li>
         ))}
@@ -77,27 +84,29 @@ function Parada({
         <p className="text-lg font-semibold">
           {p.ordenEnRuta}. {c.nombre}
         </p>
-        <p className="text-sm text-stone-600">{[c.direccion, c.zona].filter(Boolean).join(" · ") || "Sin dirección"}</p>
-        {p.nota && <p className="text-sm text-stone-600">Nota: {p.nota}</p>}
+        <p className="text-stone-600">{[c.direccion, c.zona].filter(Boolean).join(" · ") || "Sin dirección"}</p>
+        {p.nota && <p className="text-stone-600">Nota: {p.nota}</p>}
       </div>
       <p>
         {p.detalles.map((d) => `${d.cantidad} ${nombreProducto(d.producto)}`).join(", ")} · <strong>{formatoPesos(total)}</strong>
       </p>
       <Deuda deuda={deuda} hoy={hoy} />
-      <div className="flex flex-wrap gap-2 text-sm">
+      {/* Crecen para llenar la fila y bajan a otra cuando no caben: se tocan con el pulgar. Los dos cortos
+          van primero para que en un celular compartan fila y el aviso de WhatsApp quede debajo. */}
+      <div className="flex flex-wrap gap-2">
         {llamar && (
-          <a href={llamar} className="rounded border border-stone-300 px-3 py-2">
+          <a href={llamar} className={`${claseBoton("secundario")} grow`}>
             Llamar
           </a>
         )}
-        {whatsapp && (
-          <a href={whatsapp} target="_blank" rel="noreferrer" className="rounded border border-stone-300 px-3 py-2">
-            Avisar que va en camino
+        {maps && (
+          <a href={maps} target="_blank" rel="noreferrer" className={`${claseBoton("secundario")} grow`}>
+            Abrir en Maps
           </a>
         )}
-        {maps && (
-          <a href={maps} target="_blank" rel="noreferrer" className="rounded border border-stone-300 px-3 py-2">
-            Abrir en Maps
+        {whatsapp && (
+          <a href={whatsapp} target="_blank" rel="noreferrer" className={`${claseBoton("secundario")} grow`}>
+            Avisar que va en camino
           </a>
         )}
       </div>
@@ -105,13 +114,13 @@ function Parada({
       <Formulario accion={entregarPedido.bind(null, p.id)} className="space-y-2">
         <input type="hidden" name="pagado" value={total} />
         <input type="hidden" name="medio" value="EFECTIVO" />
-        <Boton type="submit" className="w-full">
+        <Boton type="submit" className="min-h-14 w-full text-lg">
           Entregado y pagó {formatoPesos(total)} en efectivo
         </Boton>
       </Formulario>
 
       <details>
-        <summary className="cursor-pointer text-sm underline">Fiado, transferencia, pago distinto o entrega parcial</summary>
+        <summary className="block cursor-pointer py-2.5 underline">Fiado, transferencia, pago distinto o entrega parcial</summary>
         <Formulario accion={entregarPedido.bind(null, p.id)} className="mt-2 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <Campo etiqueta="¿Cuánto pagó?" ayuda="0 si se fía todo. Si paga más, lo que sobra abona a sus deudas.">
@@ -138,7 +147,7 @@ function Parada({
       </details>
 
       <details>
-        <summary className="cursor-pointer text-sm underline">No se entregó</summary>
+        <summary className="block cursor-pointer py-2.5 underline">No se entregó</summary>
         <Formulario accion={marcarNoEntregado.bind(null, p.id)} className="mt-2 space-y-3">
           <Campo etiqueta="Motivo">
             <input name="motivo" required placeholder="Ej.: local cerrado" />
@@ -152,7 +161,7 @@ function Parada({
       {deuda && deuda.saldo > 0 && <Abono rutaId={rutaId} clienteId={c.id} saldo={deuda.saldo} />}
 
       <Formulario accion={soltarPedido.bind(null, p.id)} confirmar={`¿Soltar el pedido de ${c.nombre}? Queda libre para otro repartidor.`}>
-        <button type="submit" className="text-sm text-stone-600 underline">
+        <button type="submit" className="min-h-11 text-stone-600 underline">
           Soltar este pedido (no lo voy a llevar)
         </button>
       </Formulario>
@@ -163,7 +172,7 @@ function Parada({
 function Abono({ rutaId, clienteId, saldo }: { rutaId: number; clienteId: number; saldo: number }) {
   return (
     <details>
-      <summary className="cursor-pointer text-sm underline">Solo abono a la deuda</summary>
+      <summary className="block cursor-pointer py-2.5 underline">Solo abono a la deuda</summary>
       <Formulario accion={abonoEnRuta.bind(null, rutaId, clienteId)} className="mt-2 space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <Campo etiqueta="Valor" ayuda={`Debe ${formatoPesos(saldo)}. Se aplica a la deuda más antigua.`}>
@@ -199,11 +208,11 @@ function TomarPedidos({ pedidos, titulo }: { pedidos: Disponible[]; titulo: bool
   return (
     <section>
       {/* Con ruta, el título ya está en la pestaña. */}
-      {titulo && <h2 className="mb-2 font-semibold">Pedidos sin tomar ({pedidos.length})</h2>}
+      {titulo && <h2 className="mb-2 text-lg font-semibold">Pedidos sin tomar ({pedidos.length})</h2>}
       {/* El formulario queda montado aunque ya no haya pedidos, para que se vea la confirmación. */}
       <Formulario accion={tomarPedidos} className="space-y-3">
         {pedidos.length === 0 ? (
-          <p className="text-sm text-stone-500">No quedan pedidos de hoy sin tomar.</p>
+          <Vacio>No quedan pedidos de hoy sin tomar.</Vacio>
         ) : (
           <>
             <div className="mb-3">
@@ -217,7 +226,7 @@ function TomarPedidos({ pedidos, titulo }: { pedidos: Disponible[]; titulo: bool
                 >
                   <label className="flex items-start gap-3 px-3 py-3">
                     <input type="checkbox" name="pedido" value={p.id} className="mt-1 size-5" />
-                    <span className="text-sm">
+                    <span>
                       <strong>{p.cliente.nombre}</strong>
                       <span className="block text-stone-600">
                         {[p.cliente.direccion, p.cliente.zona].filter(Boolean).join(" · ") || "Sin dirección"}
@@ -287,8 +296,8 @@ function Precierre({ rutaId, esperado }: { rutaId: number; esperado: number }) {
       confirmar="¿Enviar el precierre? Después ya no puedes registrar entregas ni cobros en esta ruta."
       className="space-y-3 rounded border border-stone-200 bg-white p-4"
     >
-      <p className="font-semibold">Precierre de la ruta</p>
-      <p className="text-sm text-stone-600">
+      <h2 className="text-lg font-semibold">Precierre de la ruta</h2>
+      <p className="text-stone-600">
         Terminaste las entregas. Cuenta el efectivo que vas a entregar; el administrador lo revisa y aprueba el cierre.
       </p>
       <Campo etiqueta="Efectivo que entregas" ayuda={`Según tus cobros deberías entregar ${formatoPesos(esperado)}.`}>
@@ -313,7 +322,8 @@ async function RutaRepartidor({ datos, hoy, ver, pestanas }: { datos: Datos; hoy
 
   return (
     <>
-      <div className="mb-4 grid grid-cols-3 gap-2 text-center text-sm">
+      {/* El efectivo no cabe en un tercio de un celular: va en su propia fila hasta que haya ancho. */}
+      <div className="mb-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-3">
         <div className="rounded border border-stone-200 bg-white p-2">
           <p className="text-2xl font-semibold">{pendientes.length}</p>
           por entregar
@@ -322,8 +332,8 @@ async function RutaRepartidor({ datos, hoy, ver, pestanas }: { datos: Datos; hoy
           <p className="text-2xl font-semibold">{cierre.entregados}</p>
           entregadas
         </div>
-        <div className="rounded border border-stone-200 bg-white p-2">
-          <p className="text-lg font-semibold">{formatoPesos(liquidacion.cobradoEfectivo)}</p>
+        <div className="col-span-2 rounded border border-stone-200 bg-white p-2 sm:col-span-1">
+          <p className="text-2xl font-semibold">{formatoPesos(liquidacion.cobradoEfectivo)}</p>
           efectivo cobrado
         </div>
       </div>
@@ -357,9 +367,9 @@ async function RutaRepartidor({ datos, hoy, ver, pestanas }: { datos: Datos; hoy
 
       {ver === "hechas" && (
         <>
-          <ul className="divide-y divide-stone-100 rounded border border-stone-200 bg-white text-sm">
+          <ul className="divide-y divide-stone-100 rounded border border-stone-200 bg-white">
             {hechas.map(({ pedido: p, valores }) => (
-              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-3">
                 <span>
                   {p.ordenEnRuta}. {p.cliente.nombre}{" "}
                   <Etiqueta color={ESTADO_PEDIDO[p.estado].color}>
@@ -371,7 +381,7 @@ async function RutaRepartidor({ datos, hoy, ver, pestanas }: { datos: Datos; hoy
                   <span>
                     Pagó {formatoPesos(valores.pagado)}
                     {valores.pendiente > 0 && <span className="text-red-700"> · fiado {formatoPesos(valores.pendiente)}</span>} ·{" "}
-                    <a href={`/recibos/venta/${p.venta.id}`} target="_blank" className="underline">
+                    <a href={`/recibos/venta/${p.venta.id}`} target="_blank" className="inline-block py-2.5 underline">
                       Recibo
                     </a>
                   </span>

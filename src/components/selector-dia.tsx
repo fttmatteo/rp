@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Boton } from "@/components/ui";
 import { diaUTC, hoyISO, sumarDias } from "@/lib/formato";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -25,20 +26,21 @@ export function SelectorDia({
         <input type="date" name="fecha" defaultValue={fecha} className="mt-1" />
       </label>
       {children}
-      <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+      <Boton type="submit" variante="secundario">
         Ver
-      </button>
-      <span className="flex gap-3 py-2 text-sm">
-        <Link href={enlace(iso(sumarDias(diaUTC(fecha), -1)))} className="underline">
+      </Boton>
+      {/* Atajos de 44px de alto para tocarlos con el pulgar. */}
+      <span className="flex flex-wrap gap-x-3">
+        <Link href={enlace(iso(sumarDias(diaUTC(fecha), -1)))} className="inline-flex min-h-11 items-center px-1 underline">
           Día anterior
         </Link>
-        <Link href={enlace(hoy)} className="underline">
+        <Link href={enlace(hoy)} className="inline-flex min-h-11 items-center px-1 underline">
           Hoy
         </Link>
-        <Link href={enlace(iso(sumarDias(diaUTC(hoy), 1)))} className="underline">
+        <Link href={enlace(iso(sumarDias(diaUTC(hoy), 1)))} className="inline-flex min-h-11 items-center px-1 underline">
           Mañana
         </Link>
-        <Link href={enlace(iso(sumarDias(diaUTC(fecha), 1)))} className="underline">
+        <Link href={enlace(iso(sumarDias(diaUTC(fecha), 1)))} className="inline-flex min-h-11 items-center px-1 underline">
           Día siguiente
         </Link>
       </span>

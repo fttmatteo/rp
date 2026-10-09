@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { EstadoPedido, Prisma } from "@prisma/client";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
-import { BotonLink, Etiqueta, Tabla, Titulo, Vacio } from "@/components/ui";
+import { Boton, BotonLink, Etiqueta, Tabla, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
 import { diaUTC, formatoDia, formatoPesos } from "@/lib/formato";
@@ -75,9 +75,9 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
           Cliente o zona
           <input type="search" name="q" defaultValue={q} placeholder="Buscar" className="mt-1" />
         </label>
-        <button type="submit" className="rounded border border-stone-300 bg-white px-4 py-2">
+        <Boton type="submit" variante="secundario">
           Filtrar
-        </button>
+        </Boton>
       </form>
       {pedidos.length === 0 ? (
         <Vacio>No hay pedidos con ese filtro.</Vacio>
@@ -85,10 +85,11 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
         <Tabla>
           <thead>
             <tr>
-              <th>#</th>
-              <th>Entrega</th>
+              {/* En el celular quedan Cliente (con la fecha debajo), Valor y Estado, para no desplazar de lado. */}
+              <th className="hidden sm:table-cell">#</th>
+              <th className="hidden sm:table-cell">Entrega</th>
               <th>Cliente</th>
-              <th>Productos</th>
+              <th className="hidden sm:table-cell">Productos</th>
               <th className="text-right">Valor</th>
               <th>Estado</th>
             </tr>
@@ -96,18 +97,28 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
           <tbody>
             {pedidos.map((p) => (
               <tr key={p.id}>
-                <td>
+                <td className="hidden sm:table-cell">
                   <Link href={`/pedidos/${p.id}`} className="underline">
                     {p.id}
                   </Link>
                 </td>
-                <td className="whitespace-nowrap">{formatoDia(p.fechaEntrega)}</td>
-                <td>{p.cliente.nombre}</td>
-                <td className="text-stone-600">{p.detalles.map((d) => `${d.cantidad} ${d.producto.nombre}`).join(", ")}</td>
-                <td className="text-right">{formatoPesos(totalPedido(p.detalles))}</td>
+                <td className="hidden whitespace-nowrap sm:table-cell">{formatoDia(p.fechaEntrega)}</td>
                 <td>
-                  <Etiqueta color={ESTADOS[p.estado].color}>{ESTADOS[p.estado].texto}</Etiqueta>
-                  {p.estado === "ENTREGADO" && esParcial(p.detalles) && <span className="text-xs text-stone-500"> parcial</span>}
+                  {/* El nombre también abre el pedido: el número solo es un blanco muy pequeño. */}
+                  <Link href={`/pedidos/${p.id}`} className="underline">
+                    {p.cliente.nombre}
+                  </Link>
+                  <span className="block text-stone-600 sm:hidden">
+                    #{p.id} · {formatoDia(p.fechaEntrega)}
+                  </span>
+                </td>
+                <td className="hidden text-stone-600 sm:table-cell">{p.detalles.map((d) => `${d.cantidad} ${d.producto.nombre}`).join(", ")}</td>
+                <td className="whitespace-nowrap text-right tabular-nums">{formatoPesos(totalPedido(p.detalles))}</td>
+                <td>
+                  <Etiqueta color={ESTADOS[p.estado].color}>
+                    {ESTADOS[p.estado].texto}
+                    {p.estado === "ENTREGADO" && esParcial(p.detalles) && " parcial"}
+                  </Etiqueta>
                 </td>
               </tr>
             ))}
@@ -115,9 +126,13 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
           {conFecha && (
             <tfoot>
               <tr className="font-semibold">
-                <td colSpan={3}>{q ? "Total del día (de esta búsqueda)" : "Total del día"}</td>
-                <td>{resumen.join(", ")}</td>
-                <td className="text-right">{formatoPesos(valorTotal)}</td>
+                {/* Una celda por diseño: en el celular solo hay una columna antes del valor. */}
+                <td className="sm:hidden">{q ? "Total del día (de esta búsqueda)" : "Total del día"}</td>
+                <td colSpan={3} className="hidden sm:table-cell">
+                  {q ? "Total del día (de esta búsqueda)" : "Total del día"}
+                </td>
+                <td className="hidden sm:table-cell">{resumen.join(", ")}</td>
+                <td className="whitespace-nowrap text-right tabular-nums">{formatoPesos(valorTotal)}</td>
                 <td>
                   <Link href={`/reparto?fecha=${fecha}`} className="font-normal underline">
                     Ver resumen del reparto

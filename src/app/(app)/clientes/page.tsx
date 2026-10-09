@@ -70,7 +70,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
               <tr key={c.id}>
                 <td>
                   {c.nombre}{" "}
-                  {c._count.precios > 0 && <Etiqueta color="ambar">Precio especial</Etiqueta>}{" "}
+                  {c._count.precios > 0 && <Etiqueta color="azul">Precio especial</Etiqueta>}{" "}
                   {!c.activo && <Etiqueta color="rojo">Inactivo</Etiqueta>}
                 </td>
                 <td>{c.telefono}</td>

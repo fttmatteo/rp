@@ -1,30 +1,31 @@
 import Link from "next/link";
 import { PieCreditos } from "@/components/creditos";
+import { MenuPrincipal, type EntradaMenu } from "@/components/menu-principal";
 import { OcultarEn } from "@/components/ocultar-en";
 import { ETIQUETA_OPERACION, puede, type Permiso } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
 import { CONTABILIDAD, inicioSeccion, PEDIDOS, USUARIOS, type Pestana } from "@/components/secciones";
 import { salir } from "../login/acciones";
 
-const MENU: ({ href: string; texto: string; permiso?: Permiso } | { texto: string; seccion: Pestana[] })[] = [
+const MENU: ({ href: string; texto: string; permiso?: Permiso; rutas?: string[] } | { texto: string; seccion: Pestana[] })[] = [
   { href: "/", texto: "Inicio" },
   { href: "/mi-ruta", texto: "Mi ruta", permiso: "ruta.propia" },
   // Pedidos, Contabilidad y Usuarios agrupan varias páginas en pestañas (components/secciones.tsx).
   { texto: "Pedidos", seccion: PEDIDOS },
   { texto: "Contabilidad", seccion: CONTABILIDAD },
   // Inventario reúne existencias, clasificación y aves (pestañas dentro de la página).
-  { href: "/inventario", texto: "Inventario", permiso: "inventario.ver" },
+  { href: "/inventario", texto: "Inventario", permiso: "inventario.ver", rutas: ["/inventario", "/clasificacion", "/aves"] },
   { texto: "Usuarios", seccion: USUARIOS },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const sesion = await requerir();
-  const menu = MENU.flatMap((m) => {
+  const menu = MENU.flatMap((m): EntradaMenu[] => {
     if ("seccion" in m) {
       const href = inicioSeccion(m.seccion, sesion.operacion);
-      return href ? [{ href, texto: m.texto }] : [];
+      return href ? [{ href, texto: m.texto, rutas: m.seccion.map((p) => p.href) }] : [];
     }
-    return !m.permiso || puede(sesion.operacion, m.permiso) ? [m] : [];
+    return !m.permiso || puede(sesion.operacion, m.permiso) ? [{ href: m.href, texto: m.texto, rutas: m.rutas ?? [m.href] }] : [];
   });
   return (
     <>
@@ -34,33 +35,24 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <img src="/icons/svg/icono.svg" alt="" width={32} height={32} className="rounded" />
             RP Software
           </Link>
-          <div className="flex items-center gap-3 text-sm">
+          {/* Cambiar y Salir miden 44px de alto para tocarlos con el pulgar. */}
+          <div className="flex flex-wrap items-center gap-x-3">
             <span className="text-stone-600">
-              {sesion.usuario.nombre} · <strong>{ETIQUETA_OPERACION[sesion.operacion]}</strong>
+              {sesion.usuario.nombre} · <strong className="text-stone-900">{ETIQUETA_OPERACION[sesion.operacion]}</strong>
             </span>
             {sesion.usuario.accesos.length > 1 && (
-              <Link href="/operacion" className="underline">
+              <Link href="/operacion" className="inline-flex min-h-11 items-center underline">
                 Cambiar
               </Link>
             )}
             <form action={salir}>
-              <button type="submit" className="underline">
+              <button type="submit" className="min-h-11 underline">
                 Salir
               </button>
             </form>
           </div>
         </div>
-        <nav className="mx-auto max-w-5xl overflow-x-auto px-4">
-          <ul className="flex gap-1 whitespace-nowrap pb-2 text-sm">
-            {menu.map((m) => (
-              <li key={m.href}>
-                <Link href={m.href} className="block rounded px-3 py-1.5 hover:bg-stone-100">
-                  {m.texto}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <MenuPrincipal entradas={menu} />
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
       {/* En "Acerca de" ya están los créditos: el pie no enlaza a la misma página. */}
