@@ -11,14 +11,14 @@ import { anularClasificacion, registrarClasificacion } from "./acciones";
 export default async function ClasificacionPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
   const sesion = await requerir("clasificacion");
   const pagina = leerPagina((await searchParams).pagina);
-  const [productos, registros, totalRegistros, compras, lotes] = await Promise.all([
+  const [productos, registros, totalRegistros, compras, grupos] = await Promise.all([
     db.producto.findMany({ where: { activo: true }, orderBy: { orden: "asc" } }),
     db.registroClasificacion.findMany({
       orderBy: { id: "desc" },
       ...rango(pagina, 20),
       include: {
         usuario: { select: { nombre: true } },
-        lote: { select: { galpon: { select: { nombre: true } } } },
+        grupo: { select: { galpon: { select: { nombre: true } } } },
         compra: { include: { proveedor: true } },
         detalles: { include: { producto: true } },
         movimientos: { where: { tipo: "ANULACION" }, take: 1, select: { id: true } },
@@ -26,7 +26,7 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
     }),
     db.registroClasificacion.count(),
     db.compra.findMany({ where: { anulada: false, porClasificar: { gt: 0 } }, orderBy: { fecha: "asc" }, include: { proveedor: true } }),
-    db.lote.findMany({ where: { activo: true }, orderBy: { galpon: { nombre: "asc" } }, include: { galpon: true } }),
+    db.grupoAves.findMany({ where: { activo: true }, orderBy: { galpon: { nombre: "asc" } }, include: { galpon: true } }),
   ]);
   const huevos = productos.filter((p) => p.tipo === "CUBETA");
   const gallinaza = productos.filter((p) => p.tipo === "GALLINAZA");
@@ -41,11 +41,11 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
             <Campo etiqueta="Fecha">
               <input name="fecha" type="date" defaultValue={hoyISO()} max={hoyISO()} required />
             </Campo>
-            {lotes.length > 0 && (
+            {grupos.length > 0 && (
               <Campo etiqueta="Galpón" ayuda="El galpón de donde salieron estos huevos; con él se calcula el % de postura. No aplica a huevo comprado.">
-                <select name="lote" defaultValue={lotes.length === 1 ? lotes[0].id : ""}>
+                <select name="grupo" defaultValue={grupos.length === 1 ? grupos[0].id : ""}>
                   <option value="">Sin galpón</option>
-                  {lotes.map((l) => (
+                  {grupos.map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.galpon.nombre}
                     </option>
@@ -125,7 +125,7 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
                   {r.detalles.map((d) => `${d.producto.nombre}: ${formatoCantidad(d.producto.tipo, d.cantidad, d.producto.unidad)}`).join(" · ")}
                 </p>
                 {r.rotos > 0 && <p className="text-stone-500">Rotos: {r.rotos}</p>}
-                {r.lote && <p className="text-stone-500">Galpón: {r.lote.galpon.nombre}</p>}
+                {r.grupo && <p className="text-stone-500">Galpón: {r.grupo.galpon.nombre}</p>}
                 {r.nota && <p className="text-stone-500">{r.nota}</p>}
                 {puede(sesion.operacion, "anular") && r.movimientos.length === 0 && (
                   <Formulario accion={anularClasificacion.bind(null, r.id)} confirmar="¿Anular este registro? Sus cantidades salen del inventario." className="mt-1">

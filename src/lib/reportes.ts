@@ -24,7 +24,7 @@ export const REPORTES = {
   "ventas-clientes": "Ventas por cliente",
   "ventas-productos": "Ventas por producto",
   produccion: "Producción propia y comprada",
-  lotes: "Galpones: mortalidad y postura",
+  galpones: "Galpones: mortalidad y postura",
   cartera: "Cartera por cliente",
   compras: "Compras por proveedor",
 } as const;
@@ -91,7 +91,7 @@ async function produccion(desde: Date, hasta: Date): Promise<Reporte> {
   const [clasificaciones, compras, aVenta, productos] = await Promise.all([
     db.registroClasificacion.findMany({ where: { fecha: { gte: desde, lte: hasta }, ...sinAnular }, include: { detalles: true } }),
     db.compra.findMany({ where: { clasificada: true, anulada: false, dia: { gte: desde, lte: hasta } }, include: { detalles: true } }),
-    db.novedadLote.aggregate({ where: { tipo: "VENTA", anulada: false, fecha: { gte: desde, lte: hasta } }, _sum: { cantidad: true } }),
+    db.novedadAves.aggregate({ where: { tipo: "VENTA", anulada: false, fecha: { gte: desde, lte: hasta } }, _sum: { cantidad: true } }),
     db.producto.findMany({ orderBy: { orden: "asc" } }),
   ]);
   const propia = new Map<number, number>();
@@ -115,8 +115,8 @@ async function produccion(desde: Date, hasta: Date): Promise<Reporte> {
   return { titulo: REPORTES.produccion, nota: `Huevos rotos en la clasificación: ${rotos}. Las cubetas se muestran con un decimal (huevos ÷ 30).`, columnas, filas };
 }
 
-async function lotes(desde: Date, hasta: Date): Promise<Reporte> {
-  const lista = await db.lote.findMany({
+async function galpones(desde: Date, hasta: Date): Promise<Reporte> {
+  const lista = await db.grupoAves.findMany({
     where: { fechaIngreso: { lte: hasta }, OR: [{ activo: true }, { novedades: { some: { fecha: { gte: desde } } } }] },
     include: { galpon: true },
     orderBy: [{ galpon: { nombre: "asc" } }, { fechaIngreso: "asc" }],
@@ -124,7 +124,7 @@ async function lotes(desde: Date, hasta: Date): Promise<Reporte> {
   const [novedades, registros] = await Promise.all([
     novedadesDe(lista.map((l) => l.id)),
     db.registroClasificacion.findMany({
-      where: { loteId: { in: lista.map((l) => l.id) }, fecha: { gte: desde, lte: hasta }, movimientos: { none: { tipo: "ANULACION" } } },
+      where: { grupoId: { in: lista.map((l) => l.id) }, fecha: { gte: desde, lte: hasta }, movimientos: { none: { tipo: "ANULACION" } } },
       include: { detalles: { include: { producto: true } } },
     }),
   ]);
@@ -144,8 +144,8 @@ async function lotes(desde: Date, hasta: Date): Promise<Reporte> {
   const filas: Celda[][] = lista.map((l) => {
     const inicio = avesVivas(l, novedades, sumarDias(desde, -1));
     const fin = avesVivas(l, novedades, hasta);
-    const bajas = bajasPorTipo(novedades.filter((n) => n.loteId === l.id && n.fecha >= desde && n.fecha <= hasta));
-    const propios = registros.filter((r) => r.loteId === l.id);
+    const bajas = bajasPorTipo(novedades.filter((n) => n.grupoId === l.id && n.fecha >= desde && n.fecha <= hasta));
+    const propios = registros.filter((r) => r.grupoId === l.id);
     const huevos = propios.reduce((s, r) => s + r.rotos + r.detalles.filter((d) => d.producto.tipo === "CUBETA").reduce((x, d) => x + d.cantidad, 0), 0);
     const dias = new Set(propios.map((r) => r.fecha.getTime())).size;
     const base = Math.max(inicio, fin);
@@ -163,7 +163,7 @@ async function lotes(desde: Date, hasta: Date): Promise<Reporte> {
       dias > 0 ? porcentajePostura(huevos / dias, fin) : null,
     ];
   });
-  return { titulo: REPORTES.lotes, nota: "Una fila por cada grupo de aves que estuvo en el galpón en el período. Traslados: aves que llegaron de otros galpones menos las que salieron a otros. Postura promedio: huevos por día con registro ÷ aves al final del período.", columnas, filas };
+  return { titulo: REPORTES.galpones, nota: "Una fila por cada grupo de aves que estuvo en el galpón en el período. Traslados: aves que llegaron de otros galpones menos las que salieron a otros. Postura promedio: huevos por día con registro ÷ aves al final del período.", columnas, filas };
 }
 
 async function cartera(hoy: Date): Promise<Reporte> {
@@ -222,8 +222,8 @@ export async function generarReporte(tipo: TipoReporte, desde: Date, hasta: Date
       return ventasPorProducto(desde, hasta);
     case "produccion":
       return produccion(desde, hasta);
-    case "lotes":
-      return lotes(desde, hasta);
+    case "galpones":
+      return galpones(desde, hasta);
     case "cartera":
       return cartera(hoy);
     case "compras":

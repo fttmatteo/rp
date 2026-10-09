@@ -2,20 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { EstadoLote } from "@prisma/client";
+import type { EtapaAves } from "@prisma/client";
 import { auditar } from "@/lib/auditoria";
-import { avesPorLote, bloquearGalpones } from "@/lib/aves-db";
+import { avesPorGrupo, bloquearGalpones } from "@/lib/aves-db";
 import { db, type Tx } from "@/lib/db";
 import { bloquearExistencias, registrarMovimientos } from "@/lib/existencias";
 import { diaUTC, hoyISO } from "@/lib/formato";
 import { entero, ErrorUsuario, mensajeError, texto, textoOpcional, type EstadoForm } from "@/lib/form";
 import { requerir } from "@/lib/sesion";
 
-// En pantalla solo hay galpones. Las aves que hay hoy en un galpón son su lote activo (a lo sumo uno);
-// cuando salen todas, el lote se cierra solo y el galpón queda vacío para la siguiente entrada.
-// Todo cambio de lotes se hace con el galpón bloqueado.
+// En pantalla solo hay galpones. Las aves que hay hoy en un galpón son su grupo activo (a lo sumo uno);
+// cuando salen todas, el grupo se cierra solo y el galpón queda vacío para la siguiente entrada.
+// Todo cambio de grupos se hace con el galpón bloqueado.
 
-const ESTADOS: EstadoLote[] = ["CRIA", "LEVANTE", "POSTURA", "DESCARTE"];
+const ETAPAS: EtapaAves[] = ["CRIA", "LEVANTE", "POSTURA", "DESCARTE"];
 const TIPOS = ["MUERTE", "DESCARTE", "VENTA", "TRASLADO"] as const;
 
 function leerFecha(form: FormData, campo: string): Date {
@@ -24,10 +24,10 @@ function leerFecha(form: FormData, campo: string): Date {
   return diaUTC(iso);
 }
 
-function leerEstado(form: FormData): EstadoLote {
-  const estado = texto(form, "estado") as EstadoLote;
-  if (!ESTADOS.includes(estado)) throw new ErrorUsuario("Elige la etapa de las aves.");
-  return estado;
+function leerEtapa(form: FormData): EtapaAves {
+  const etapa = texto(form, "etapa") as EtapaAves;
+  if (!ETAPAS.includes(etapa)) throw new ErrorUsuario("Elige la etapa de las aves.");
+  return etapa;
 }
 
 /** Datos de una entrada de aves; null si no se escribió la cantidad (galpón que se crea vacío). */
@@ -42,16 +42,14 @@ function leerEntrada(form: FormData, obligatoria: boolean) {
     cantidadInicial,
     fechaIngreso,
     edadIngresoSemanas: entero(form, "edadIngresoSemanas", "Edad al entrar") ?? 0,
-    estado: leerEstado(form),
+    etapa: leerEtapa(form),
     raza: textoOpcional(form, "raza"),
-    // El nombre del lote ya no se pide: sirve solo para distinguir las entradas de un mismo galpón.
-    nombre: `Entrada ${fechaIngreso.toISOString().slice(0, 10)}`,
   };
 }
 
 async function crearEntrada(tx: Tx, usuarioId: number, galponId: number, datos: NonNullable<ReturnType<typeof leerEntrada>>) {
-  const lote = await tx.lote.create({ data: { ...datos, galponId } });
-  await auditar(tx, usuarioId, "Lote", lote.id, "crear", { galponId, ...datos });
+  const grupo = await tx.grupoAves.create({ data: { ...datos, galponId } });
+  await auditar(tx, usuarioId, "GrupoAves", grupo.id, "crear", { galponId, ...datos });
 }
 
 export async function crearGalpon(_: EstadoForm, form: FormData): Promise<EstadoForm> {
@@ -83,7 +81,7 @@ export async function entradaAves(galponId: number, _: EstadoForm, form: FormDat
       await bloquearGalpones(tx, [galponId]);
       const galpon = await tx.galpon.findUnique({ where: { id: galponId } });
       if (!galpon || !galpon.activo) throw new ErrorUsuario("El galpón no está en uso.");
-      if (await tx.lote.findFirst({ where: { galponId, activo: true } }))
+      if (await tx.grupoAves.findFirst({ where: { galponId, activo: true } }))
         throw new ErrorUsuario("El galpón ya tiene aves. Para sumar aves de otro galpón usa un traslado.");
       await crearEntrada(tx, sesion.usuario.id, galponId, entrada);
     });
@@ -111,31 +109,30 @@ export async function registrarNovedad(galponId: number, _: EstadoForm, form: Fo
     await db.$transaction(async (tx) => {
       await bloquearGalpones(tx, destinoId ? [galponId, destinoId] : [galponId]);
       const galpon = await tx.galpon.findUniqueOrThrow({ where: { id: galponId } });
-      const lote = await tx.lote.findFirst({ where: { galponId, activo: true } });
-      if (!lote) throw new ErrorUsuario("El galpón no tiene aves.");
+      const grupo = await tx.grupoAves.findFirst({ where: { galponId, activo: true } });
+      if (!grupo) throw new ErrorUsuario("El galpón no tiene aves.");
       let destino = null;
       if (destinoId) {
         const g = await tx.galpon.findUnique({ where: { id: destinoId } });
         if (!g || !g.activo) throw new ErrorUsuario("El galpón de destino no está en uso.");
         // Si el destino está vacío, las aves llegan con la edad y la etapa que traen.
         destino =
-          (await tx.lote.findFirst({ where: { galponId: destinoId, activo: true } })) ??
-          (await tx.lote.create({
+          (await tx.grupoAves.findFirst({ where: { galponId: destinoId, activo: true } })) ??
+          (await tx.grupoAves.create({
             data: {
               galponId: destinoId,
-              nombre: `Traslado desde ${galpon.nombre}`,
-              raza: lote.raza,
-              fechaIngreso: lote.fechaIngreso,
-              edadIngresoSemanas: lote.edadIngresoSemanas,
+              raza: grupo.raza,
+              fechaIngreso: grupo.fechaIngreso,
+              edadIngresoSemanas: grupo.edadIngresoSemanas,
               cantidadInicial: 0,
-              estado: lote.estado,
+              etapa: grupo.etapa,
             },
           }));
       }
-      const vivas = (await avesPorLote([lote], tx)).get(lote.id) ?? 0;
+      const vivas = (await avesPorGrupo([grupo], tx)).get(grupo.id) ?? 0;
       if (cantidad > vivas) throw new ErrorUsuario(`El galpón solo tiene ${vivas} aves.`);
-      const novedad = await tx.novedadLote.create({
-        data: { loteId: lote.id, fecha, tipo, cantidad, loteDestinoId: destino?.id, nota: textoOpcional(form, "nota"), usuarioId: sesion.usuario.id },
+      const novedad = await tx.novedadAves.create({
+        data: { grupoId: grupo.id, fecha, tipo, cantidad, grupoDestinoId: destino?.id, nota: textoOpcional(form, "nota"), usuarioId: sesion.usuario.id },
       });
       if (tipo === "VENTA") {
         const gallina = await tx.producto.findFirst({ where: { tipo: "GALLINA" } });
@@ -152,8 +149,8 @@ export async function registrarNovedad(galponId: number, _: EstadoForm, form: Fo
         ]);
       }
       vacio = cantidad === vivas;
-      if (vacio) await tx.lote.update({ where: { id: lote.id }, data: { activo: false } });
-      await auditar(tx, sesion.usuario.id, "NovedadLote", novedad.id, "crear", { galponId, tipo, cantidad, galponDestinoId: destinoId });
+      if (vacio) await tx.grupoAves.update({ where: { id: grupo.id }, data: { activo: false } });
+      await auditar(tx, sesion.usuario.id, "NovedadAves", novedad.id, "crear", { galponId, tipo, cantidad, galponDestinoId: destinoId });
     });
   } catch (e) {
     return { error: mensajeError(e) };
@@ -170,19 +167,19 @@ export async function anularNovedad(id: number, _: EstadoForm, _form: FormData):
   const galpones: number[] = [];
   try {
     await db.$transaction(async (tx) => {
-      const previa = await tx.novedadLote.findUnique({ where: { id }, include: { lote: true, loteDestino: true } });
+      const previa = await tx.novedadAves.findUnique({ where: { id }, include: { grupo: true, grupoDestino: true } });
       if (!previa) throw new ErrorUsuario("Novedad no encontrada.");
-      galpones.push(previa.lote.galponId, ...(previa.loteDestino ? [previa.loteDestino.galponId] : []));
+      galpones.push(previa.grupo.galponId, ...(previa.grupoDestino ? [previa.grupoDestino.galponId] : []));
       await bloquearGalpones(tx, galpones);
-      const n = await tx.novedadLote.findUniqueOrThrow({ where: { id }, include: { movimientos: true, lote: true, loteDestino: true } });
+      const n = await tx.novedadAves.findUniqueOrThrow({ where: { id }, include: { movimientos: true, grupo: true, grupoDestino: true } });
       if (n.anulada) throw new ErrorUsuario("Esta novedad ya estaba anulada.");
-      if (!n.lote.activo && (await tx.lote.findFirst({ where: { galponId: n.lote.galponId, activo: true } })))
+      if (!n.grupo.activo && (await tx.grupoAves.findFirst({ where: { galponId: n.grupo.galponId, activo: true } })))
         throw new ErrorUsuario("Ese galpón ya tiene aves nuevas. Registra la corrección con otra novedad.");
-      if (n.loteDestino) {
-        const enDestino = (await avesPorLote([n.loteDestino], tx)).get(n.loteDestino.id) ?? 0;
+      if (n.grupoDestino) {
+        const enDestino = (await avesPorGrupo([n.grupoDestino], tx)).get(n.grupoDestino.id) ?? 0;
         if (enDestino < n.cantidad) throw new ErrorUsuario("El galpón de destino ya no tiene esas aves. Registra la corrección con otra novedad.");
         // Si el destino se queda sin aves, queda vacío.
-        if (enDestino === n.cantidad) await tx.lote.update({ where: { id: n.loteDestino.id }, data: { activo: false } });
+        if (enDestino === n.cantidad) await tx.grupoAves.update({ where: { id: n.grupoDestino.id }, data: { activo: false } });
       }
       const entradas = n.movimientos.filter((m) => m.tipo === "PRODUCCION");
       if (entradas.length > 0) {
@@ -204,10 +201,10 @@ export async function anularNovedad(id: number, _: EstadoForm, _form: FormData):
           })),
         );
       }
-      await tx.novedadLote.update({ where: { id }, data: { anulada: true } });
+      await tx.novedadAves.update({ where: { id }, data: { anulada: true } });
       // Las aves vuelven al galpón de origen: si había quedado vacío, vuelve a tenerlas.
-      await tx.lote.update({ where: { id: n.loteId }, data: { activo: true } });
-      await auditar(tx, sesion.usuario.id, "NovedadLote", id, "anular", { tipo: n.tipo, cantidad: n.cantidad });
+      await tx.grupoAves.update({ where: { id: n.grupoId }, data: { activo: true } });
+      await auditar(tx, sesion.usuario.id, "NovedadAves", id, "anular", { tipo: n.tipo, cantidad: n.cantidad });
     });
   } catch (e) {
     return { error: mensajeError(e) };
@@ -226,15 +223,15 @@ export async function actualizarGalpon(galponId: number, _: EstadoForm, form: Fo
     const activo = form.get("fueraDeUso") !== "on";
     await db.$transaction(async (tx) => {
       await bloquearGalpones(tx, [galponId]);
-      const lote = await tx.lote.findFirst({ where: { galponId, activo: true } });
-      if (!activo && lote) throw new ErrorUsuario("Solo se deja fuera de uso un galpón vacío.");
+      const grupo = await tx.grupoAves.findFirst({ where: { galponId, activo: true } });
+      if (!activo && grupo) throw new ErrorUsuario("Solo se deja fuera de uso un galpón vacío.");
       await tx.galpon.update({ where: { id: galponId }, data: { nombre, capacidad, activo } });
       await auditar(tx, sesion.usuario.id, "Galpon", galponId, "actualizar", { nombre, capacidad, activo });
-      if (lote) {
-        const estado = leerEstado(form);
+      if (grupo) {
+        const etapa = leerEtapa(form);
         const nota = textoOpcional(form, "nota");
-        await tx.lote.update({ where: { id: lote.id }, data: { estado, nota } });
-        await auditar(tx, sesion.usuario.id, "Lote", lote.id, "actualizar", { estado, nota });
+        await tx.grupoAves.update({ where: { id: grupo.id }, data: { etapa, nota } });
+        await auditar(tx, sesion.usuario.id, "GrupoAves", grupo.id, "actualizar", { etapa, nota });
       }
     });
   } catch (e) {

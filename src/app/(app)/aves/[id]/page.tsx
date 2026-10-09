@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion, paginar } from "@/components/paginacion";
 import { Boton, BotonLink, Campo, Etiqueta, Tabla, Tarjeta, Titulo, Vacio, Vistas, vistaElegida } from "@/components/ui";
-import { huevosPorLoteYDia, novedadesDe } from "@/lib/aves-db";
+import { huevosPorGrupoYDia, novedadesDe } from "@/lib/aves-db";
 import { db } from "@/lib/db";
-import { ESTADO_LOTE, TIPO_NOVEDAD } from "@/lib/etiquetas-aves";
+import { ETAPA_AVES, TIPO_NOVEDAD } from "@/lib/etiquetas-aves";
 import { diaUTC, formatoDia, hoyISO, sumarDias } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
@@ -27,28 +27,28 @@ export default async function GalponPage({
   const pagina = leerPagina(sp.pagina);
   const id = Number((await params).id);
   const galpon = Number.isInteger(id)
-    ? await db.galpon.findUnique({ where: { id }, include: { lotes: { orderBy: [{ fechaIngreso: "desc" }, { id: "desc" }] } } })
+    ? await db.galpon.findUnique({ where: { id }, include: { grupos: { orderBy: [{ fechaIngreso: "desc" }, { id: "desc" }] } } })
     : null;
   if (!galpon) notFound();
-  // Las aves de hoy son el lote activo; los cerrados son aves que ya salieron del galpón.
-  const lote = galpon.lotes.find((l) => l.activo) ?? null;
-  const anteriores = galpon.lotes.filter((l) => !l.activo);
+  // Las aves de hoy son el grupo activo; los cerrados son aves que ya salieron del galpón.
+  const grupo = galpon.grupos.find((l) => l.activo) ?? null;
+  const anteriores = galpon.grupos.filter((l) => !l.activo);
   // Las novedades que se ven (y se pueden anular) son las de las aves de hoy o, si está vacío, las de las últimas que salieron.
-  const ultimo = lote ?? anteriores[0] ?? null;
+  const ultimo = grupo ?? anteriores[0] ?? null;
   const hoy = diaUTC(hoyISO());
   const desde = sumarDias(hoy, -(DIAS - 1));
   const [novedades, otros, huevos] = await Promise.all([
-    novedadesDe(galpon.lotes.map((l) => l.id)),
-    lote ? db.galpon.findMany({ where: { activo: true, id: { not: id } }, orderBy: { nombre: "asc" } }) : [],
-    lote ? huevosPorLoteYDia([lote.id], desde, hoy) : new Map<string, number>(),
+    novedadesDe(galpon.grupos.map((l) => l.id)),
+    grupo ? db.galpon.findMany({ where: { activo: true, id: { not: id } }, orderBy: { nombre: "asc" } }) : [],
+    grupo ? huevosPorGrupoYDia([grupo.id], desde, hoy) : new Map<string, number>(),
   ]);
-  const deLote = (loteId: number) => novedades.filter((n) => n.loteId === loteId || n.loteDestinoId === loteId);
+  const deGrupo = (grupoId: number) => novedades.filter((n) => n.grupoId === grupoId || n.grupoDestinoId === grupoId);
 
   // Una parte a la vez; con aves se abre en la novedad, que es lo que más se registra.
   const vistas = [
-    lote && { clave: "novedad", texto: "Registrar novedad" },
-    !lote && galpon.activo && { clave: "entrada", texto: "Entrada de aves" },
-    lote && { clave: "produccion", texto: "Producción" },
+    grupo && { clave: "novedad", texto: "Registrar novedad" },
+    !grupo && galpon.activo && { clave: "entrada", texto: "Entrada de aves" },
+    grupo && { clave: "produccion", texto: "Producción" },
     ultimo && { clave: "novedades", texto: "Novedades" },
     anteriores.length > 0 && { clave: "anteriores", texto: "Aves anteriores" },
     { clave: "datos", texto: "Datos del galpón" },
@@ -64,9 +64,9 @@ export default async function GalponPage({
           </BotonLink>
         }
       >
-        {galpon.nombre} {!lote && <Etiqueta>{galpon.activo ? "Vacío" : "Fuera de uso"}</Etiqueta>}
+        {galpon.nombre} {!grupo && <Etiqueta>{galpon.activo ? "Vacío" : "Fuera de uso"}</Etiqueta>}
       </Titulo>
-      {lote ? <Resumen lote={lote} novedades={deLote(lote.id)} hoy={hoy} capacidad={galpon.capacidad} /> : <p className="mb-4 text-stone-600">Este galpón no tiene aves.</p>}
+      {grupo ? <Resumen grupo={grupo} novedades={deGrupo(grupo.id)} hoy={hoy} capacidad={galpon.capacidad} /> : <p className="mb-4 text-stone-600">Este galpón no tiene aves.</p>}
 
       <Vistas ruta={`/aves/${id}`} actual={ver ?? ""} vistas={vistas} />
       <div className="max-w-2xl">
@@ -120,13 +120,13 @@ export default async function GalponPage({
           </Tarjeta>
         )}
 
-        {ver === "produccion" && lote && <Produccion lote={lote} novedades={deLote(lote.id)} huevos={huevos} hoy={hoy} />}
+        {ver === "produccion" && grupo && <Produccion grupo={grupo} novedades={deGrupo(grupo.id)} huevos={huevos} hoy={hoy} />}
 
         {ver === "novedades" && ultimo && (
           <Novedades
             galponId={id}
-            lote={ultimo}
-            novedades={deLote(ultimo.id)}
+            grupo={ultimo}
+            novedades={deGrupo(ultimo.id)}
             pagina={pagina}
             anular={puede(sesion.operacion, "anular")}
           />
@@ -145,8 +145,8 @@ export default async function GalponPage({
             </thead>
             <tbody>
               {anteriores.map((l) => {
-                const propias = deLote(l.id).filter((n) => !n.anulada);
-                const bajas = bajasPorTipo(propias.filter((n) => n.loteId === l.id));
+                const propias = deGrupo(l.id).filter((n) => !n.anulada);
+                const bajas = bajasPorTipo(propias.filter((n) => n.grupoId === l.id));
                 const ultima = propias.reduce<Date | null>((u, n) => (!u || n.fecha > u ? n.fecha : u), null);
                 return (
                   <tr key={l.id}>
@@ -175,11 +175,11 @@ export default async function GalponPage({
                 <Campo etiqueta="Capacidad (aves)">
                   <input name="capacidad" inputMode="numeric" defaultValue={galpon.capacidad ?? ""} />
                 </Campo>
-                {lote && (
+                {grupo && (
                   <>
                     <Campo etiqueta="Etapa de las aves">
-                      <select name="estado" defaultValue={lote.estado}>
-                        {Object.entries(ESTADO_LOTE).map(([k, v]) => (
+                      <select name="etapa" defaultValue={grupo.etapa}>
+                        {Object.entries(ETAPA_AVES).map(([k, v]) => (
                           <option key={k} value={k}>
                             {v}
                           </option>
@@ -187,12 +187,12 @@ export default async function GalponPage({
                       </select>
                     </Campo>
                     <Campo etiqueta="Nota">
-                      <input name="nota" defaultValue={lote.nota ?? ""} />
+                      <input name="nota" defaultValue={grupo.nota ?? ""} />
                     </Campo>
                   </>
                 )}
               </div>
-              {!lote && (
+              {!grupo && (
                 <label className="flex items-center gap-2 font-normal">
                   <input type="checkbox" name="fueraDeUso" defaultChecked={!galpon.activo} /> Galpón fuera de uso
                 </label>
@@ -208,13 +208,13 @@ export default async function GalponPage({
   );
 }
 
-type Lote = { id: number; cantidadInicial: number; fechaIngreso: Date; edadIngresoSemanas: number; estado: keyof typeof ESTADO_LOTE; raza: string | null };
+type GrupoAves = { id: number; cantidadInicial: number; fechaIngreso: Date; edadIngresoSemanas: number; etapa: keyof typeof ETAPA_AVES; raza: string | null };
 type Novedad = Awaited<ReturnType<typeof novedadesDe>>[number];
 
-function Resumen({ lote, novedades, hoy, capacidad }: { lote: Lote; novedades: Novedad[]; hoy: Date; capacidad: number | null }) {
-  const vivas = avesVivas(lote, novedades);
-  const bajas = bajasPorTipo(novedades.filter((n) => n.loteId === lote.id));
-  const base = avesQueEntraron(lote, novedades);
+function Resumen({ grupo, novedades, hoy, capacidad }: { grupo: GrupoAves; novedades: Novedad[]; hoy: Date; capacidad: number | null }) {
+  const vivas = avesVivas(grupo, novedades);
+  const bajas = bajasPorTipo(novedades.filter((n) => n.grupoId === grupo.id));
+  const base = avesQueEntraron(grupo, novedades);
   const mortalidad = base > 0 ? Math.round((bajas.MUERTE / base) * 1000) / 10 : 0;
   return (
     <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -225,11 +225,11 @@ function Resumen({ lote, novedades, hoy, capacidad }: { lote: Lote; novedades: N
       </Tarjeta>
       <Tarjeta>
         <p className="text-sm text-stone-600">Edad</p>
-        <p className="text-2xl font-semibold">{edadSemanas(lote.fechaIngreso, lote.edadIngresoSemanas, hoy)} sem.</p>
+        <p className="text-2xl font-semibold">{edadSemanas(grupo.fechaIngreso, grupo.edadIngresoSemanas, hoy)} sem.</p>
       </Tarjeta>
       <Tarjeta>
         <p className="text-sm text-stone-600">Etapa</p>
-        <p className="text-2xl font-semibold">{ESTADO_LOTE[lote.estado]}</p>
+        <p className="text-2xl font-semibold">{ETAPA_AVES[grupo.etapa]}</p>
       </Tarjeta>
       <Tarjeta>
         <p className="text-sm text-stone-600">Mortalidad acumulada</p>
@@ -242,11 +242,11 @@ function Resumen({ lote, novedades, hoy, capacidad }: { lote: Lote; novedades: N
   );
 }
 
-function Produccion({ lote, novedades, huevos, hoy }: { lote: Lote; novedades: Novedad[]; huevos: Map<string, number>; hoy: Date }) {
+function Produccion({ grupo, novedades, huevos, hoy }: { grupo: GrupoAves; novedades: Novedad[]; huevos: Map<string, number>; hoy: Date }) {
   const produccion = Array.from({ length: DIAS }, (_, i) => {
     const dia = sumarDias(hoy, -i);
-    const total = huevos.get(`${lote.id}|${dia.toISOString().slice(0, 10)}`);
-    const aves = avesVivas(lote, novedades, dia);
+    const total = huevos.get(`${grupo.id}|${dia.toISOString().slice(0, 10)}`);
+    const aves = avesVivas(grupo, novedades, dia);
     return { dia, total, aves, postura: total === undefined ? null : porcentajePostura(total, aves) };
   }).filter((p) => p.total !== undefined);
   if (produccion.length === 0)
@@ -283,36 +283,36 @@ function Produccion({ lote, novedades, huevos, hoy }: { lote: Lote; novedades: N
   );
 }
 
-async function Novedades({ galponId, lote, novedades, pagina, anular }: { galponId: number; lote: Lote; novedades: Novedad[]; pagina: number; anular: boolean }) {
+async function Novedades({ galponId, grupo, novedades, pagina, anular }: { galponId: number; grupo: GrupoAves; novedades: Novedad[]; pagina: number; anular: boolean }) {
   // Todas las novedades cuentan para las aves vivas; en pantalla van por páginas.
   const ordenadas = [...novedades].sort((a, b) => b.fecha.getTime() - a.fecha.getTime() || b.id - a.id);
   const lista = paginar(ordenadas, pagina);
   // Solo los galpones y usuarios que aparecen en esta página.
-  const [lotesVistos, usuariosVistos] = await Promise.all([
-    db.lote.findMany({
-      where: { id: { in: [...new Set(lista.flatMap((n) => [n.loteId, n.loteDestinoId ?? n.loteId]))] } },
+  const [gruposVistos, usuariosVistos] = await Promise.all([
+    db.grupoAves.findMany({
+      where: { id: { in: [...new Set(lista.flatMap((n) => [n.grupoId, n.grupoDestinoId ?? n.grupoId]))] } },
       select: { id: true, galpon: { select: { nombre: true } } },
     }),
     db.usuario.findMany({ where: { id: { in: [...new Set(lista.map((n) => n.usuarioId))] } }, select: { id: true, nombre: true } }),
   ]);
-  const galponDe = new Map(lotesVistos.map((l) => [l.id, l.galpon.nombre]));
+  const galponDe = new Map(gruposVistos.map((l) => [l.id, l.galpon.nombre]));
   const nombreUsuario = new Map(usuariosVistos.map((u) => [u.id, u.nombre]));
   return (
     <Tarjeta>
-      {lote.cantidadInicial > 0 && (
+      {grupo.cantidadInicial > 0 && (
         <p className="mb-2 text-sm text-stone-600">
-          Entraron {lote.cantidadInicial.toLocaleString("es-CO")} aves el {formatoDia(lote.fechaIngreso)}
-          {lote.raza && ` · ${lote.raza}`}.
+          Entraron {grupo.cantidadInicial.toLocaleString("es-CO")} aves el {formatoDia(grupo.fechaIngreso)}
+          {grupo.raza && ` · ${grupo.raza}`}.
         </p>
       )}
       <ul className="divide-y divide-stone-100 text-sm">
         {lista.map((n) => {
-          const entrada = n.loteDestinoId === lote.id;
+          const entrada = n.grupoDestinoId === grupo.id;
           return (
             <li key={n.id} className="flex flex-wrap justify-between gap-2 py-2">
               <span>
-                {formatoDia(n.fecha)} · {entrada ? `Traslado desde ${galponDe.get(n.loteId)}` : TIPO_NOVEDAD[n.tipo]}
-                {!entrada && n.loteDestinoId && ` a ${galponDe.get(n.loteDestinoId)}`}
+                {formatoDia(n.fecha)} · {entrada ? `Traslado desde ${galponDe.get(n.grupoId)}` : TIPO_NOVEDAD[n.tipo]}
+                {!entrada && n.grupoDestinoId && ` a ${galponDe.get(n.grupoDestinoId)}`}
                 {n.nota && <span className="text-stone-500"> · {n.nota}</span>}
                 <span className="text-stone-400"> · {nombreUsuario.get(n.usuarioId)}</span> {n.anulada && <Etiqueta color="rojo">Anulada</Etiqueta>}
               </span>
