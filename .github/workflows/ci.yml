@@ -1,0 +1,164 @@
+# Integración y entrega continua de RP Software.
+# - En cada PR y en cada push a main: tipos, migraciones, pruebas con cobertura mínima, build y la imagen de Docker.
+# - En main y en las etiquetas vX.Y.Z, si todo pasó: publica las imágenes en GitHub Container Registry (GHCR).
+# Nada toca el servidor de producción: la actualización se hace allá a mano (ver "Actualizar el servidor" en el README).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # En un PR basta la última corrida; en main se termina cada una para no dejar imágenes a medias.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  pruebas:
+    name: Tipos, migraciones y pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: rp
+          POSTGRES_PASSWORD: rp
+          POSTGRES_DB: rp_pruebas
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rp -d rp_pruebas"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://rp:rp@localhost:5432/rp_pruebas
+      DATABASE_URL_PRUEBAS: postgresql://rp:rp@localhost:5432/rp_pruebas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+
+      - name: Esquema de Prisma válido
+        run: npx prisma validate
+
+      - name: Las migraciones coinciden con el esquema
+        run: |
+          PGPASSWORD=rp psql -h localhost -U rp -d rp_pruebas -c "CREATE DATABASE rp_sombra"
+          npx prisma migrate diff \
+            --from-migrations prisma/migrations \
+            --to-schema-datamodel prisma/schema.prisma \
+            --shadow-database-url postgresql://rp:rp@localhost:5432/rp_sombra \
+            --exit-code
+
+      - name: Chequeo de tipos
+        run: npm run typecheck
+
+      - name: Pruebas unitarias y de integración con cobertura
+        run: npm run test:cobertura
+
+      - name: Resumen de cobertura
+        if: always()
+        run: node scripts/resumen-cobertura.mjs >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cobertura
+          path: coverage/
+          retention-days: 14
+
+  build:
+    name: Build de Next.js
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**') }}
+          restore-keys: next-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      - run: npm run build
+
+      - name: Auditoría de dependencias de producción
+        # Informa sin bloquear: un aviso nuevo de una dependencia no debe frenar un arreglo urgente.
+        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high
+
+  imagen:
+    name: Imagen Docker
+    needs: [pruebas, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - target: app
+            imagen: ghcr.io/${{ github.repository }}
+          - target: migrar
+            imagen: ghcr.io/${{ github.repository }}-migrar
+    env:
+      # Solo se publica desde main o desde una etiqueta de versión, nunca desde un PR.
+      PUBLICAR: ${{ github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        if: env.PUBLICAR == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ matrix.imagen }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+          labels: |
+            org.opencontainers.image.title=RP Software (${{ matrix.target }})
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: ${{ matrix.target }}
+          push: ${{ env.PUBLICAR == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+
+      - name: Resumen
+        if: env.PUBLICAR == 'true'
+        run: |
+          echo "### Imagen ${{ matrix.target }} publicada" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.meta.outputs.tags }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
