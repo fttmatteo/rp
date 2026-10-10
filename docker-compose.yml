@@ -1,5 +1,6 @@
 # RP Software en el servidor propio: base de datos, app, túnel de Cloudflare y copias diarias.
 # Uso: docker compose --env-file produccion.env up -d --build
+# O con las imágenes que publica GitHub Actions: ver "Actualizar el servidor" en el README.
 name: rp
 
 services:
@@ -20,6 +21,7 @@ services:
 
   # Migraciones y datos iniciales; corre en cada arranque y termina.
   migrar:
+    image: ghcr.io/fttmatteo/rp-migrar:${RP_VERSION:-latest}
     build: { context: ., target: migrar }
     restart: "no"
     environment:
@@ -29,6 +31,7 @@ services:
       db: { condition: service_healthy }
 
   app:
+    image: ghcr.io/fttmatteo/rp:${RP_VERSION:-latest}
     build: { context: ., target: app }
     restart: unless-stopped
     environment:

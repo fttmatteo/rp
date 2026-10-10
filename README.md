@@ -68,7 +68,7 @@ La app corre en el servidor propio con Docker Compose y se publica con un túnel
 
    Esto levanta la base de datos, aplica las migraciones, crea los productos y el usuario `admin` (solo la primera vez), arranca la app y el túnel. Entra por el dominio con `admin` y la clave de `SEED_ADMIN_PASSWORD`, y cámbiala en **Usuarios > Empleados**.
 
-5. Para actualizar a una versión nueva: descarga los cambios y repite el mismo comando; las migraciones se aplican solas.
+5. Para actualizar a una versión nueva: descarga los cambios y repite el mismo comando; las migraciones se aplican solas. También se puede actualizar sin compilar en el servidor, con las imágenes que publica GitHub (ver abajo).
 
 La app solo escucha en `127.0.0.1:3000` del servidor; desde otros equipos se entra por el dominio (la sesión exige HTTPS). Opcional: en Cloudflare **Access** se puede pedir un código por correo antes de llegar al login.
 
@@ -85,13 +85,45 @@ docker compose --env-file produccion.env exec respaldo pg_restore -d prueba /res
 
 Para reemplazar la base real, detén la app (`docker compose --env-file produccion.env stop app`), restaura con `pg_restore --clean -d rp ...` y vuelve a arrancarla.
 
+### Actualizar el servidor con las imágenes de GitHub
+
+Cada cambio que entra a `main` (y cada etiqueta `vX.Y.Z`) pasa por las comprobaciones de GitHub Actions y, si todo sale bien, publica dos imágenes en GitHub Container Registry: `ghcr.io/fttmatteo/rp` (la app) y `ghcr.io/fttmatteo/rp-migrar` (migraciones). Cada una lleva las etiquetas `latest` (lo último de `main`), `sha-abc1234` (el commit) y, para las versiones, `1.2.0` y `1.2`. Nada se instala solo en el servidor: la actualización la hace una persona.
+
+Una sola vez en el servidor (el repositorio es privado, así que las imágenes también):
+
+1. En GitHub: **Settings > Developer settings > Personal access tokens > Tokens (classic)**, crea un token solo con el permiso `read:packages`.
+2. `docker login ghcr.io -u fttmatteo` y pega el token como clave.
+
+Para actualizar:
+
+```bash
+git pull                                                   # trae docker-compose.yml al día
+docker compose --env-file produccion.env exec respaldo sh -c 'pg_dump -Fc -f /respaldos/antes-de-actualizar.dump'
+docker compose --env-file produccion.env pull app migrar   # descarga la versión de RP_VERSION
+docker compose --env-file produccion.env up -d --no-build  # aplica las migraciones y arranca la versión nueva
+```
+
+`RP_VERSION` en `produccion.env` elige la versión (`latest`, `sha-abc1234` o `1.2.0`). Para volver a una versión anterior, cambia `RP_VERSION` y repite `pull` y `up`; si la versión nueva ya había cambiado la base de datos, restaura además la copia `antes-de-actualizar.dump`.
+
+Para publicar una versión con número: `git tag v1.0.0 && git push origin v1.0.0`.
+
 ## Comprobaciones
+
+Lo mismo que corre GitHub Actions en cada PR y en cada cambio a `main` (`.github/workflows/ci.yml`):
 
 ```bash
 npm run typecheck
-npm test
+npm test                  # pruebas unitarias (no necesitan base de datos)
+npm run test:integracion  # acciones, cartera, caja, rutas, inventario... contra PostgreSQL real
+npm run test:cobertura    # todas, con el informe en coverage/ y el mínimo exigido
 npm run build
 ```
+
+Las pruebas de integración usan una base aparte que vacían antes de cada prueba: por defecto `postgresql://rp:rp@localhost:5432/rp_pruebas` (se cambia con `DATABASE_URL_PRUEBAS`). Por seguridad se niegan a correr si el nombre de la base no contiene "prueba" o "test", así nunca borran la base real. Se crea con `createdb -O rp rp_pruebas`; las migraciones se aplican solas.
+
+La cobertura se mide sobre el código del servidor (`src/**/*.ts`: reglas de negocio, acceso a datos, acciones y rutas de recibos y reportes) y debe quedar en al menos 90% de líneas, instrucciones y funciones y 85% de ramas; si baja, el PR queda en rojo. Las pantallas (`.tsx`) se comprueban con el chequeo de tipos y el build.
+
+En GitHub Actions además se valida el esquema de Prisma, que las migraciones coincidan con `schema.prisma`, la auditoría de dependencias (solo informa) y que la imagen de Docker compile. Dependabot propone cada semana las actualizaciones de dependencias.
 
 ## Organización
 
@@ -102,6 +134,8 @@ src/app/recibos/...       recibos en PDF
 src/app/(app)/reportes/   reportes y su exportación a Excel y PDF; libro mensual en Excel
 src/lib/                  sesión, permisos, base de datos, formatos
 src/modules/              reglas de negocio puras con pruebas (cartera, precios, inventario, rutas, aves, mensajes)
+src/pruebas/              pruebas de integración contra PostgreSQL (acciones del servidor, reportes y recibos)
+.github/workflows/ci.yml  CI: tipos, migraciones, pruebas con cobertura, build e imagen; publica en GHCR desde main
 src/components/           componentes de interfaz (HTML + Tailwind)
 ```
 
