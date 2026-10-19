@@ -1,5 +1,5 @@
 # Imagen de RP Software. La usa docker-compose.yml; ver la sección "Puesta en marcha" del README.
-FROM node:22-bookworm-slim AS base
+FROM node:26-bookworm-slim AS base
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
