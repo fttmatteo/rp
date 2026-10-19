@@ -47,63 +47,91 @@ Simula 90 días hasta hoy (`DEMO_DIAS=180` para más) y deja algo que ver en cad
 
 Ayer queda con la caja sin cerrar, una ruta con el precierre devuelto y dos pedidos atrasados. Hoy queda con la caja abierta, una ruta a medio entregar, otra con el precierre por aprobar, pedidos sin tomar, huevo comprado por clasificar y Jumbo bajo el mínimo, así que el inicio muestra todas las alertas. Al cerrar la caja de ayer ya se puede sacar el libro del mes.
 
-Crea los usuarios `laura` (ventas), `carlos` y `andres` (repartidores) y `diana` (ventas y repartidor), con la clave de `DEMO_PASSWORD` (si no está, la de `SEED_ADMIN_PASSWORD`). Solo corre en una base sin clientes, galpones, proveedores, caja ni inventario, así que no toca la de producción. Para empezar de nuevo, borra y crea la base de pruebas (`dropdb` y `createdb`) y repite `npm run db:deploy`, `npm run db:seed` y `npm run db:demo`.
+Crea los usuarios `laura` (ventas), `carlos` y `andres` (repartidores) y `diana` (ventas y repartidor), con la clave de `DEMO_PASSWORD` (si no está, la de `SEED_ADMIN_PASSWORD`). Solo corre en una base sin clientes, galpones, proveedores, caja ni inventario, así que no toca la de producción.
+
+Para borrar los datos de ejemplo y volver a cargarlos, en tu computador (nunca en el servidor), con la base de `DATABASE_URL` del `.env` (por defecto `rp`):
+
+```bash
+dropdb rp && createdb -O rp rp   # borra la base y la crea vacía
+npm run db:deploy                # crea las tablas
+npm run db:seed                  # productos y usuario "admin"
+npm run db:demo                  # datos de ejemplo
+```
 
 Con Docker: `docker compose --env-file pruebas.env run --rm migrar npm run db:demo`.
 
-## Puesta en marcha en el servidor
+## Servidor de producción
 
-La app corre en el servidor propio con Docker Compose y se publica con un túnel de Cloudflare: HTTPS en el dominio de la empresa sin abrir puertos del router ni tener IP fija.
+La app corre en un PC de la empresa (Windows 10) con Docker Desktop y Docker Compose, en la carpeta `C:\rp`, y se publica con un túnel de Cloudflare: HTTPS en el dominio de la empresa sin abrir puertos del router ni tener IP fija. El servidor no usa GitHub: el código llega en un ZIP de `main` y Docker arma la app en el mismo PC. La guía completa, paso a paso, está en los archivos del proyecto (`guias/instalar-servidor-windows10.md`).
 
-1. En el servidor (Linux con Docker y Docker Compose) descarga este repositorio.
-2. En Cloudflare: **Zero Trust > Networks > Tunnels > Create a tunnel** (tipo Cloudflared), copia el token que aparece en la opción Docker. En **Public Hostname** agrega el dominio (por ejemplo `app.tuempresa.com`) con servicio `HTTP` y URL `app:3000`.
+### Instalar por primera vez
+
+1. En GitHub, en la rama `main`: **Code > Download ZIP**. Descomprímelo en `C:\rp` (debe quedar `C:\rp\docker-compose.yml`).
+2. En Cloudflare: **Zero Trust > Networks > Tunnels > Create a tunnel** (tipo Cloudflared), copia el token que aparece en la opción Docker. En **Public Hostname** agrega el dominio con servicio `HTTP` y URL `app:3000`.
 3. Copia `produccion.env.example` como `produccion.env` y llena las claves, el token y `EMPRESA_NOMBRE` (el nombre de la empresa que usa el software).
-4. Arranca todo:
+4. En PowerShell:
 
-   ```bash
+   ```powershell
+   cd C:\rp
    docker compose --env-file produccion.env up -d --build
    ```
 
-   Esto levanta la base de datos, aplica las migraciones, crea los productos y el usuario `admin` (solo la primera vez), arranca la app y el túnel. Entra por el dominio con `admin` y la clave de `SEED_ADMIN_PASSWORD`, y cámbiala en **Usuarios > Empleados**.
-
-5. Para actualizar a una versión nueva: descarga los cambios y repite el mismo comando; las migraciones se aplican solas. También se puede actualizar sin compilar en el servidor, con las imágenes que publica GitHub (ver abajo).
+   Esto arma la app, levanta la base de datos, aplica las migraciones, crea los productos y el usuario `admin` (solo la primera vez), arranca la app y el túnel. Entra por el dominio con `admin` y la clave de `SEED_ADMIN_PASSWORD`, y cámbiala en **Usuarios > Empleados**.
 
 La app solo escucha en `127.0.0.1:3000` del servidor; desde otros equipos se entra por el dominio (la sesión exige HTTPS). Opcional: en Cloudflare **Access** se puede pedir un código por correo antes de llegar al login.
 
+### Actualizar a una versión nueva
+
+Los datos viven en la base de datos de Docker, no en los archivos de `C:\rp`, así que cambiar el código no los toca. Antes de actualizar, revisa en GitHub que el último cambio de `main` tenga la marca verde (pasó las comprobaciones).
+
+1. En tu portátil: **Code > Download ZIP** de `main` y pásalo a la USB. Ponle la fecha al nombre (por ejemplo `rp-2026-10-19.zip`) y guarda también el anterior, por si hay que volver atrás.
+2. En el servidor, saca una copia de la base antes de tocar nada:
+
+   ```powershell
+   cd C:\rp
+   docker compose --env-file produccion.env exec respaldo sh -c 'pg_dump -Fc -f /respaldos/antes-de-actualizar.dump'
+   ```
+
+   Revisa que aparezca `C:\rp\respaldos\antes-de-actualizar.dump`.
+3. Descomprime el ZIP nuevo **encima** de `C:\rp` y acepta reemplazar los archivos. `produccion.env` y la carpeta `respaldos` no vienen en el ZIP, así que se conservan. No borres la carpeta `C:\rp`.
+4. Arma y arranca la versión nueva:
+
+   ```powershell
+   docker compose --env-file produccion.env up -d --build
+   ```
+
+   Mientras se arma (puede tardar de 10 a 20 minutos), la versión anterior sigue atendiendo; el corte es de pocos segundos al final. Las migraciones de la base se aplican solas.
+5. Comprueba que quedó bien:
+
+   ```powershell
+   docker compose --env-file produccion.env ps -a
+   ```
+
+   `migrar` debe decir `Exited (0)` y `app` debe decir `healthy`. Entra a la app y revisa que todo esté como antes.
+
+**Si algo sale mal:** descomprime el ZIP anterior encima de `C:\rp` y repite el paso 4. Si la versión nueva traía cambios en la base de datos, restaura además `antes-de-actualizar.dump` (ver "Copias de seguridad").
+
+**Nunca** uses `docker compose down -v` ni borres el volumen `rp_datos` en Docker Desktop: ahí está la base de datos.
+
+**Limpieza ocasional** (cada varias actualizaciones, para recuperar espacio en disco):
+
+```powershell
+docker image prune -f
+docker builder prune -f
+```
+
 ### Copias de seguridad
 
-El servicio `respaldo` guarda una copia diaria de la base de datos en la carpeta `respaldos/` del servidor y borra las de más de `DIAS_RESPALDO` días. Esa carpeta debe copiarse también fuera del servidor (un disco externo o una nube, por ejemplo con `rclone`), porque si el servidor se daña se pierden ambas.
+El servicio `respaldo` guarda una copia diaria de la base de datos en `C:\rp\respaldos` y borra las de más de `DIAS_RESPALDO` días. Esa carpeta debe copiarse también fuera del servidor (una USB, un disco externo o una carpeta de Google Drive u OneDrive), porque si el PC se daña se pierden ambas.
 
 Restaurar una copia (por ejemplo, para probar que sirve, en una base aparte):
 
-```bash
+```powershell
 docker compose --env-file produccion.env exec respaldo createdb prueba
 docker compose --env-file produccion.env exec respaldo pg_restore -d prueba /respaldos/rp-AAAA-MM-DD_HHMM.dump
 ```
 
 Para reemplazar la base real, detén la app (`docker compose --env-file produccion.env stop app`), restaura con `pg_restore --clean -d rp ...` y vuelve a arrancarla.
-
-### Actualizar el servidor con las imágenes de GitHub
-
-Cada cambio que entra a `main` (y cada etiqueta `vX.Y.Z`) pasa por las comprobaciones de GitHub Actions y, si todo sale bien, publica dos imágenes en GitHub Container Registry: `ghcr.io/fttmatteo/rp` (la app) y `ghcr.io/fttmatteo/rp-migrar` (migraciones). Cada una lleva las etiquetas `latest` (lo último de `main`), `sha-abc1234` (el commit) y, para las versiones, `1.2.0` y `1.2`. Nada se instala solo en el servidor: la actualización la hace una persona.
-
-Una sola vez en el servidor (el repositorio es privado, así que las imágenes también):
-
-1. En GitHub: **Settings > Developer settings > Personal access tokens > Tokens (classic)**, crea un token solo con el permiso `read:packages`.
-2. `docker login ghcr.io -u fttmatteo` y pega el token como clave.
-
-Para actualizar:
-
-```bash
-git pull                                                   # trae docker-compose.yml al día
-docker compose --env-file produccion.env exec respaldo sh -c 'pg_dump -Fc -f /respaldos/antes-de-actualizar.dump'
-docker compose --env-file produccion.env pull app migrar   # descarga la versión de RP_VERSION
-docker compose --env-file produccion.env up -d --no-build  # aplica las migraciones y arranca la versión nueva
-```
-
-`RP_VERSION` en `produccion.env` elige la versión (`latest`, `sha-abc1234` o `1.2.0`). Para volver a una versión anterior, cambia `RP_VERSION` y repite `pull` y `up`; si la versión nueva ya había cambiado la base de datos, restaura además la copia `antes-de-actualizar.dump`.
-
-Para publicar una versión con número: `git tag v1.0.0 && git push origin v1.0.0`.
 
 ## Comprobaciones
 
@@ -133,7 +161,7 @@ src/app/(app)/reportes/   reportes y su exportación a Excel y PDF; libro mensua
 src/lib/                  sesión, permisos, base de datos, formatos
 src/modules/              reglas de negocio puras con pruebas (cartera, precios, inventario, rutas, aves, mensajes)
 src/pruebas/              pruebas de integración contra PostgreSQL (acciones del servidor, reportes y recibos)
-.github/workflows/ci.yml  CI: tipos, migraciones, pruebas con cobertura, build e imagen; publica en GHCR desde main
+.github/workflows/ci.yml  CI: tipos, migraciones, pruebas con cobertura, build e imagen de Docker
 src/components/           componentes de interfaz (HTML + Tailwind)
 ```
 
