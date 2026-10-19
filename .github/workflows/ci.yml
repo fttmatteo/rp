@@ -58,10 +58,9 @@ jobs:
       - name: Las migraciones coinciden con el esquema
         run: |
           PGPASSWORD=rp psql -h localhost -U rp -d rp_pruebas -c "CREATE DATABASE rp_sombra"
-          npx prisma migrate diff \
+          SHADOW_DATABASE_URL=postgresql://rp:rp@localhost:5432/rp_sombra npx prisma migrate diff \
             --from-migrations prisma/migrations \
-            --to-schema-datamodel prisma/schema.prisma \
-            --shadow-database-url postgresql://rp:rp@localhost:5432/rp_sombra \
+            --to-schema prisma/schema.prisma \
             --exit-code
 
       - name: Chequeo de tipos

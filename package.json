@@ -13,14 +13,12 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
-    "db:demo": "node --experimental-strip-types prisma/demo.ts",
+    "db:demo": "node --env-file-if-exists=.env --experimental-strip-types prisma/demo.ts",
     "postinstall": "prisma generate"
   },
-  "prisma": {
-    "seed": "node --experimental-strip-types prisma/seed.ts"
-  },
   "dependencies": {
-    "@prisma/client": "6.19.3",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
     "bcryptjs": "^3.0.3",
     "next": "16.4.0",
     "pdf-lib": "^1.17.1",
@@ -35,7 +33,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^5.0.3",
-    "prisma": "6.19.3",
+    "prisma": "7.10.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"

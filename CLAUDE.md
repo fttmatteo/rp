@@ -4,7 +4,7 @@ Guía para Claude (y para cualquier persona) que trabaje en este repositorio. Co
 
 ## Qué es
 
-**RP Software**: aplicación web para una granja productora de huevos (clasificación diaria, inventario, clientes con precios especiales, pedidos, rutas de entrega, ventas con recibo PDF, cartera o fiado, caja diaria, compras a terceros, galpones de aves, reportes y libro mensual en Excel). Se usa en el computador de la oficina y en el celular de los repartidores, desde el navegador. No es PWA y no tiene modo sin conexión (la fase 7 del plan es opcional y no está hecha).
+**RP Software**: aplicación web para una granja productora de huevos (clasificación diaria, inventario, clientes con precios especiales, pedidos, rutas de entrega, ventas con recibo PDF, cartera o fiado, caja diaria, compras a terceros, galpones de aves, reportes y libro mensual en Excel). Se usa en el computador de la oficina y en el celular de los repartidores, desde el navegador. No es PWA y no tiene modo sin conexión. El proyecto está terminado: lo que sigue son mejoras puntuales y actualizaciones.
 
 - Dueño del repo: Matteo (`fttmatteo`).
 - Producción: un PC con Windows 10 de la empresa, con Docker Compose y un túnel de Cloudflare, en `https://rp.plak.digital`. Ese servidor no usa GitHub ni GHCR: se actualiza a mano (la guía está fuera del repo, en los archivos del proyecto: `guias/instalar-servidor-windows10.md`).
@@ -17,7 +17,7 @@ Todo va en **español**: textos de la interfaz, mensajes de error, nombres de va
 ## Stack
 
 - **Next.js 16** (App Router, Server Components, Server Actions, `output: "standalone"`), **React 19**, **TypeScript** estricto.
-- **PostgreSQL 16** con **Prisma 6** (`prisma/schema.prisma`, migraciones SQL en `prisma/migrations/`).
+- **PostgreSQL 16** con **Prisma 7** (`prisma/schema.prisma`, migraciones SQL en `prisma/migrations/`, configuración en `prisma.config.ts`). El cliente se conecta con el adaptador `@prisma/adapter-pg` (`src/lib/db.ts`); Prisma 7 no lee el `.env` solo: lo carga `prisma.config.ts` y `db:demo` usa `--env-file-if-exists`.
 - **Tailwind CSS 4** sin librería de componentes (nada de shadcn, Radix, MUI, etc.) y **sin animaciones**.
 - **pdf-lib** para recibos y reportes en PDF; los Excel (.xlsx) se generan con código propio en `src/modules/xlsx.ts` (no hay librería de Excel).
 - **zod** disponible, **bcryptjs** para claves. Sesiones propias con cookie (no Auth.js).
