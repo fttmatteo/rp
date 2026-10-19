@@ -1,8 +1,9 @@
 // Datos iniciales: productos con sus precios y el usuario administrador.
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
-const db = new PrismaClient();
+const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 
 const PRODUCTOS = [
   { codigo: "JUMBO", nombre: "Jumbo", tipo: "CUBETA", orden: 1, precioGeneral: 23000, precioClienteSugerido: null },

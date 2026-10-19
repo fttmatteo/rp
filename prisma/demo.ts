@@ -8,9 +8,10 @@
 // Solo se cargan en una base sin clientes, galpones, proveedores ni caja: nunca en producción.
 // Uso: npm run db:seed && npm run db:demo   (DEMO_DIAS cambia cuántos días se simulan; 90 por defecto)
 import { PrismaClient, type Prisma } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
-const db = new PrismaClient();
+const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 
 // ---------- Azar reproducible: la misma semilla da los mismos datos ----------
 

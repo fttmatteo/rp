@@ -17,7 +17,7 @@ Todo va en **español**: textos de la interfaz, mensajes de error, nombres de va
 ## Stack
 
 - **Next.js 16** (App Router, Server Components, Server Actions, `output: "standalone"`), **React 19**, **TypeScript** estricto.
-- **PostgreSQL 16** con **Prisma 6** (`prisma/schema.prisma`, migraciones SQL en `prisma/migrations/`).
+- **PostgreSQL 16** con **Prisma 7** (`prisma/schema.prisma`, migraciones SQL en `prisma/migrations/`, configuración en `prisma.config.ts`). El cliente se conecta con el adaptador `@prisma/adapter-pg` (`src/lib/db.ts`); Prisma 7 no lee el `.env` solo: lo carga `prisma.config.ts` y `db:demo` usa `--env-file-if-exists`.
 - **Tailwind CSS 4** sin librería de componentes (nada de shadcn, Radix, MUI, etc.) y **sin animaciones**.
 - **pdf-lib** para recibos y reportes en PDF; los Excel (.xlsx) se generan con código propio en `src/modules/xlsx.ts` (no hay librería de Excel).
 - **zod** disponible, **bcryptjs** para claves. Sesiones propias con cookie (no Auth.js).
