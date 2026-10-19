@@ -20,7 +20,7 @@
     "seed": "node --experimental-strip-types prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "6.19.3",
+    "@prisma/client": "7.10.1",
     "bcryptjs": "^3.0.3",
     "next": "16.4.0",
     "pdf-lib": "^1.17.1",
