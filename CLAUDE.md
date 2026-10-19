@@ -4,7 +4,7 @@ Guía para Claude (y para cualquier persona) que trabaje en este repositorio. Co
 
 ## Qué es
 
-**RP Software**: aplicación web para una granja productora de huevos (clasificación diaria, inventario, clientes con precios especiales, pedidos, rutas de entrega, ventas con recibo PDF, cartera o fiado, caja diaria, compras a terceros, galpones de aves, reportes y libro mensual en Excel). Se usa en el computador de la oficina y en el celular de los repartidores, desde el navegador. No es PWA y no tiene modo sin conexión (la fase 7 del plan es opcional y no está hecha).
+**RP Software**: aplicación web para una granja productora de huevos (clasificación diaria, inventario, clientes con precios especiales, pedidos, rutas de entrega, ventas con recibo PDF, cartera o fiado, caja diaria, compras a terceros, galpones de aves, reportes y libro mensual en Excel). Se usa en el computador de la oficina y en el celular de los repartidores, desde el navegador. No es PWA y no tiene modo sin conexión. El proyecto está terminado: lo que sigue son mejoras puntuales y actualizaciones.
 
 - Dueño del repo: Matteo (`fttmatteo`).
 - Producción: un PC con Windows 10 de la empresa, con Docker Compose y un túnel de Cloudflare, en `https://rp.plak.digital`. Ese servidor no usa GitHub ni GHCR: se actualiza a mano (la guía está fuera del repo, en los archivos del proyecto: `guias/instalar-servidor-windows10.md`).

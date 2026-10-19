@@ -1,11 +1,14 @@
-# Propuestas semanales de actualización, agrupadas para no llenar de PRs.
+# Propuestas mensuales de actualización, agrupadas para no llenar de PRs.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
-    schedule: { interval: weekly, day: monday }
+    schedule: { interval: monthly }
     open-pull-requests-limit: 5
     groups:
+      # prisma y @prisma/* deben subir juntos: por separado no compilan.
+      prisma:
+        patterns: ["prisma", "@prisma/*"]
       menores:
         update-types: [minor, patch]
   - package-ecosystem: github-actions
