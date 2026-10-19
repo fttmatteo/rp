@@ -47,7 +47,16 @@ Simula 90 días hasta hoy (`DEMO_DIAS=180` para más) y deja algo que ver en cad
 
 Ayer queda con la caja sin cerrar, una ruta con el precierre devuelto y dos pedidos atrasados. Hoy queda con la caja abierta, una ruta a medio entregar, otra con el precierre por aprobar, pedidos sin tomar, huevo comprado por clasificar y Jumbo bajo el mínimo, así que el inicio muestra todas las alertas. Al cerrar la caja de ayer ya se puede sacar el libro del mes.
 
-Crea los usuarios `laura` (ventas), `carlos` y `andres` (repartidores) y `diana` (ventas y repartidor), con la clave de `DEMO_PASSWORD` (si no está, la de `SEED_ADMIN_PASSWORD`). Solo corre en una base sin clientes, galpones, proveedores, caja ni inventario, así que no toca la de producción. Para empezar de nuevo, borra y crea la base de pruebas (`dropdb` y `createdb`) y repite `npm run db:deploy`, `npm run db:seed` y `npm run db:demo`.
+Crea los usuarios `laura` (ventas), `carlos` y `andres` (repartidores) y `diana` (ventas y repartidor), con la clave de `DEMO_PASSWORD` (si no está, la de `SEED_ADMIN_PASSWORD`). Solo corre en una base sin clientes, galpones, proveedores, caja ni inventario, así que no toca la de producción.
+
+Para borrar los datos de ejemplo y volver a cargarlos, en tu computador (nunca en el servidor), con la base de `DATABASE_URL` del `.env` (por defecto `rp`):
+
+```bash
+dropdb rp && createdb -O rp rp   # borra la base y la crea vacía
+npm run db:deploy                # crea las tablas
+npm run db:seed                  # productos y usuario "admin"
+npm run db:demo                  # datos de ejemplo
+```
 
 Con Docker: `docker compose --env-file pruebas.env run --rm migrar npm run db:demo`.
 
