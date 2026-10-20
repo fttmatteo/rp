@@ -12,7 +12,8 @@ import { superaCupo } from "@/modules/cartera";
 import { enlaceWhatsApp } from "@/modules/contacto";
 import { mensajePedido, mensajeRecibo } from "@/modules/mensajes";
 import { totalPedido } from "@/modules/precios";
-import { anularVenta, cancelarPedido, entregarPedido, marcarNoEntregado, reprogramarPedido } from "../acciones";
+import { textoDias } from "@/modules/recurrentes";
+import { anularVenta, aprobarPedido, cancelarPedido, entregarPedido, marcarNoEntregado, reprogramarPedido } from "../acciones";
 
 export default async function PedidoPage({
   params,
@@ -31,6 +32,7 @@ export default async function PedidoPage({
           cliente: true,
           creadoPor: true,
           ruta: { include: { repartidor: true } },
+          recurrente: true,
           detalles: { include: { producto: true }, orderBy: { id: "asc" } },
           venta: { include: { aplicaciones: { include: { pago: true } } } },
         },
@@ -77,7 +79,10 @@ export default async function PedidoPage({
       </Titulo>
       {creado && (
         <div className="mb-4">
-          <Alerta tipo="ok">Pedido creado. Queda pendiente hasta que se entregue.</Alerta>
+          <Alerta tipo="ok">
+            Pedido creado. Queda pendiente hasta que se entregue.
+            {pedido.recurrente && ` Se repetirá cada ${textoDias(pedido.recurrente.diasSemana)}: esos días se carga solo a Pedidos y el administrador lo aprueba.`}
+          </Alerta>
         </div>
       )}
 
@@ -96,6 +101,14 @@ export default async function PedidoPage({
             {formatoFechaHora(pedido.creadoEn)}
           </p>
           {pedido.nota && <p className="mt-1 text-stone-600">Nota: {pedido.nota}</p>}
+          {pedido.recurrente && (
+            <p className="mt-1">
+              Pedido recurrente:{" "}
+              <Link href="/pedidos/recurrentes" className="underline">
+                {pedido.recurrente.activo ? `se repite cada ${textoDias(pedido.recurrente.diasSemana)}` : "ya no se repite"}
+              </Link>
+            </p>
+          )}
           {pedido.ruta && (
             <p className="mt-1">
               Ruta:{" "}
@@ -158,6 +171,17 @@ export default async function PedidoPage({
             )}
           </Tarjeta>
 
+          {pedido.estado === "POR_APROBAR" && (
+            <Tarjeta id="aprobar" titulo="Por aprobar">
+              <p className="mb-3">Este pedido se cargó solo porque se repite cada semana. El repartidor lo podrá tomar cuando el administrador lo apruebe.</p>
+              {puede(op, "pedidos.aprobar") && (
+                <Formulario accion={aprobarPedido.bind(null, pedido.id)}>
+                  <Boton type="submit">Aprobar pedido</Boton>
+                </Formulario>
+              )}
+            </Tarjeta>
+          )}
+
           {pedido.estado === "PENDIENTE" && puedeEntregar && (
             <Tarjeta id="entrega" titulo="Registrar entrega">
               <Formulario accion={entregarPedido.bind(null, pedido.id)}>
@@ -218,7 +242,7 @@ export default async function PedidoPage({
             </Tarjeta>
           )}
 
-          {pedido.estado === "PENDIENTE" && puede(op, "pedidos.crear") && (
+          {(pedido.estado === "PENDIENTE" || pedido.estado === "POR_APROBAR") && puede(op, "pedidos.crear") && (
             <Formulario accion={cancelarPedido.bind(null, pedido.id)} confirmar="¿Cancelar este pedido?">
               <Boton type="submit" variante="peligro">
                 Cancelar pedido

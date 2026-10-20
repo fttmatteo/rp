@@ -1,6 +1,7 @@
 import type { EstadoPedido, EstadoRuta } from "@prisma/client";
 
 export const ESTADO_PEDIDO: Record<EstadoPedido, { texto: string; color: "azul" | "verde" | "gris" | "rojo" }> = {
+  POR_APROBAR: { texto: "Por aprobar", color: "rojo" },
   PENDIENTE: { texto: "Pendiente", color: "azul" },
   ENTREGADO: { texto: "Entregado", color: "verde" },
   NO_ENTREGADO: { texto: "No entregado", color: "rojo" },

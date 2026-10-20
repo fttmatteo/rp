@@ -1073,6 +1073,22 @@ async function main() {
       filas.detallesPedido.push({ id: nuevoId("DetallePedido"), pedidoId, productoId: prod(codigo).id, cantidad: entre(min, max), precioUnitario: c.precios.get(codigo) ?? precioGeneral(codigo, manana) });
   }
 
+  // Pedidos recurrentes: uno empieza hoy (sale por aprobar al abrir la app) y otro desde el próximo día de reparto.
+  // Se eligen clientes sin pedido hoy para no duplicarles la entrega.
+  const conPedidoHoy = new Set(filas.pedidos.filter((p) => +new Date(p.fechaEntrega) === +hoy).map((p) => p.clienteId));
+  const recurrentes = lista
+    .filter((c) => c.activo && c.tamano !== "FINCA" && !conPedidoHoy.has(c.id))
+    .slice(0, 2)
+    .map((c, i) => ({
+      clienteId: c.id,
+      diasSemana: i === 0 ? [1, 2, 3, 4, 5, 6] : [1, 4],
+      desde: i === 0 ? hoy : manana,
+      nota: i === 0 ? "Pedido fijo de la semana" : null,
+      creadoEn: hora(sumar(hoy, -10), 9),
+      creadoPorId: ventas.id,
+      detalles: { create: CANASTA[c.tamano].slice(0, 2).map(([codigo, , min]) => ({ productoId: prod(codigo).id, cantidad: min })) },
+    }));
+
   // ---------- Guardar todo ----------
   await db.$transaction(
     async (tx) => {
@@ -1104,6 +1120,7 @@ async function main() {
       await enLotes(filas.detallesClasif, (data) => tx.detalleClasificacion.createMany({ data }));
       await enLotes(filas.movimientos, (data) => tx.movimientoInventario.createMany({ data }));
       await enLotes(filas.auditoria, (data) => tx.auditoria.createMany({ data }));
+      for (const data of recurrentes) await tx.pedidoRecurrente.create({ data });
       for (const [id, existencias] of stock) await tx.producto.update({ where: { id }, data: { existencias } });
       // El grupo viejo ya se vendió completo: queda cerrado.
       if (grupoViejo.vivas <= 0) await tx.grupoAves.update({ where: { id: grupoViejo.id }, data: { activo: false, etapa: "DESCARTE" } });
@@ -1123,7 +1140,7 @@ async function main() {
   );
   console.log(`  Cartera pendiente: $${cartera.toLocaleString("es-CO")}.`);
   console.log(`  Por revisar: la caja de ayer sin cerrar, una ruta de ayer devuelta sin liquidar, el precierre de Diana de hoy por aprobar,`);
-  console.log(`  pedidos de hoy sin tomar y atrasados, una compra vencida a La Pradera y huevo comprado por clasificar.`);
+  console.log(`  pedidos de hoy sin tomar y atrasados, un pedido recurrente de hoy por aprobar, una compra vencida a La Pradera y huevo comprado por clasificar.`);
   console.log(`  Usuarios: laura (ventas), carlos y andres (repartidores), diana (ventas y repartidor), con la clave de DEMO_PASSWORD.`);
 }
 
