@@ -33,7 +33,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
       <Titulo>Reportes</Titulo>
       <PestanasContabilidad actual="/reportes" operacion={sesion.operacion} />
       <Tarjeta id="libro" titulo="Libro mensual en Excel" className="mb-6">
-        <p className="mb-3 text-sm text-stone-500">
+        <p className="mb-3 text-stone-500">
           Cada cobro, ingreso y egreso con su saldo. Solo sale si todas las cajas de esas fechas están cerradas; lo que incluya hoy sale hasta hoy.
         </p>
         {sinCerrar.length > 0 && (
@@ -112,7 +112,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
 
       <div id="reporte" className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-lg font-semibold">{reporte.titulo}</h2>
-        {/* Descargan solo este reporte con los filtros elegidos; el libro mensual tiene su propio botón abajo. */}
+        {/* Descargan solo este reporte con los filtros elegidos; el libro mensual tiene sus propios botones arriba. */}
         <span className="flex flex-wrap gap-2">
           <BotonLink href={`/reportes/exportar?${consulta}&formato=xlsx`} variante="secundario" prefetch={false}>
             Descargar este reporte en Excel
@@ -160,7 +160,7 @@ export default async function ReportesPage({ searchParams }: { searchParams: Pro
         </Tabla>
       )}
       <Paginacion ruta="/reportes" params={{ tipo: p.tipo, desde: p.desde, hasta: p.hasta }} pagina={pagina} total={reporte.filas.length} ancla="reporte" />
-      {reporte.nota && <p className="mt-2 text-sm text-stone-500">{reporte.nota}</p>}
+      {reporte.nota && <p className="mt-2 text-stone-500">{reporte.nota}</p>}
 
     </>
   );

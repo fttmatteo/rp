@@ -6,7 +6,7 @@ import { existencias } from "@/lib/existencias";
 import { formatoCantidad, formatoFechaHora, formatoHuevos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
-import { registrarAjuste } from "./acciones";
+import { guardarMinimos, registrarAjuste } from "./acciones";
 import { PestanasInventario } from "./pestanas";
 
 const TIPO = { PRODUCCION: "Clasificación", VENTA: "Venta", AJUSTE: "Ajuste", ROTURA: "Rotura", ANULACION: "Anulación", COMPRA: "Compra" } as const;
@@ -57,48 +57,78 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
         )}
       </div>
 
-      {/* El ajuste va en una fila sobre los movimientos; así la tabla usa todo el ancho y cada movimiento cabe en una línea. */}
+      {/* El ajuste es poco frecuente: va plegado sobre los movimientos, así la tabla queda a la vista y usa todo el ancho. */}
       {ajustar && (
-        <Tarjeta id="ajuste" titulo="Ajuste de inventario" className="mb-6">
-          <Formulario accion={registrarAjuste} className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <Campo etiqueta="Producto">
-                <select name="productoId" required>
-                  {productos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre}
-                    </option>
-                  ))}
-                </select>
-              </Campo>
-              <Campo etiqueta="Tipo" ayuda="Ajuste: corrige tras un conteo. Rotura: siempre resta.">
-                <select name="tipo">
-                  <option value="AJUSTE">Ajuste</option>
-                  <option value="ROTURA">Rotura (salida)</option>
-                </select>
-              </Campo>
-              <Campo etiqueta="Sentido" ayuda="Entrada suma, salida resta. En rotura no se usa.">
-                <select name="sentido">
-                  <option value="entrada">Entrada</option>
-                  <option value="salida">Salida</option>
-                </select>
-              </Campo>
-              <Campo etiqueta="Cubetas, gallinas o gallinaza">
-                <input name="cantidad" inputMode="numeric" defaultValue="0" />
-              </Campo>
-              <Campo etiqueta="Huevos sueltos" ayuda="Los que no completan una cubeta de 30. No aplica a gallinas.">
-                <input name="sueltos" inputMode="numeric" defaultValue="0" />
-              </Campo>
-            </div>
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="min-w-64 flex-1">
-                <Campo etiqueta="Motivo">
-                  <input name="nota" required placeholder="Conteo físico, cubetas rotas en bodega..." />
+        <Tarjeta id="ajuste" className="mb-6">
+          <details>
+            <summary className="block cursor-pointer py-2.5 text-lg font-semibold underline">Ajuste de inventario o rotura</summary>
+            <Formulario accion={registrarAjuste} className="mt-2 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <Campo etiqueta="Producto">
+                  <select name="productoId" required>
+                    {productos.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </Campo>
+                <Campo etiqueta="Tipo" ayuda="Ajuste: corrige tras un conteo. Rotura: siempre resta.">
+                  <select name="tipo">
+                    <option value="AJUSTE">Ajuste</option>
+                    <option value="ROTURA">Rotura (salida)</option>
+                  </select>
+                </Campo>
+                <Campo etiqueta="Sentido" ayuda="Entrada suma, salida resta. En rotura no se usa.">
+                  <select name="sentido">
+                    <option value="entrada">Entrada</option>
+                    <option value="salida">Salida</option>
+                  </select>
+                </Campo>
+                <Campo etiqueta="Cubetas, gallinas o gallinaza">
+                  <input name="cantidad" inputMode="numeric" defaultValue="0" />
+                </Campo>
+                <Campo etiqueta="Huevos sueltos" ayuda="Los que no completan una cubeta de 30. No aplica a gallinas.">
+                  <input name="sueltos" inputMode="numeric" defaultValue="0" />
                 </Campo>
               </div>
-              <Boton type="submit">Registrar ajuste</Boton>
-            </div>
-          </Formulario>
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="min-w-64 flex-1">
+                  <Campo etiqueta="Motivo">
+                    <input name="nota" required placeholder="Conteo físico, cubetas rotas en bodega..." />
+                  </Campo>
+                </div>
+                <Boton type="submit">Registrar ajuste</Boton>
+              </div>
+            </Formulario>
+          </details>
+        </Tarjeta>
+      )}
+
+      {ajustar && (
+        <Tarjeta id="minimos" className="mb-6">
+          <details>
+            <summary className="block cursor-pointer py-2.5 text-lg font-semibold underline">Mínimo en bodega</summary>
+            <Formulario accion={guardarMinimos} className="mt-2 space-y-3">
+              <p className="text-stone-600">Si las existencias bajan del mínimo, Inicio muestra una alerta. Déjalo vacío para no avisar.</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                {productos.map((p) => (
+                  <Campo key={p.id} etiqueta={p.nombre}>
+                    <input type="hidden" name={`antes_minimo_${p.id}`} defaultValue={p.minimo ?? ""} />
+                    <input
+                      name={`minimo_${p.id}`}
+                      inputMode="numeric"
+                      defaultValue={p.minimo ?? ""}
+                      placeholder={p.tipo === "CUBETA" ? "cubetas" : p.tipo === "GALLINA" ? "gallinas" : (p.unidad ?? "bulto") + "s"}
+                    />
+                  </Campo>
+                ))}
+              </div>
+              <Boton type="submit" variante="secundario">
+                Guardar mínimos
+              </Boton>
+            </Formulario>
+          </details>
         </Tarjeta>
       )}
 

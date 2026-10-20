@@ -155,7 +155,7 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
                   ))}
                 </tbody>
               </Tabla>
-              <p className="mt-2 text-sm text-stone-500">Cubetas de 30 huevos; gallinas por unidad. Devuelto: entregas parciales y pedidos no entregados.</p>
+              <p className="mt-2 text-stone-500">Cubetas de 30 huevos; gallinas por unidad. Devuelto: entregas parciales y pedidos no entregados.</p>
             </Tarjeta>
           </div>
           <h2 id="pedidos" className="mb-3 text-lg font-semibold">
@@ -210,7 +210,7 @@ export default async function RepartoPage({ searchParams }: { searchParams: Prom
             </Tabla>
           )}
           <Paginacion ruta="/reparto" params={{ fecha, ruta: rutaParam, q }} pagina={pagina} total={lista.length} ancla="pedidos" />
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-stone-500">
             Pagado es lo que el cliente pagó el día de la entrega. Lo que no pagó queda como pendiente (fiado) y se ve en su cartera.
           </p>
 

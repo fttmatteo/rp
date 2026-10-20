@@ -83,7 +83,7 @@ export default async function CarteraPage({ searchParams }: { searchParams: Prom
         ))}
       </div>
       <form className="mb-4 flex flex-wrap gap-2">
-        <input name="q" type="search" defaultValue={q} placeholder="Buscar cliente por nombre, teléfono o zona" className="max-w-sm" />
+        <input name="q" type="search" defaultValue={q} placeholder="Buscar cliente por nombre, teléfono o zona" aria-label="Buscar cliente" className="max-w-sm" />
         <Boton type="submit" variante="secundario">
           Buscar
         </Boton>

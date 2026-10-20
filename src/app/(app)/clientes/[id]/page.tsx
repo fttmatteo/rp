@@ -30,11 +30,20 @@ export default async function ClientePage({
 
   return (
     <>
+      {/* Lo que más se hace con un cliente (tomarle un pedido, ver lo que debe) queda a mano, como en su cartera. */}
       <Titulo
         accion={
-          <BotonLink href="/clientes" variante="secundario">
-            Volver
-          </BotonLink>
+          <div className="flex flex-wrap gap-2">
+            {puede(op, "pedidos.crear") && cliente.activo && <BotonLink href={`/pedidos/nuevo?cliente=${id}`}>Nuevo pedido</BotonLink>}
+            {puede(op, "cartera.ver") && (
+              <BotonLink href={`/cartera/${id}`} variante="secundario">
+                Ver cartera
+              </BotonLink>
+            )}
+            <BotonLink href="/clientes" variante="secundario">
+              Volver
+            </BotonLink>
+          </div>
         }
       >
         {cliente.nombre} {!cliente.activo && <EtiquetaInactivo />}
@@ -114,7 +123,7 @@ export default async function ClientePage({
                   ))}
                 </tbody>
               </Tabla>
-              <p className="text-sm text-stone-500">Vacío = paga el precio general.</p>
+              <p className="text-stone-500">Vacío = paga el precio general.</p>
               <Boton type="submit">Guardar precios</Boton>
             </Formulario>
           ) : (
@@ -130,7 +139,7 @@ export default async function ClientePage({
         </Tarjeta>
 
       </div>
-      <p className="mt-6 text-sm text-stone-500">Cliente desde {formatoFecha(cliente.creadoEn)}</p>
+      <p className="mt-6 text-stone-500">Cliente desde {formatoFecha(cliente.creadoEn)}</p>
     </>
   );
 }

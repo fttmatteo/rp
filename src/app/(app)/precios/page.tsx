@@ -32,7 +32,6 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
                 <th>Producto</th>
                 <th>Precio general</th>
                 <th>Precio cliente sugerido</th>
-                <th>Mínimo en bodega</th>
                 <th>En venta</th>
               </tr>
             </thead>
@@ -43,7 +42,6 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
                     {/* Valores con que se abrió la página: si otra persona guarda mientras tanto, no se pisan sus cambios. */}
                     <input type="hidden" name={`antes_general_${p.id}`} defaultValue={p.precioGeneral || ""} />
                     <input type="hidden" name={`antes_sugerido_${p.id}`} defaultValue={p.precioClienteSugerido ?? ""} />
-                    <input type="hidden" name={`antes_minimo_${p.id}`} defaultValue={p.minimo ?? ""} />
                     <input type="hidden" name={`antes_activo_${p.id}`} defaultValue={p.activo ? "on" : ""} />
                     {p.tipo === "GALLINAZA" && <input type="hidden" name={`antes_unidad_${p.id}`} defaultValue={p.unidad ?? "bulto"} />}
                     {p.tipo === "GALLINAZA" ? (
@@ -68,14 +66,6 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
                     <input name={`sugerido_${p.id}`} inputMode="numeric" defaultValue={p.precioClienteSugerido ?? ""} />
                   </td>
                   <td>
-                    <input
-                      name={`minimo_${p.id}`}
-                      inputMode="numeric"
-                      defaultValue={p.minimo ?? ""}
-                      placeholder={p.tipo === "CUBETA" ? "cubetas" : p.tipo === "GALLINA" ? "gallinas" : (p.unidad ?? "bulto") + "s"}
-                    />
-                  </td>
-                  <td>
                     <input type="checkbox" name={`activo_${p.id}`} defaultChecked={p.activo} aria-label={`${p.nombre} en venta`} />
                   </td>
                 </tr>
@@ -85,8 +75,7 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
           <p className="text-stone-600">
             El precio sugerido se propone al configurar los precios especiales de un cliente. Cada cliente puede tener el suyo. Un producto
             que no está en venta no aparece en pedidos ni en la clasificación. La gallinaza se vende, se clasifica y se cuenta en la unidad
-            elegida; si cambias la unidad, ajusta su inventario. Si las existencias bajan del mínimo, Inicio muestra una alerta (déjalo vacío
-            para no avisar).
+            elegida; si cambias la unidad, ajusta su inventario. El mínimo en bodega de cada producto se pone en Inventario.
           </p>
           <h2 className="pt-2 text-lg font-semibold">Peso de cada tipo de huevo</h2>
           <Tabla>

@@ -98,7 +98,7 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
             {elegido === "venta" && (
               <Tarjeta id="venta" titulo="Venta en el punto">
                 <Formulario accion={registrarVentaDirecta} className="space-y-3">
-                  <p className="text-sm text-stone-500">
+                  <p className="text-stone-500">
                     Para el cliente que se lleva el producto ahora: queda entregada con su recibo. Los pedidos para repartir se crean en{" "}
                     <Link href="/pedidos/nuevo" className="underline">
                       Pedidos
@@ -135,7 +135,7 @@ export default async function IngresosPage({ searchParams }: { searchParams: Pro
                       ))}
                     </tbody>
                   </Tabla>
-                  <p className="text-sm text-stone-500">Si el cliente tiene precio especial, se usa ese.</p>
+                  <p className="text-stone-500">Si el cliente tiene precio especial, se usa ese.</p>
                   <div className="grid grid-cols-2 gap-3">
                     <Campo etiqueta="Valor pagado" ayuda="Vacío = paga todo. 0 = queda fiado.">
                       <input name="pagado" inputMode="numeric" />

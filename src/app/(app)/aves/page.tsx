@@ -105,7 +105,7 @@ export default async function AvesPage() {
               </tbody>
             </Tabla>
           )}
-          <p className="text-sm text-stone-500">
+          <p className="text-stone-500">
             Entra a un galpón para registrar muertes, ventas o traslados. La postura sale de la clasificación diaria: huevos clasificados más rotos ÷ aves
             vivas.
           </p>

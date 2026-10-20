@@ -103,7 +103,7 @@ export default async function GalponPage({
               <Campo etiqueta="Nota">
                 <input name="nota" />
               </Campo>
-              <p className="text-sm text-stone-500">
+              <p className="text-stone-500">
                 Paso a venta: las gallinas salen del galpón y suman al inventario para venderlas en los pedidos. Cuando salen todas las aves, el galpón queda vacío.
               </p>
               <Boton type="submit">Registrar</Boton>
@@ -222,7 +222,7 @@ function Resumen({ grupo, novedades, hoy, capacidad }: { grupo: GrupoAves; noved
       <Tarjeta>
         <p className="text-stone-600">Aves vivas</p>
         <p className="text-2xl font-semibold tabular-nums">{vivas.toLocaleString("es-CO")}</p>
-        {capacidad && <p className="text-sm text-stone-500">de {capacidad.toLocaleString("es-CO")} que caben</p>}
+        {capacidad && <p className="text-stone-500">de {capacidad.toLocaleString("es-CO")} que caben</p>}
       </Tarjeta>
       <Tarjeta>
         <p className="text-stone-600">Edad</p>
@@ -235,7 +235,7 @@ function Resumen({ grupo, novedades, hoy, capacidad }: { grupo: GrupoAves; noved
       <Tarjeta>
         <p className="text-stone-600">Mortalidad acumulada</p>
         <p className="text-2xl font-semibold tabular-nums">{mortalidad}%</p>
-        <p className="text-sm text-stone-500">
+        <p className="text-stone-500">
           {bajas.MUERTE} muertes · {bajas.DESCARTE} descartes · {bajas.VENTA} a venta
         </p>
       </Tarjeta>

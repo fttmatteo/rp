@@ -78,8 +78,9 @@ describe("inicio de sesión", () => {
 describe("usuarios", () => {
   it("el administrador crea y edita empleados", async () => {
     const admin = await comoOperacion("ADMIN");
-    ok(await crearUsuario(undefined, form({ nombre: "Johan", usuario: "Johan", clave: "12345678", accesos: ["REPARTIDOR"] })));
+    const url = await redireccion(crearUsuario(undefined, form({ nombre: "Johan", usuario: "Johan", clave: "12345678", accesos: ["REPARTIDOR"] })));
     const johan = await db.usuario.findUniqueOrThrow({ where: { usuario: "johan" } });
+    expect(url).toBe(`/usuarios/${johan.id}?creado=1`);
     expect(johan.accesos).toEqual(["REPARTIDOR"]);
     fallo(await crearUsuario(undefined, form({ nombre: "Otro", usuario: "johan", clave: "12345678", accesos: ["VENTAS"] })), /ya existe/);
     fallo(await crearUsuario(undefined, form({ usuario: "x" })), /nombre/);
@@ -139,7 +140,7 @@ describe("clientes, precios y proveedores", () => {
     expect(await redireccion(guardarPreciosCliente(c.id, undefined, form()))).toBe("/sin-acceso");
   });
 
-  it("precios generales: activar, unidad de la gallinaza y mínimo", async () => {
+  it("precios generales: activar y unidad de la gallinaza", async () => {
     await comoOperacion("ADMIN");
     const productos = await db.producto.findMany();
     const actuales = Object.fromEntries(
@@ -154,8 +155,8 @@ describe("clientes, precios y proveedores", () => {
     const gallinaza = await producto("GALLINAZA");
     fallo(await guardarPreciosGenerales(undefined, form({ ...actuales, [`activo_${gallinaza.id}`]: true })), /precio general de Gallinaza/);
     fallo(await guardarPreciosGenerales(undefined, form({ ...actuales, [`unidad_${gallinaza.id}`]: "litro" })), /unidad de la gallinaza/);
-    ok(await guardarPreciosGenerales(undefined, form({ ...actuales, [`general_${aa.id}`]: 19_000, [`minimo_${aa.id}`]: 10, [`general_${gallinaza.id}`]: 8_000, [`activo_${gallinaza.id}`]: true, [`unidad_${gallinaza.id}`]: "viaje" })));
-    expect(await producto("AA")).toMatchObject({ precioGeneral: 19_000, minimo: 10 });
+    ok(await guardarPreciosGenerales(undefined, form({ ...actuales, [`general_${aa.id}`]: 19_000, [`general_${gallinaza.id}`]: 8_000, [`activo_${gallinaza.id}`]: true, [`unidad_${gallinaza.id}`]: "viaje" })));
+    expect(await producto("AA")).toMatchObject({ precioGeneral: 19_000 });
     expect(await producto("GALLINAZA")).toMatchObject({ precioGeneral: 8_000, activo: true, unidad: "viaje" });
     expect(await db.historialPrecio.count()).toBe(2);
   });
@@ -207,7 +208,6 @@ describe("clientes, precios y proveedores", () => {
           [
             ["general", p.precioGeneral],
             ["sugerido", p.precioClienteSugerido ?? ""],
-            ["minimo", p.minimo ?? ""],
             ["activo", p.activo ? "on" : null],
             ["unidad", p.tipo === "GALLINAZA" ? (p.unidad ?? "bulto") : null],
           ] as const
@@ -226,11 +226,11 @@ describe("clientes, precios y proveedores", () => {
     expect((await producto("A")).precioGeneral).toBe(16_000);
     // Si la página vieja cambia el mismo precio a otro valor, se avisa y no se guarda nada.
     fallo(
-      await guardarPreciosGenerales(undefined, form({ ...pagina, [`general_${aa.id}`]: 21_000, [`minimo_${a.id}`]: 5 })),
+      await guardarPreciosGenerales(undefined, form({ ...pagina, [`general_${aa.id}`]: 21_000, [`sugerido_${a.id}`]: 5 })),
       /Otra persona cambió el precio general de AA/,
     );
     expect(await producto("AA")).toMatchObject({ precioGeneral: 19_000 });
-    expect((await producto("A")).minimo).toBeNull();
+    expect((await producto("A")).precioClienteSugerido).toBe(a.precioClienteSugerido);
     expect(await db.historialPrecio.count()).toBe(2);
     // Borrar el precio general de un producto en venta no se deja; el sugerido sí se guarda.
     const jumbo = await producto("JUMBO");

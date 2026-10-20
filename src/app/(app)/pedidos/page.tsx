@@ -56,12 +56,20 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
   }
   const resumen = [...totales].sort((a, b) => a[1].orden - b[1].orden).map(([nombre, t]) => `${t.cantidad} ${nombre}`);
   const valorTotal = totalPedido(delDia);
+  const op = sesion.operacion;
+  const vender = puede(op, "caja") && puede(op, "pedidos.crear") && puede(op, "pedidos.entregar");
 
   return (
     <>
       <Titulo
         accion={
           <div className="flex flex-wrap gap-2">
+            {/* La venta en el punto se registra en Ingresos (entra a la caja), pero quien vende la busca aquí. */}
+            {vender && (
+              <BotonLink href="/ingresos?registrar=venta" variante="secundario">
+                Venta en el punto
+              </BotonLink>
+            )}
             <BotonLink href="/pedidos/recurrentes" variante="secundario">
               Pedidos recurrentes
             </BotonLink>

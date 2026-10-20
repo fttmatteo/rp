@@ -152,7 +152,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
             <details className="mt-2">
               <summary className="block cursor-pointer py-2.5 text-stone-600 underline">Corregir la base</summary>
               <Formulario accion={actualizarBase.bind(null, diaISO)} className="mt-2 space-y-2">
-                <p className="text-sm text-stone-500">Se toma del efectivo contado en el último cierre. Corrígela si no coincide.</p>
+                <p className="text-stone-500">Se toma del efectivo contado en el último cierre. Corrígela si no coincide.</p>
                 <div className="flex gap-2">
                   <input name="base" inputMode="numeric" defaultValue={caja.base} required aria-label="Base" />
                   <Boton type="submit" variante="secundario">

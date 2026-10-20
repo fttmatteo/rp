@@ -45,7 +45,7 @@ export default async function ClientesPage({ searchParams }: { searchParams: Pro
       </Titulo>
       <PestanasUsuarios actual="/clientes" operacion={sesion.operacion} />
       <form className="mb-4 flex flex-wrap gap-2">
-        <input name="q" defaultValue={q} placeholder="Buscar por nombre, teléfono o zona" className="max-w-sm" />
+        <input name="q" type="search" defaultValue={q} placeholder="Buscar por nombre, teléfono o zona" aria-label="Buscar cliente" className="max-w-sm" />
         <label className="flex min-h-11 items-center gap-2 font-normal">
           <input type="checkbox" name="inactivos" value="1" defaultChecked={Boolean(inactivos)} /> Incluir inactivos
         </label>

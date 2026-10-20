@@ -76,7 +76,7 @@ Dónde poner cada cosa:
 ## Roles y permisos
 
 - Tres operaciones (enum `Acceso`): `ADMIN` (Administrador), `VENTAS`, `REPARTIDOR`. El administrador asigna a cada usuario las que puede usar (combinables). No existe "galponero" (se quitó).
-- Tras el login el usuario **elige la operación** (`/operacion`); si no la tiene asignada ve "Acceso denegado". La operación activa se guarda en la sesión.
+- Tras el login el usuario **elige la operación** (`/operacion`), que solo muestra las que tiene asignadas; si pide otra igual (por ejemplo, a mano), ve "Acceso denegado". La operación activa se guarda en la sesión.
 - La matriz está en `src/lib/permisos.ts` (`puede(operacion, permiso)`). ADMIN puede todo menos `ruta.propia` (Mi ruta es solo del repartidor). VENTAS maneja clientes, pedidos, pagos, cartera, caja (incluido el cierre), compras, reportes y ve rutas, pero **no** aprueba rutas, ni anula, ni toca precios, usuarios, aves, clasificación ni ajustes de inventario. REPARTIDOR solo tiene `pedidos.entregar`, `pagos.registrar` y `ruta.propia`: trabaja únicamente desde Mi ruta y solo sobre pedidos de su propia ruta.
 - **Los permisos se verifican en el servidor en cada página y en cada acción** con `await requerir("permiso")` de `src/lib/sesion.ts` (redirige a `/login`, `/operacion` o `/sin-acceso`). Esconder un botón o una entrada del menú no basta. Si agregas un permiso, actualiza `permisos.ts`, `permisos.test.ts`, el menú (`src/app/(app)/layout.tsx` y `src/components/secciones.tsx`) y las pruebas de integración.
 - Solo el administrador: anular, aprobar el precierre de una ruta, aprobar los pedidos que generan los recurrentes (`pedidos.aprobar`), reabrir una caja cerrada, precios, usuarios, inventario (ajustes), aves y clasificación.
