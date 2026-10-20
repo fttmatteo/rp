@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { formatoFechaHora, formatoPesos, nombreProducto, UNIDADES_GALLINAZA } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { PestanasContabilidad } from "@/components/secciones";
+import { textoRangoGramos } from "@/modules/pesos";
 import { guardarPreciosGenerales } from "./acciones";
 
 export default async function PreciosPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
@@ -81,7 +82,38 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
             elegida; si cambias la unidad, ajusta su inventario. Si las existencias bajan del mínimo, Inicio muestra una alerta (déjalo vacío
             para no avisar).
           </p>
-          <Boton type="submit">Guardar precios</Boton>
+          <h2 className="pt-2 text-lg font-semibold">Peso de cada tipo de huevo</h2>
+          <Tabla>
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Desde (gramos)</th>
+                <th>Hasta (gramos)</th>
+                <th>Queda</th>
+              </tr>
+            </thead>
+            <tbody>
+              {productos
+                .filter((p) => p.tipo === "CUBETA")
+                .map((p) => (
+                  <tr key={p.id}>
+                    <td className="font-medium">{p.nombre}</td>
+                    <td>
+                      <input name={`gramosMin_${p.id}`} inputMode="numeric" defaultValue={p.gramosMin ?? ""} aria-label={`${p.nombre} desde (gramos)`} />
+                    </td>
+                    <td>
+                      <input name={`gramosMax_${p.id}`} inputMode="numeric" defaultValue={p.gramosMax ?? ""} aria-label={`${p.nombre} hasta (gramos)`} />
+                    </td>
+                    <td className="text-stone-600">{textoRangoGramos(p) ?? "Sin peso"}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </Tabla>
+          <p className="text-stone-600">
+            El peso de un huevo, en gramos, decide su tipo. Se muestra en la clasificación como guía. Deja «Desde» vacío para «hasta tantos
+            gramos» y «Hasta» vacío para «tantos gramos o más». Dos tipos no pueden compartir el mismo peso.
+          </p>
+          <Boton type="submit">Guardar precios y pesos</Boton>
         </Formulario>
 
         <Tarjeta id="cambios" titulo="Cambios de precio">

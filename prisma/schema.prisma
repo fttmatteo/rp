@@ -94,6 +94,9 @@ model Producto {
   unidad                String?
   // Alerta de existencias bajas: cubetas, gallinas o unidades de gallinaza. Null = sin alerta.
   minimo                Int?
+  // Solo huevo: rango de peso por huevo en gramos que define el tipo. Lo escribe el administrador; null = sin límite.
+  gramosMin             Int?
+  gramosMax             Int?
   activo                Boolean      @default(true)
   // Suma de sus movimientos de inventario, actualizada en la misma transacción
   // que cada movimiento para no tener que sumar todo el historial.
