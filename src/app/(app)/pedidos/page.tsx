@@ -1,19 +1,24 @@
 import Link from "next/link";
 import type { EstadoPedido, Prisma } from "@prisma/client";
+import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
 import { Boton, BotonLink, Etiqueta, Tabla, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { ESTADO_PEDIDO, esParcial } from "@/lib/estados";
-import { diaUTC, formatoDia, formatoPesos } from "@/lib/formato";
+import { diaUTC, formatoDia, formatoPesos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
+import { generarPedidosRecurrentes } from "@/lib/recurrentes-db";
 import { requerir } from "@/lib/sesion";
 import { PestanasPedidos } from "@/components/secciones";
 import { totalPedido } from "@/modules/precios";
+import { aprobarPedidosDeHoy } from "./acciones";
 
 const ESTADOS = ESTADO_PEDIDO;
 
 export default async function PedidosPage({ searchParams }: { searchParams: Promise<{ estado?: string; fecha?: string; q?: string; pagina?: string }> }) {
   const sesion = await requerir("pedidos.ver");
+  // Los pedidos recurrentes de hoy se cargan al abrir la lista.
+  await generarPedidosRecurrentes();
   const params = await searchParams;
   const { estado = "PENDIENTE", fecha = "" } = params;
   const q = (params.q ?? "").trim();
@@ -24,10 +29,11 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
     ...(conFecha ? { fechaEntrega: diaUTC(fecha) } : {}),
     ...(q ? { cliente: { OR: [{ nombre: { contains: q, mode: "insensitive" } }, { zona: { contains: q, mode: "insensitive" } }] } } : {}),
   };
-  const [pedidos, total, delDia] = await Promise.all([
+  const hoy = diaUTC(hoyISO());
+  const [pedidos, total, delDia, porAprobarHoy] = await Promise.all([
     db.pedido.findMany({
       where,
-      orderBy: [{ fechaEntrega: estado === "PENDIENTE" ? "asc" : "desc" }, { id: "desc" }],
+      orderBy: [{ fechaEntrega: estado === "PENDIENTE" || estado === "POR_APROBAR" ? "asc" : "desc" }, { id: "desc" }],
       ...rango(pagina),
       include: { cliente: { select: { nombre: true } }, detalles: { include: { producto: true } } },
     }),
@@ -39,6 +45,7 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
           select: { cantidad: true, precioUnitario: true, producto: { select: { nombre: true, orden: true } } },
         })
       : [],
+    db.pedido.count({ where: { estado: "POR_APROBAR", fechaEntrega: hoy } }),
   ]);
 
   const totales = new Map<string, { orden: number; cantidad: number }>();
@@ -52,14 +59,43 @@ export default async function PedidosPage({ searchParams }: { searchParams: Prom
 
   return (
     <>
-      <Titulo accion={puede(sesion.operacion, "pedidos.crear") && <BotonLink href="/pedidos/nuevo">Nuevo pedido</BotonLink>}>
+      <Titulo
+        accion={
+          <div className="flex flex-wrap gap-2">
+            <BotonLink href="/pedidos/recurrentes" variante="secundario">
+              Pedidos recurrentes
+            </BotonLink>
+            {puede(sesion.operacion, "pedidos.crear") && <BotonLink href="/pedidos/nuevo">Nuevo pedido</BotonLink>}
+          </div>
+        }
+      >
         Pedidos
       </Titulo>
       <PestanasPedidos actual="/pedidos" operacion={sesion.operacion} fecha={conFecha ? fecha : undefined} />
+      {porAprobarHoy > 0 && (
+        // Aviso en azul, como en el inicio: los recurrentes de hoy esperan al administrador.
+        <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded border border-blue-300 bg-blue-50 px-3 py-2 text-blue-800">
+          <p>
+            {porAprobarHoy === 1 ? "Hay 1 pedido recurrente de hoy por aprobar." : `Hay ${porAprobarHoy} pedidos recurrentes de hoy por aprobar.`}{" "}
+            {estado !== "POR_APROBAR" && (
+              <Link href="/pedidos?estado=POR_APROBAR" className="underline">
+                Verlos
+              </Link>
+            )}
+            {!puede(sesion.operacion, "pedidos.aprobar") && " Los aprueba el administrador."}
+          </p>
+          {puede(sesion.operacion, "pedidos.aprobar") && (
+            <Formulario accion={aprobarPedidosDeHoy} className="">
+              <Boton type="submit">Aprobar todos</Boton>
+            </Formulario>
+          )}
+        </div>
+      )}
       <form className="mb-4 flex flex-wrap items-end gap-2">
         <label>
           Estado
           <select name="estado" defaultValue={estado} className="mt-1">
+            <option value="POR_APROBAR">Por aprobar</option>
             <option value="PENDIENTE">Pendientes</option>
             <option value="ENTREGADO">Entregados</option>
             <option value="NO_ENTREGADO">No entregados</option>

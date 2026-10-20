@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoPesos, hoyISO, nombreProducto } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { precioParaCliente } from "@/modules/precios";
+import { DIAS_SEMANA } from "@/modules/recurrentes";
 import { crearPedido } from "../acciones";
 
 export default async function NuevoPedidoPage({ searchParams }: { searchParams: Promise<{ cliente?: string; q?: string; pagina?: string }> }) {
@@ -113,6 +114,24 @@ export default async function NuevoPedidoPage({ searchParams }: { searchParams: 
             <Campo etiqueta="Nota">
               <input name="nota" placeholder="Ej.: pedido por WhatsApp, entregar en la tarde" />
             </Campo>
+            <details>
+              <summary className="block cursor-pointer py-2.5 underline">Repetir este pedido cada semana</summary>
+              <fieldset className="mt-2">
+                <legend className="font-medium text-stone-700">Días en que se repite</legend>
+                <div className="grid grid-cols-2 sm:grid-cols-4">
+                  {DIAS_SEMANA.map((d) => (
+                    <label key={d.valor} className="flex min-h-11 items-center gap-2 font-normal capitalize">
+                      <input type="checkbox" name="dias" value={d.valor} />
+                      {d.nombre}
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-1 text-stone-600">
+                  Desde la fecha de entrega, cada día elegido el pedido se carga solo a Pedidos con el precio de ese día. El administrador lo aprueba y
+                  queda listo para el repartidor.
+                </p>
+              </fieldset>
+            </details>
             <Boton type="submit">Crear pedido</Boton>
           </Formulario>
         </Tarjeta>

@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { existencias } from "@/lib/existencias";
 import { diaUTC, formatoCantidad, formatoHuevos, formatoPesos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
+import { generarPedidosRecurrentes } from "@/lib/recurrentes-db";
 import { instantes } from "@/lib/reportes";
 import { requerir } from "@/lib/sesion";
 import { existenciasBajas } from "@/modules/alertas";
@@ -45,6 +46,8 @@ export default async function InicioPage() {
   const hoyIso = hoyISO();
   const hoy = diaUTC(hoyIso);
   const si = <T,>(permiso: Parameters<typeof puede>[1], f: () => Promise<T>) => (puede(op, permiso) ? f() : Promise.resolve(null));
+  // Los pedidos recurrentes de hoy se cargan con la primera persona que abre la app en el día.
+  await generarPedidosRecurrentes(hoy);
 
   const [
     miRuta,
@@ -67,6 +70,7 @@ export default async function InicioPage() {
     comprasVencidas,
     porClasificar,
     grupos,
+    porAprobar,
   ] = await Promise.all([
     puede(op, "ruta.propia")
       ? db.ruta.findUnique({
@@ -96,6 +100,7 @@ export default async function InicioPage() {
     si("compras", () => db.compra.count({ where: { anulada: false, saldo: { gt: 0 }, vence: { lt: hoy } } })),
     si("inventario.ver", () => db.compra.aggregate({ where: { anulada: false, porClasificar: { gt: 0 } }, _sum: { porClasificar: true } })),
     si("aves", () => db.grupoAves.findMany({ where: { activo: true } })),
+    si("pedidos.aprobar", () => db.pedido.count({ where: { estado: "POR_APROBAR", fechaEntrega: hoy } })),
   ]);
 
   // Postura de hoy de las aves que hay en los galpones.
@@ -118,6 +123,8 @@ export default async function InicioPage() {
     alertas.push({ texto: `${cuenta(clientesVencidos.length, "cliente", "clientes")} con deudas vencidas por ${formatoPesos(vencida?._sum.saldo ?? 0)}.`, href: "/cartera" });
   if (cajasAbiertas?.length) alertas.push({ texto: `${cuenta(cajasAbiertas.length, "día", "días")} de caja sin cerrar.`, href: "/caja" });
   if (transferencias) alertas.push({ texto: `${cuenta(transferencias, "transferencia", "transferencias")} sin verificar en el banco.`, href: "/caja" });
+  if (porAprobar)
+    alertas.push({ texto: `${cuenta(porAprobar, "pedido recurrente", "pedidos recurrentes")} de hoy por aprobar.`, href: "/pedidos?estado=POR_APROBAR" });
   if (rutasPorAprobar)
     alertas.push({ texto: `${cuenta(rutasPorAprobar, "ruta", "rutas")} con precierre del repartidor por aprobar.`, href: "/rutas" });
   if (rutasSinLiquidar) alertas.push({ texto: `${cuenta(rutasSinLiquidar, "ruta", "rutas")} de días anteriores sin liquidar.`, href: "/rutas" });
