@@ -177,20 +177,16 @@ describe("clientes, precios y proveedores", () => {
     fallo(await guardarPreciosGenerales(undefined, form({ ...actuales, [`gramosMin_${aa.id}`]: 66, [`gramosMax_${aa.id}`]: 60 })), /«desde» no puede ser mayor/);
     fallo(await guardarPreciosGenerales(undefined, form({ ...actuales, [`gramosMin_${aa.id}`]: 0 })), /mayor que 0 gramos/);
     fallo(await guardarPreciosGenerales(undefined, form({ ...actuales, [`gramosMax_${aa.id}`]: "60,5" })), /solo números enteros/);
-    fallo(
-      await guardarPreciosGenerales(undefined, form({ ...actuales, [`gramosMin_${jumbo.id}`]: 66, [`gramosMin_${aa.id}`]: 60, [`gramosMax_${aa.id}`]: 66 })),
-      /Jumbo y AA se cruzan/,
-    );
     expect(await producto("AA")).toMatchObject({ gramosMin: null, gramosMax: null });
 
-    // La gallinaza no tiene peso aunque llegue en el formulario.
+    // Los rangos pueden cruzarse; la gallinaza no tiene peso aunque llegue en el formulario.
     ok(
       await guardarPreciosGenerales(
         undefined,
-        form({ ...actuales, [`gramosMin_${jumbo.id}`]: 67, [`gramosMin_${aa.id}`]: 60, [`gramosMax_${aa.id}`]: 66, [`gramosMin_${gallinaza.id}`]: 5 }),
+        form({ ...actuales, [`gramosMin_${jumbo.id}`]: 64, [`gramosMin_${aa.id}`]: 60, [`gramosMax_${aa.id}`]: 66, [`gramosMin_${gallinaza.id}`]: 5 }),
       ),
     );
-    expect(await producto("JUMBO")).toMatchObject({ gramosMin: 67, gramosMax: null });
+    expect(await producto("JUMBO")).toMatchObject({ gramosMin: 64, gramosMax: null });
     expect(await producto("AA")).toMatchObject({ gramosMin: 60, gramosMax: 66 });
     expect(await producto("GALLINAZA")).toMatchObject({ gramosMin: null, gramosMax: null });
     expect(await db.historialPrecio.count()).toBe(0);

@@ -5,14 +5,12 @@ import { auditar } from "@/lib/auditoria";
 import { db } from "@/lib/db";
 import { entero, mensajeError, ErrorUsuario, texto, type EstadoForm } from "@/lib/form";
 import { UNIDADES_GALLINAZA } from "@/lib/formato";
-import { rangosCruzados, type RangoGramos } from "@/modules/pesos";
 import { requerir } from "@/lib/sesion";
 
 export async function guardarPreciosGenerales(_: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("precios");
   try {
-    const productos = await db.producto.findMany({ orderBy: { orden: "asc" } });
-    const rangos: RangoGramos[] = [];
+    const productos = await db.producto.findMany();
     // Se lee todo antes de escribir para que un error no deje cambios a medias.
     await db.$transaction(async (tx) => {
       for (const p of productos) {
@@ -30,7 +28,6 @@ export async function guardarPreciosGenerales(_: EstadoForm, form: FormData): Pr
           if (gramosMin !== null && gramosMax !== null && gramosMin > gramosMax) {
             throw new ErrorUsuario(`En ${p.nombre} el peso «desde» no puede ser mayor que el peso «hasta».`);
           }
-          rangos.push({ nombre: p.nombre, gramosMin, gramosMax });
         }
         let unidad = p.unidad;
         if (p.tipo === "GALLINAZA") {
@@ -50,9 +47,6 @@ export async function guardarPreciosGenerales(_: EstadoForm, form: FormData): Pr
         }
         await auditar(tx, sesion.usuario.id, "Producto", p.id, "precios", { general, sugerido, activo, unidad, minimo, gramosMin, gramosMax });
       }
-      // Un mismo peso no puede caer en dos tipos de huevo.
-      const cruce = rangosCruzados(rangos);
-      if (cruce) throw new ErrorUsuario(`Los pesos de ${cruce[0]} y ${cruce[1]} se cruzan. Un huevo solo puede caer en un tipo.`);
     });
   } catch (e) {
     return { error: mensajeError(e) };

@@ -111,7 +111,7 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
           </Tabla>
           <p className="text-stone-600">
             El peso de un huevo, en gramos, decide su tipo. Se muestra en la clasificación como guía. Deja «Desde» vacío para «hasta tantos
-            gramos» y «Hasta» vacío para «tantos gramos o más». Dos tipos no pueden compartir el mismo peso.
+            gramos» y «Hasta» vacío para «tantos gramos o más».
           </p>
           <Boton type="submit">Guardar precios y pesos</Boton>
         </Formulario>
