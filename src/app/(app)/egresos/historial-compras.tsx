@@ -23,7 +23,8 @@ export async function HistorialCompras({
   /** Filtros de la URL que se conservan al cambiar de página. */
   params: Record<string, string | undefined>;
 }) {
-  const where = { dia: diasDelMes(mes) };
+  // Los saldos iniciales de proveedores no son compras de huevo: se ven en Por pagar.
+  const where = { tipo: "COMPRA" as const, dia: diasDelMes(mes) };
   const [compras, total] = await Promise.all([
     db.compra.findMany({
       where,

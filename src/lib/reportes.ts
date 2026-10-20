@@ -191,7 +191,8 @@ async function cartera(hoy: Date): Promise<Reporte> {
 }
 
 async function comprasPorProveedor(desde: Date, hasta: Date): Promise<Reporte> {
-  const compras = await db.compra.findMany({ where: { anulada: false, dia: { gte: desde, lte: hasta } }, include: { proveedor: true } });
+  // El saldo inicial es deuda de antes de la app, no una compra del periodo.
+  const compras = await db.compra.findMany({ where: { tipo: "COMPRA", anulada: false, dia: { gte: desde, lte: hasta } }, include: { proveedor: true } });
   const porProveedor = new Map<number, { nombre: string; n: number; huevos: number; contado: number; credito: number; saldo: number }>();
   for (const c of compras) {
     const f = porProveedor.get(c.proveedorId) ?? { nombre: c.proveedor.nombre, n: 0, huevos: 0, contado: 0, credito: 0, saldo: 0 };

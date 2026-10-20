@@ -2,13 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion } from "@/components/paginacion";
-import { Boton, BotonLink, BotonTexto, Campo, claseBoton, Etiqueta, EtiquetaInactivo, Tabla, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, BotonTexto, Campo, claseBoton, Etiqueta, EtiquetaInactivo, Tabla, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { diaUTC, formatoDia, formatoFecha, formatoHuevos, formatoPesos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { comprasPorPagar } from "@/lib/proveedores-db";
 import { requerir } from "@/lib/sesion";
-import { anularPagoProveedor, registrarAbonoProveedor } from "../acciones";
+import { anularCompra } from "../../egresos/compras";
+import { anularPagoProveedor, registrarAbonoProveedor, registrarSaldoInicialProveedor } from "../acciones";
 
 const MOVIMIENTOS = 20;
 
@@ -43,6 +44,8 @@ export default async function PorPagarProveedorPage({
   ]);
   const saldo = deudas.reduce((s, d) => s + d.saldo, 0);
   const hoy = diaUTC(hoyISO());
+  const admin = puede(sesion.operacion, "anular");
+  const nombreCompra = (c: { id: number; tipo: string }) => (c.tipo === "SALDO_INICIAL" ? `Saldo inicial #${c.id}` : `Compra #${c.id}`);
 
   return (
     <>
@@ -66,6 +69,7 @@ export default async function PorPagarProveedorPage({
       </div>
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
         <Tarjeta id="por-pagar" titulo="Cuentas por pagar">
           {deudas.length === 0 ? (
             <p className="text-stone-500">No le debemos nada.</p>
@@ -82,7 +86,7 @@ export default async function PorPagarProveedorPage({
               <tbody>
                 {deudas.map((d) => (
                   <tr key={d.id}>
-                    <td>#{d.id}</td>
+                    <td>{d.tipo === "SALDO_INICIAL" ? `Saldo inicial #${d.id}` : `#${d.id}`}</td>
                     <td>{formatoFecha(d.fecha)}</td>
                     <td>
                       {d.vence ? formatoDia(d.vence) : "—"} {d.vence && d.vence < hoy && <Etiqueta color="rojo">Vencida</Etiqueta>}
@@ -115,7 +119,7 @@ export default async function PorPagarProveedorPage({
                   <option value="">La compra más antigua primero</option>
                   {deudas.map((d) => (
                     <option key={d.id} value={d.id}>
-                      Compra #{d.id} · {formatoFecha(d.fecha)} · debe {formatoPesos(d.saldo)}
+                      {nombreCompra(d)} · {formatoFecha(d.fecha)} · debe {formatoPesos(d.saldo)}
                     </option>
                   ))}
                 </select>
@@ -124,6 +128,29 @@ export default async function PorPagarProveedorPage({
             </Formulario>
           )}
         </Tarjeta>
+
+        {admin && (
+          <Tarjeta id="saldo-inicial" titulo="Saldo inicial">
+            <Formulario accion={registrarSaldoInicialProveedor.bind(null, id)} className="space-y-3">
+              <Alerta tipo="aviso">Úsalo solo para cargar lo que ya le debíamos a este proveedor antes de usar la app. No mueve huevo ni caja.</Alerta>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Campo etiqueta="Valor">
+                  <input name="valor" inputMode="numeric" required />
+                </Campo>
+                <Campo etiqueta="Fecha de la deuda" ayuda="Desde esta fecha se cuentan los días de crédito para saber si está vencida.">
+                  <input name="fecha" type="date" defaultValue={hoyISO()} max={hoyISO()} required />
+                </Campo>
+              </div>
+              <Campo etiqueta="Nota">
+                <input name="nota" />
+              </Campo>
+              <Boton type="submit" variante="secundario">
+                Cargar saldo inicial
+              </Boton>
+            </Formulario>
+          </Tarjeta>
+        )}
+        </div>
 
         <Tarjeta id="movimientos" titulo="Movimientos">
           <ul className="divide-y divide-stone-100">
@@ -134,10 +161,23 @@ export default async function PorPagarProveedorPage({
                 "c" in m ? (
                   <li key={`c${m.c.id}`} className="flex justify-between gap-2 py-2">
                     <span>
-                      {formatoFecha(m.fecha)} · Compra #{m.c.id} ({formatoHuevos(m.c.huevos)},{" "}
-                      {m.c.formaPago === "CONTADO" ? "contado" : "crédito"}) {m.c.anulada && <Etiqueta color="rojo">Anulada</Etiqueta>}
+                      {formatoFecha(m.fecha)} · {nombreCompra(m.c)}{" "}
+                      {m.c.tipo === "SALDO_INICIAL"
+                        ? m.c.nota && `(${m.c.nota})`
+                        : `(${formatoHuevos(m.c.huevos)}, ${m.c.formaPago === "CONTADO" ? "contado" : "crédito"})`}{" "}
+                      {m.c.anulada && <Etiqueta color="rojo">Anulada</Etiqueta>}
                     </span>
-                    <span className="whitespace-nowrap tabular-nums">{formatoPesos(m.c.total)}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="whitespace-nowrap tabular-nums">{formatoPesos(m.c.total)}</span>
+                      {/* Las compras se anulan en Egresos; el saldo inicial, aquí, mientras no tenga abonos. */}
+                      {admin && m.c.tipo === "SALDO_INICIAL" && !m.c.anulada && m.c.saldo === m.c.total && (
+                        <Formulario accion={anularCompra.bind(null, m.c.id)} confirmar="¿Anular este saldo inicial?" className="inline">
+                          <BotonTexto type="submit" peligro>
+                            Anular
+                          </BotonTexto>
+                        </Formulario>
+                      )}
+                    </span>
                   </li>
                 ) : (
                   <li key={`p${m.p.id}`} className="flex flex-wrap justify-between gap-2 py-2">
@@ -147,7 +187,7 @@ export default async function PorPagarProveedorPage({
                     </span>
                     <span className="flex items-center gap-2">
                       <span className="whitespace-nowrap text-green-700 tabular-nums">−{formatoPesos(m.p.valor)}</span>
-                      {!m.p.anulado && puede(sesion.operacion, "anular") && (
+                      {!m.p.anulado && admin && (
                         <Formulario
                           accion={anularPagoProveedor.bind(null, m.p.id)}
                           confirmar="¿Anular este abono? El dinero vuelve a la caja."

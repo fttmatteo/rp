@@ -449,6 +449,23 @@ async function main() {
   const elEden = proveedor("Granja El Edén", "3127654321", 0, "Huevo sin clasificar, se paga de contado");
   const pradera = proveedor("Huevos La Pradera", "3159876543", 8, null);
   const llano = proveedor("Avícola El Llano", "3201112233", 0, "Ya no se le compra: el huevo llegaba muy sucio", false);
+  // Lo que se le debía a San Luis antes de usar la app: se le paga con los abonos de los lunes.
+  filas.compras.push({
+    id: nuevoId("Compra"),
+    tipo: "SALDO_INICIAL",
+    proveedorId: sanLuis.id,
+    fecha: hora(sumar(inicio, -1), 12),
+    dia: sumar(inicio, -1),
+    usuarioId: admin.id,
+    clasificada: false,
+    huevos: 0,
+    porClasificar: 0,
+    total: 850000,
+    saldo: 850000,
+    formaPago: "CREDITO",
+    vence: sumar(inicio, sanLuis.diasCredito - 1),
+    nota: "Deuda del cuaderno anterior",
+  });
 
   // ---------- Inventario inicial ----------
   const INICIAL: Record<string, number> = { JUMBO: 15, AAA: 40, AA: 120, A: 100, B: 40 };

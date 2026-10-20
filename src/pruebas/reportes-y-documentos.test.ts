@@ -5,6 +5,7 @@ import { registrarAbono } from "@/app/(app)/cartera/acciones";
 import { registrarClasificacion } from "@/app/(app)/clasificacion/acciones";
 import { registrarCompra } from "@/app/(app)/egresos/compras";
 import { entregarPedido } from "@/app/(app)/pedidos/acciones";
+import { registrarSaldoInicialProveedor } from "@/app/(app)/por-pagar/acciones";
 import { GET as exportar } from "@/app/(app)/reportes/exportar/route";
 import { GET as libro } from "@/app/(app)/reportes/libro/route";
 import { GET as reciboPago } from "@/app/recibos/pago/[id]/route";
@@ -65,6 +66,9 @@ describe("reportes", () => {
     const cartera = await r("cartera");
     expect(cartera.filas).toEqual([["Rosa", "3001234567", 6_000, 0, 10_000, 0, 10_000, 16_000]]);
 
+    // El saldo inicial de un proveedor no es una compra del período.
+    const granja = await db.proveedor.findFirstOrThrow({ where: { nombre: "Granja" } });
+    ok(await registrarSaldoInicialProveedor(granja.id, undefined, form({ valor: 70_000, fecha: iso(hoy()) })));
     expect((await r("compras")).filas).toEqual([["Granja", 1, 2, 0, 30_000, 30_000]]);
     expect(Object.keys(REPORTES)).toHaveLength(6);
   });
