@@ -1,7 +1,7 @@
 import { Formulario } from "@/components/formulario";
 import { leerPagina, Paginacion, rango } from "@/components/paginacion";
 import { PestanasPedidos } from "@/components/secciones";
-import { Boton, BotonLink, Etiqueta, Tabla, Titulo, Vacio } from "@/components/ui";
+import { BotonLink, BotonTexto, Etiqueta, Tabla, Titulo, Vacio } from "@/components/ui";
 import { db } from "@/lib/db";
 import { formatoDia, nombreProducto } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
@@ -62,9 +62,9 @@ export default async function RecurrentesPage({ searchParams }: { searchParams: 
                   <td>
                     {r.activo && (
                       <Formulario accion={terminarRecurrente.bind(null, r.id)} confirmar="¿Dejar de repetir este pedido? Lo que ya está en Pedidos sigue igual." className="">
-                        <Boton type="submit" variante="peligro">
+                        <BotonTexto type="submit" peligro>
                           Dejar de repetir
-                        </Boton>
+                        </BotonTexto>
                       </Formulario>
                     )}
                   </td>
