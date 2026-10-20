@@ -374,6 +374,7 @@ async function main() {
       usuarioId: d.usuarioId,
       rutaId: d.rutaId ?? null,
       verificadoEn: transferencia ? verificacion(d.dia, d.fecha) : null,
+      saldoDespues: deudaDe(c),
     });
     return { valor, medio: d.medio, pagoId };
   };
