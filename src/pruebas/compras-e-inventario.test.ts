@@ -144,6 +144,7 @@ describe("compras de huevo a proveedores", () => {
     expect(await saldosProveedores()).toEqual(new Map([[p.id, 80_000]]));
     fallo(await registrarSaldoInicialProveedor(p.id, undefined, form({ valor: 0, fecha })), /mayor que cero/);
     fallo(await registrarSaldoInicialProveedor(p.id, undefined, form({ valor: 1, fecha: "2999-01-01" })), /Fecha/);
+    fallo(await registrarSaldoInicialProveedor(p.id, undefined, form({ valor: "", fecha })), /mayor que cero/);
     fallo(await registrarSaldoInicialProveedor(999, undefined, form({ valor: 1, fecha })), /no encontrado/);
 
     // Se paga como cualquier cuenta por pagar y, sin abonos, se anula.
