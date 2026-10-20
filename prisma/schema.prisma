@@ -458,8 +458,14 @@ enum FormaPagoCompra {
   CREDITO // queda como cuenta por pagar
 }
 
+enum TipoCompra {
+  COMPRA
+  SALDO_INICIAL // lo que se le debía al proveedor antes de usar la app
+}
+
 model Compra {
   id            Int             @id @default(autoincrement())
+  tipo          TipoCompra      @default(COMPRA)
   proveedorId   Int
   fecha         DateTime        @default(now())
   dia           DateTime        @db.Date
