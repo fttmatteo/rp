@@ -160,6 +160,43 @@ describe("clientes, precios y proveedores", () => {
     expect(await db.historialPrecio.count()).toBe(2);
   });
 
+  it("rango de peso en gramos de cada tipo de huevo", async () => {
+    await comoOperacion("ADMIN");
+    const productos = await db.producto.findMany();
+    const actuales = Object.fromEntries(
+      productos.flatMap((p) => [
+        [`general_${p.id}`, p.precioGeneral],
+        [`activo_${p.id}`, p.activo],
+        [`sugerido_${p.id}`, p.precioClienteSugerido ?? ""],
+        [`unidad_${p.id}`, p.unidad ?? ""],
+      ]),
+    );
+    const jumbo = await producto("JUMBO");
+    const aa = await producto("AA");
+    const gallinaza = await producto("GALLINAZA");
+    fallo(await guardarPreciosGenerales(undefined, form({ ...actuales, [`gramosMin_${aa.id}`]: 66, [`gramosMax_${aa.id}`]: 60 })), /«desde» no puede ser mayor/);
+    fallo(await guardarPreciosGenerales(undefined, form({ ...actuales, [`gramosMin_${aa.id}`]: 0 })), /mayor que 0 gramos/);
+    fallo(await guardarPreciosGenerales(undefined, form({ ...actuales, [`gramosMax_${aa.id}`]: "60,5" })), /solo números enteros/);
+    expect(await producto("AA")).toMatchObject({ gramosMin: null, gramosMax: null });
+
+    // Los rangos pueden cruzarse; la gallinaza no tiene peso aunque llegue en el formulario.
+    ok(
+      await guardarPreciosGenerales(
+        undefined,
+        form({ ...actuales, [`gramosMin_${jumbo.id}`]: 64, [`gramosMin_${aa.id}`]: 60, [`gramosMax_${aa.id}`]: 66, [`gramosMin_${gallinaza.id}`]: 5 }),
+      ),
+    );
+    expect(await producto("JUMBO")).toMatchObject({ gramosMin: 64, gramosMax: null });
+    expect(await producto("AA")).toMatchObject({ gramosMin: 60, gramosMax: 66 });
+    expect(await producto("GALLINAZA")).toMatchObject({ gramosMin: null, gramosMax: null });
+    expect(await db.historialPrecio.count()).toBe(0);
+    expect(await db.auditoria.count({ where: { entidad: "Producto", accion: "precios" } })).toBe(2);
+
+    // Vaciar los campos quita el rango.
+    ok(await guardarPreciosGenerales(undefined, form(actuales)));
+    expect(await producto("AA")).toMatchObject({ gramosMin: null, gramosMax: null });
+  });
+
   it("precios generales con la página abierta en dos equipos: no se pisan los cambios de otra persona", async () => {
     await comoOperacion("ADMIN");
     const productos = await db.producto.findMany();

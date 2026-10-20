@@ -34,24 +34,37 @@ export async function guardarPreciosGenerales(_: EstadoForm, form: FormData): Pr
         if (activo && general <= 0) throw new ErrorUsuario(`Escribe el precio general de ${p.nombre} para ponerlo en venta.`);
         const sugerido = campo("sugerido", (c) => entero(form, c, `Precio sugerido de ${p.nombre}`) || null, p.precioClienteSugerido, "el precio sugerido");
         const minimo = campo("minimo", (c) => entero(form, c, `Mínimo de ${p.nombre}`), p.minimo, "el mínimo");
+        let gramosMin: number | null = null;
+        let gramosMax: number | null = null;
+        if (p.tipo === "CUBETA") {
+          gramosMin = campo("gramosMin", (c) => entero(form, c, `Peso desde de ${p.nombre}`), p.gramosMin, "el peso desde");
+          gramosMax = campo("gramosMax", (c) => entero(form, c, `Peso hasta de ${p.nombre}`), p.gramosMax, "el peso hasta");
+          if (gramosMin === 0 || gramosMax === 0) throw new ErrorUsuario(`El peso de ${p.nombre} debe ser mayor que 0 gramos.`);
+          if (gramosMin !== null && gramosMax !== null && gramosMin > gramosMax) {
+            throw new ErrorUsuario(`En ${p.nombre} el peso «desde» no puede ser mayor que el peso «hasta».`);
+          }
+        }
         let unidad = p.unidad;
         if (p.tipo === "GALLINAZA") {
           unidad = campo("unidad", (c) => texto(form, c), p.unidad ?? "bulto", "la unidad");
           if (!(UNIDADES_GALLINAZA as readonly string[]).includes(unidad)) throw new ErrorUsuario("Elige la unidad de la gallinaza.");
         }
-        if (general === p.precioGeneral && sugerido === p.precioClienteSugerido && activo === p.activo && unidad === p.unidad && minimo === p.minimo) continue;
-        await tx.producto.update({ where: { id: p.id }, data: { precioGeneral: general, precioClienteSugerido: sugerido, activo, unidad, minimo } });
+        if (general === p.precioGeneral && sugerido === p.precioClienteSugerido && activo === p.activo && unidad === p.unidad && minimo === p.minimo && gramosMin === p.gramosMin && gramosMax === p.gramosMax) continue;
+        await tx.producto.update({
+          where: { id: p.id },
+          data: { precioGeneral: general, precioClienteSugerido: sugerido, activo, unidad, minimo, gramosMin, gramosMax },
+        });
         if (general !== p.precioGeneral) {
           await tx.historialPrecio.create({
             data: { productoId: p.id, precioAnterior: p.precioGeneral, precioNuevo: general, usuarioId: sesion.usuario.id },
           });
         }
-        await auditar(tx, sesion.usuario.id, "Producto", p.id, "precios", { general, sugerido, activo, unidad, minimo });
+        await auditar(tx, sesion.usuario.id, "Producto", p.id, "precios", { general, sugerido, activo, unidad, minimo, gramosMin, gramosMax });
       }
     });
   } catch (e) {
     return { error: mensajeError(e) };
   }
   revalidatePath("/precios");
-  return { ok: "Precios guardados. Los pedidos ya creados conservan su precio." };
+  return { ok: "Precios y pesos guardados. Los pedidos ya creados conservan su precio." };
 }
