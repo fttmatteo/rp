@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { auditar } from "@/lib/auditoria";
 import { db } from "@/lib/db";
 import { decimal, entero, ErrorUsuario, mensajeError, texto, textoOpcional, type EstadoForm } from "@/lib/form";
+import { bloquearCliente } from "@/lib/existencias";
 import { requerir } from "@/lib/sesion";
+import { valorAGuardar } from "@/modules/precios";
 
 function leerCliente(form: FormData) {
   const nombre = texto(form, "nombre");
@@ -61,15 +63,24 @@ export async function actualizarCliente(id: number, _: EstadoForm, form: FormDat
 export async function guardarPreciosCliente(clienteId: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("precios");
   try {
-    const [productos, actuales] = await Promise.all([
-      db.producto.findMany(),
-      db.precioCliente.findMany({ where: { clienteId } }),
-    ]);
-    const previo = new Map(actuales.map((p) => [p.productoId, p.precio]));
     await db.$transaction(async (tx) => {
+      // Bloqueado el cliente, dos personas que guardan sus precios a la vez no se pisan.
+      await bloquearCliente(tx, clienteId);
+      const [productos, actuales] = await Promise.all([tx.producto.findMany(), tx.precioCliente.findMany({ where: { clienteId } })]);
+      const previo = new Map(actuales.map((p) => [p.productoId, p.precio]));
       for (const p of productos) {
-        const nuevo = entero(form, `precio_${p.id}`, `Precio de ${p.nombre}`) || null;
         const anterior = previo.get(p.id) ?? null;
+        const leer = (c: string) => entero(form, c, `Precio de ${p.nombre}`) || null;
+        // antes_precio_* es el precio con que se abrió la página: lo que esta persona no tocó no pisa cambios ajenos.
+        const { valor: nuevo, choque } = valorAGuardar(
+          leer(`precio_${p.id}`),
+          form.has(`antes_precio_${p.id}`) ? leer(`antes_precio_${p.id}`) : undefined,
+          anterior,
+        );
+        if (choque)
+          throw new ErrorUsuario(
+            `Otra persona cambió el precio de ${p.nombre} de este cliente mientras tenías la página abierta. Recarga la página y vuelve a escribir tu cambio.`,
+          );
         if (nuevo === anterior) continue;
         if (nuevo === null) {
           await tx.precioCliente.delete({ where: { clienteId_productoId: { clienteId, productoId: p.id } } });

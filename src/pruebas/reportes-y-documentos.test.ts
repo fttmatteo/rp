@@ -5,6 +5,7 @@ import { registrarAbono } from "@/app/(app)/cartera/acciones";
 import { registrarClasificacion } from "@/app/(app)/clasificacion/acciones";
 import { registrarCompra } from "@/app/(app)/egresos/compras";
 import { entregarPedido } from "@/app/(app)/pedidos/acciones";
+import { registrarSaldoInicialProveedor } from "@/app/(app)/por-pagar/acciones";
 import { GET as exportar } from "@/app/(app)/reportes/exportar/route";
 import { GET as libro } from "@/app/(app)/reportes/libro/route";
 import { GET as reciboPago } from "@/app/recibos/pago/[id]/route";
@@ -65,6 +66,9 @@ describe("reportes", () => {
     const cartera = await r("cartera");
     expect(cartera.filas).toEqual([["Rosa", "3001234567", 6_000, 0, 10_000, 0, 10_000, 16_000]]);
 
+    // El saldo inicial de un proveedor no es una compra del período.
+    const granja = await db.proveedor.findFirstOrThrow({ where: { nombre: "Granja" } });
+    ok(await registrarSaldoInicialProveedor(granja.id, undefined, form({ valor: 70_000, fecha: iso(hoy()) })));
     expect((await r("compras")).filas).toEqual([["Granja", 1, 2, 0, 30_000, 30_000]]);
     expect(Object.keys(REPORTES)).toHaveLength(6);
   });
@@ -145,6 +149,9 @@ describe("recibos en PDF", () => {
     expect((await reciboVenta(peticion(""), params("abc"))).status).toBe(404);
     expect((await reciboPago(peticion(""), params(pago.id))).headers.get("Content-Disposition")).toBe('inline; filename="AB-000001.pdf"');
     expect((await reciboPago(peticion(""), params(999))).status).toBe(404);
+    // Un pago de antes de guardar el saldo muestra el saldo de hoy.
+    await db.pago.update({ where: { id: pago.id }, data: { saldoDespues: null } });
+    expect((await reciboPago(peticion(""), params(pago.id))).status).toBe(200);
 
     // El repartidor solo ve los recibos de su ruta, y no los de pagos.
     const repartidor = await usuario(["REPARTIDOR"]);

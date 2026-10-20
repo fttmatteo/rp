@@ -210,6 +210,10 @@ describe("cartera", () => {
     expect(await saldo(nueva.id)).toBe(25_000);
     expect(await saldoCliente(c.id)).toBe(25_000);
     expect((await deudasPendientes(c.id)).map((d) => d.id)).toEqual([nueva.id]);
+    // El recibo guarda lo que quedó debiendo con ese pago, aunque después abone más.
+    ok(await registrarAbono(c.id, undefined, form({ valor: 5_000, medio: "EFECTIVO" })));
+    const pagos = await db.pago.findMany({ orderBy: { id: "asc" } });
+    expect(pagos.map((p) => p.saldoDespues)).toEqual([25_000, 20_000]);
   });
 
   it("el abono a un recibo elegido va primero a ese y el resto a la más antigua", async () => {

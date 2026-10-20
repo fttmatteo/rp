@@ -110,8 +110,9 @@ export async function registrarCompra(_: EstadoForm, form: FormData): Promise<Es
 /** Solo el administrador: devuelve el inventario y el dinero de una compra equivocada. */
 export async function anularCompra(id: number, _: EstadoForm, _form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("anular");
+  let proveedorId: number;
   try {
-    await db.$transaction(async (tx) => {
+    proveedorId = await db.$transaction(async (tx) => {
       const encontrada = await tx.compra.findUnique({ where: { id } });
       if (!encontrada) throw new ErrorUsuario("Compra no encontrada.");
       await bloquearProveedor(tx, encontrada.proveedorId);
@@ -154,10 +155,12 @@ export async function anularCompra(id: number, _: EstadoForm, _form: FormData): 
       }
       await tx.compra.update({ where: { id }, data: { anulada: true, saldo: 0, porClasificar: 0 } });
       await auditar(tx, sesion.usuario.id, "Compra", id, "anular", { total: compra.total, huevos: compra.huevos });
+      return compra.proveedorId;
     });
   } catch (e) {
     return { error: mensajeError(e) };
   }
   revalidatePath("/egresos");
+  revalidatePath(`/por-pagar/${proveedorId}`);
   return { ok: "Compra anulada." };
 }

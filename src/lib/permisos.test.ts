@@ -17,6 +17,10 @@ describe("permisos", () => {
     expect(puede("REPARTIDOR", "rutas.aprobar")).toBe(false);
     expect(puede("VENTAS", "rutas.aprobar")).toBe(false);
     expect(puede("ADMIN", "rutas.aprobar")).toBe(true);
+    // Los pedidos que generan los recurrentes solo los aprueba el administrador.
+    expect(puede("ADMIN", "pedidos.aprobar")).toBe(true);
+    expect(puede("VENTAS", "pedidos.aprobar")).toBe(false);
+    expect(puede("REPARTIDOR", "pedidos.aprobar")).toBe(false);
     // Mi ruta es solo del repartidor.
     expect(puede("ADMIN", "ruta.propia")).toBe(false);
     expect(puede("VENTAS", "ruta.propia")).toBe(false);

@@ -40,6 +40,12 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
               {productos.map((p) => (
                 <tr key={p.id}>
                   <td className="font-medium">
+                    {/* Valores con que se abrió la página: si otra persona guarda mientras tanto, no se pisan sus cambios. */}
+                    <input type="hidden" name={`antes_general_${p.id}`} defaultValue={p.precioGeneral || ""} />
+                    <input type="hidden" name={`antes_sugerido_${p.id}`} defaultValue={p.precioClienteSugerido ?? ""} />
+                    <input type="hidden" name={`antes_minimo_${p.id}`} defaultValue={p.minimo ?? ""} />
+                    <input type="hidden" name={`antes_activo_${p.id}`} defaultValue={p.activo ? "on" : ""} />
+                    {p.tipo === "GALLINAZA" && <input type="hidden" name={`antes_unidad_${p.id}`} defaultValue={p.unidad ?? "bulto"} />}
                     {p.tipo === "GALLINAZA" ? (
                       <label className="font-medium">
                         Gallinaza por
@@ -99,6 +105,8 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
                   <tr key={p.id}>
                     <td className="font-medium">{p.nombre}</td>
                     <td>
+                      <input type="hidden" name={`antes_gramosMin_${p.id}`} defaultValue={p.gramosMin ?? ""} />
+                      <input type="hidden" name={`antes_gramosMax_${p.id}`} defaultValue={p.gramosMax ?? ""} />
                       <input name={`gramosMin_${p.id}`} inputMode="numeric" defaultValue={p.gramosMin ?? ""} aria-label={`${p.nombre} desde (gramos)`} />
                     </td>
                     <td>
