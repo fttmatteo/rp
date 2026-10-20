@@ -43,7 +43,7 @@ export function Campo({ etiqueta, ayuda, children }: { etiqueta: string; ayuda?:
         {etiqueta}
         <div className="mt-1">{children}</div>
       </label>
-      {ayuda && <p className="text-sm text-stone-500">{ayuda}</p>}
+      {ayuda && <p className="text-stone-500">{ayuda}</p>}
     </div>
   );
 }

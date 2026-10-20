@@ -44,7 +44,7 @@ export default async function UsuariosPage() {
             ))}
           </tbody>
         </Tabla>
-        <Tarjeta id="nuevo" titulo="Nuevo usuario" className="self-start">
+        <Tarjeta id="nuevo" titulo="Nuevo empleado" className="self-start">
           <Formulario accion={crearUsuario}>
             <CampoNombre />
             <Campo etiqueta="Usuario" ayuda="Con este nombre ingresa a la app.">
@@ -54,7 +54,7 @@ export default async function UsuariosPage() {
               <input name="clave" type="password" autoComplete="new-password" required />
             </Campo>
             <CamposAccesos />
-            <Boton type="submit">Crear usuario</Boton>
+            <Boton type="submit">Crear empleado</Boton>
           </Formulario>
         </Tarjeta>
       </div>

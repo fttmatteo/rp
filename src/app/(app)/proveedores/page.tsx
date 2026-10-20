@@ -30,7 +30,7 @@ export default async function ProveedoresPage({ searchParams }: { searchParams: 
       <div className="grid items-start gap-6 md:grid-cols-[3fr_2fr]">
         <div>
           <form className="mb-4 flex flex-wrap gap-2">
-            <input name="q" type="search" defaultValue={q} placeholder="Buscar por nombre o teléfono" className="max-w-sm" />
+            <input name="q" type="search" defaultValue={q} placeholder="Buscar por nombre o teléfono" aria-label="Buscar proveedor" className="max-w-sm" />
             <Boton type="submit" variante="secundario">
               Buscar
             </Boton>

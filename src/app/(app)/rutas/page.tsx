@@ -93,7 +93,7 @@ export default async function RutasPage({ searchParams }: { searchParams: Promis
                 ))}
               </tbody>
             </Tabla>
-            <p className="mt-2 text-sm text-stone-500">Cada repartidor toma los pedidos que va a llevar desde Mi ruta, el mismo día de la entrega.</p>
+            <p className="mt-2 text-stone-500">Cada repartidor toma los pedidos que va a llevar desde Mi ruta, el mismo día de la entrega.</p>
           </>
         )}
       </Tarjeta>

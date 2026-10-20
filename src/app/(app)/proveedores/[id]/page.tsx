@@ -17,9 +17,14 @@ export default async function ProveedorPage({ params }: { params: Promise<{ id: 
     <>
       <Titulo
         accion={
-          <BotonLink href="/proveedores" variante="secundario">
-            Volver
-          </BotonLink>
+          <div className="flex flex-wrap gap-2">
+            <BotonLink href={`/por-pagar/${id}`} variante="secundario">
+              Ver lo que le debemos
+            </BotonLink>
+            <BotonLink href="/proveedores" variante="secundario">
+              Volver
+            </BotonLink>
+          </div>
         }
       >
         {proveedor.nombre} {!proveedor.activo && <EtiquetaInactivo />}
@@ -28,7 +33,7 @@ export default async function ProveedorPage({ params }: { params: Promise<{ id: 
         <Tarjeta id="datos" titulo="Datos del proveedor">
           <Formulario accion={actualizarProveedor.bind(null, id)}>
             <CamposProveedor p={proveedor} />
-            <label className="flex items-center gap-2 font-normal">
+            <label className="flex min-h-11 items-center gap-2 font-normal">
               <input type="checkbox" name="activo" defaultChecked={proveedor.activo} /> Proveedor activo
             </label>
             <Boton type="submit">Guardar</Boton>

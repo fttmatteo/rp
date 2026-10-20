@@ -187,7 +187,7 @@ export default async function PedidoPage({
                       </Campo>
                     ))}
                   </div>
-                  <p className="mt-1 text-sm text-stone-500">Escribe solo lo que cambió. Se cobra lo entregado; ajusta también lo pagado.</p>
+                  <p className="mt-1 text-stone-500">Escribe solo lo que cambió. Se cobra lo entregado; ajusta también lo pagado.</p>
                 </details>
                 <Boton type="submit">Confirmar entrega</Boton>
               </Formulario>

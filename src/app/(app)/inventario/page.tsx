@@ -57,48 +57,51 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
         )}
       </div>
 
-      {/* El ajuste va en una fila sobre los movimientos; así la tabla usa todo el ancho y cada movimiento cabe en una línea. */}
+      {/* El ajuste es poco frecuente: va plegado sobre los movimientos, así la tabla queda a la vista y usa todo el ancho. */}
       {ajustar && (
-        <Tarjeta id="ajuste" titulo="Ajuste de inventario" className="mb-6">
-          <Formulario accion={registrarAjuste} className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <Campo etiqueta="Producto">
-                <select name="productoId" required>
-                  {productos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre}
-                    </option>
-                  ))}
-                </select>
-              </Campo>
-              <Campo etiqueta="Tipo" ayuda="Ajuste: corrige tras un conteo. Rotura: siempre resta.">
-                <select name="tipo">
-                  <option value="AJUSTE">Ajuste</option>
-                  <option value="ROTURA">Rotura (salida)</option>
-                </select>
-              </Campo>
-              <Campo etiqueta="Sentido" ayuda="Entrada suma, salida resta. En rotura no se usa.">
-                <select name="sentido">
-                  <option value="entrada">Entrada</option>
-                  <option value="salida">Salida</option>
-                </select>
-              </Campo>
-              <Campo etiqueta="Cubetas, gallinas o gallinaza">
-                <input name="cantidad" inputMode="numeric" defaultValue="0" />
-              </Campo>
-              <Campo etiqueta="Huevos sueltos" ayuda="Los que no completan una cubeta de 30. No aplica a gallinas.">
-                <input name="sueltos" inputMode="numeric" defaultValue="0" />
-              </Campo>
-            </div>
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="min-w-64 flex-1">
-                <Campo etiqueta="Motivo">
-                  <input name="nota" required placeholder="Conteo físico, cubetas rotas en bodega..." />
+        <Tarjeta id="ajuste" className="mb-6">
+          <details>
+            <summary className="block cursor-pointer py-2.5 text-lg font-semibold underline">Ajuste de inventario o rotura</summary>
+            <Formulario accion={registrarAjuste} className="mt-2 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                <Campo etiqueta="Producto">
+                  <select name="productoId" required>
+                    {productos.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </Campo>
+                <Campo etiqueta="Tipo" ayuda="Ajuste: corrige tras un conteo. Rotura: siempre resta.">
+                  <select name="tipo">
+                    <option value="AJUSTE">Ajuste</option>
+                    <option value="ROTURA">Rotura (salida)</option>
+                  </select>
+                </Campo>
+                <Campo etiqueta="Sentido" ayuda="Entrada suma, salida resta. En rotura no se usa.">
+                  <select name="sentido">
+                    <option value="entrada">Entrada</option>
+                    <option value="salida">Salida</option>
+                  </select>
+                </Campo>
+                <Campo etiqueta="Cubetas, gallinas o gallinaza">
+                  <input name="cantidad" inputMode="numeric" defaultValue="0" />
+                </Campo>
+                <Campo etiqueta="Huevos sueltos" ayuda="Los que no completan una cubeta de 30. No aplica a gallinas.">
+                  <input name="sueltos" inputMode="numeric" defaultValue="0" />
                 </Campo>
               </div>
-              <Boton type="submit">Registrar ajuste</Boton>
-            </div>
-          </Formulario>
+              <div className="flex flex-wrap items-end gap-3">
+                <div className="min-w-64 flex-1">
+                  <Campo etiqueta="Motivo">
+                    <input name="nota" required placeholder="Conteo físico, cubetas rotas en bodega..." />
+                  </Campo>
+                </div>
+                <Boton type="submit">Registrar ajuste</Boton>
+              </div>
+            </Formulario>
+          </details>
         </Tarjeta>
       )}
 

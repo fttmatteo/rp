@@ -110,7 +110,7 @@ export function HistorialDinero({
   return (
     <Tarjeta id="historial" titulo={`${titulo} (${vigentes})`}>
       <FranjaTotales filas={filas} />
-      {nota && <p className="mb-3 text-sm text-stone-500">{nota}</p>}
+      {nota && <p className="mb-3 text-stone-500">{nota}</p>}
       {filas.length === 0 ? (
         <p className="text-stone-500">{vacio}</p>
       ) : (

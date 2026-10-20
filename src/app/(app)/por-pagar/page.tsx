@@ -82,7 +82,7 @@ export default async function PorPagarPage() {
           </tbody>
         </Tabla>
       )}
-      <p className="mt-2 text-sm text-stone-500">Las compras y los pagos a proveedores se registran en Egresos. Para pagar una compra en particular, abre el proveedor.</p>
+      <p className="mt-2 text-stone-500">Las compras y los pagos a proveedores se registran en Egresos. Para pagar una compra en particular, abre el proveedor.</p>
     </>
   );
 }

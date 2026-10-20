@@ -132,7 +132,7 @@ export default async function RutaPage({
                   ))}
                 </tbody>
               </Tabla>
-              <p className="mt-2 text-sm text-stone-500">
+              <p className="mt-2 text-stone-500">
                 Devuelto es lo que el repartidor trae de vuelta: entregas parciales y pedidos no entregados.
               </p>
             </Tarjeta>
@@ -230,7 +230,7 @@ export default async function RutaPage({
               <Fila texto="Abonos a deudas anteriores (transferencia)" valor={liquidacion.abonosTransferencia} />
               <Fila texto="Quedó pendiente (fiado)" valor={cierre.pendiente} rojo />
               <Fila texto="Efectivo que debe entregar" valor={liquidacion.efectivoEsperado} fuerte />
-              <p className="pt-1 text-sm text-stone-500">Las transferencias no se cuentan; se verifican en la caja.</p>
+              <p className="pt-1 text-stone-500">Las transferencias no se cuentan; se verifican en la caja.</p>
             </Tarjeta>
           </div>
         </div>
@@ -321,7 +321,7 @@ export default async function RutaPage({
             </Tabla>
           )}
           {abierta && filas.length > 0 && (
-            <p className="mt-2 text-sm text-stone-500">
+            <p className="mt-2 text-stone-500">
               Para cambiar el orden escribe el número de parada (por ejemplo, 1 para que vaya de primera) y pulsa «Guardar orden escrito».
             </p>
           )}

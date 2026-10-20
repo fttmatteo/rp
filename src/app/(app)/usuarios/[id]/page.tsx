@@ -20,7 +20,7 @@ export default async function UsuarioPage({ params }: { params: Promise<{ id: st
         <Formulario accion={actualizarUsuario.bind(null, usuario.id)}>
           <CampoNombre valor={usuario.nombre} />
           <CamposAccesos actuales={usuario.accesos} />
-          <label className="flex items-center gap-2 font-normal">
+          <label className="flex min-h-11 items-center gap-2 font-normal">
             <input type="checkbox" name="activo" defaultChecked={usuario.activo} />
             Usuario activo
           </label>
