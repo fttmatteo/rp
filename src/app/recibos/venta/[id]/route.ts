@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
-import { formatoConsecutivo, formatoFechaHora, formatoPesos, nombreProducto } from "@/lib/formato";
+import { formatoConsecutivo, formatoFechaHora, formatoPesos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { generarRecibo } from "@/lib/recibo-pdf";
 import { respuestaPdf } from "@/lib/respuesta-pdf";
 import { requerir } from "@/lib/sesion";
+import { lineasReciboVenta } from "@/modules/recibos";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const sesion = await requerir();
@@ -17,7 +18,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         include: {
           cliente: true,
           usuario: true,
-          pedido: { include: { ruta: true, detalles: { include: { producto: true } } } },
+          pedido: { include: { ruta: true, detalles: { include: { producto: true }, orderBy: { id: "asc" } } } },
           aplicaciones: { include: { pago: true } },
         },
       })
@@ -26,13 +27,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   if (!general && venta.pedido?.ruta?.repartidorId !== sesion.usuario.id) return new Response("Acceso denegado", { status: 403 });
 
   const numero = formatoConsecutivo("RP", venta.consecutivo);
-  const lineas =
-    venta.pedido?.detalles.map((d) => ({
-      descripcion: d.producto.tipo === "CUBETA" ? `Cubeta x30 ${d.producto.nombre}` : nombreProducto(d.producto),
-      cantidad: d.cantidad,
-      precio: d.precioUnitario,
-      valor: d.cantidad * d.precioUnitario,
-    })) ?? [{ descripcion: venta.nota ? `Saldo inicial: ${venta.nota}` : "Saldo inicial", valor: venta.total }];
+  const lineas = lineasReciboVenta(venta.pedido?.detalles ?? null, venta);
   const pagado = venta.aplicaciones.filter((a) => !a.pago.anulado).reduce((s, a) => s + a.valor, 0);
 
   const bytes = await generarRecibo({

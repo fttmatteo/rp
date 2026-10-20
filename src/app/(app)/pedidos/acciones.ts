@@ -11,6 +11,7 @@ import { entero, ErrorUsuario, mensajeError, texto, textoOpcional, type EstadoFo
 import { leerMedio } from "@/lib/pagos";
 import { requerir } from "@/lib/sesion";
 import { precioParaCliente, totalPedido } from "@/modules/precios";
+import { normalizarDias } from "@/modules/recurrentes";
 
 export async function crearPedido(clienteId: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
   const sesion = await requerir("pedidos.crear");
@@ -33,18 +34,31 @@ export async function crearPedido(clienteId: number, _: EstadoForm, form: FormDa
       }))
       .filter((d) => d.cantidad > 0);
     if (detalles.length === 0) throw new ErrorUsuario("Escribe al menos una cantidad.");
+    // Si eligió días de la semana, el pedido se repite: esos días se carga solo a Pedidos para que el administrador lo apruebe.
+    const dias = normalizarDias(form.getAll("dias").map(Number));
+    const nota = textoOpcional(form, "nota");
+    const fechaEntrega = diaUTC(fechaISO);
 
     id = await db.$transaction(async (tx) => {
+      const recurrente =
+        dias.length > 0
+          ? await tx.pedidoRecurrente.create({
+              data: {
+                clienteId,
+                diasSemana: dias,
+                desde: fechaEntrega,
+                nota,
+                creadoPorId: sesion.usuario.id,
+                detalles: { create: detalles.map((d) => ({ productoId: d.productoId, cantidad: d.cantidad })) },
+              },
+            })
+          : null;
+      // Este primer pedido ya lo creó una persona: no necesita aprobación. Queda ligado al recurrente para no repetirlo ese día.
       const pedido = await tx.pedido.create({
-        data: {
-          clienteId,
-          fechaEntrega: diaUTC(fechaISO),
-          nota: textoOpcional(form, "nota"),
-          creadoPorId: sesion.usuario.id,
-          detalles: { create: detalles },
-        },
+        data: { clienteId, fechaEntrega, nota, creadoPorId: sesion.usuario.id, recurrenteId: recurrente?.id, detalles: { create: detalles } },
       });
-      await auditar(tx, sesion.usuario.id, "Pedido", pedido.id, "crear", { clienteId, detalles, total: totalPedido(detalles) });
+      await auditar(tx, sesion.usuario.id, "Pedido", pedido.id, "crear", { clienteId, detalles, total: totalPedido(detalles), dias });
+      if (recurrente) await auditar(tx, sesion.usuario.id, "PedidoRecurrente", recurrente.id, "crear", { clienteId, dias });
       return pedido.id;
     });
   } catch (e) {
@@ -58,8 +72,8 @@ export async function cancelarPedido(id: number, _: EstadoForm, _form: FormData)
   const sesion = await requerir("pedidos.crear");
   try {
     await db.$transaction(async (tx) => {
-      const r = await tx.pedido.updateMany({ where: { id, estado: "PENDIENTE" }, data: { estado: "CANCELADO" } });
-      if (r.count === 0) throw new ErrorUsuario("Solo se pueden cancelar pedidos pendientes.");
+      const r = await tx.pedido.updateMany({ where: { id, estado: { in: ["PENDIENTE", "POR_APROBAR"] } }, data: { estado: "CANCELADO" } });
+      if (r.count === 0) throw new ErrorUsuario("Solo se pueden cancelar pedidos pendientes o por aprobar.");
       await auditar(tx, sesion.usuario.id, "Pedido", id, "cancelar");
     });
   } catch (e) {
@@ -67,6 +81,58 @@ export async function cancelarPedido(id: number, _: EstadoForm, _form: FormData)
   }
   revalidatePath(`/pedidos/${id}`);
   return { ok: "Pedido cancelado." };
+}
+
+/** El administrador aprueba un pedido que generó un recurrente: queda pendiente y el repartidor ya lo puede tomar. */
+export async function aprobarPedido(id: number, _: EstadoForm, _form: FormData): Promise<EstadoForm> {
+  const sesion = await requerir("pedidos.aprobar");
+  try {
+    await db.$transaction(async (tx) => {
+      const r = await tx.pedido.updateMany({ where: { id, estado: "POR_APROBAR" }, data: { estado: "PENDIENTE" } });
+      if (r.count === 0) throw new ErrorUsuario("Este pedido ya no está por aprobar.");
+      await auditar(tx, sesion.usuario.id, "Pedido", id, "aprobar");
+    });
+  } catch (e) {
+    return { error: mensajeError(e) };
+  }
+  revalidatePath(`/pedidos/${id}`);
+  revalidatePath("/pedidos");
+  return { ok: "Pedido aprobado. Ya aparece en los pedidos del día para el repartidor." };
+}
+
+/** Aprueba de una vez todos los pedidos recurrentes de hoy que están por aprobar. */
+export async function aprobarPedidosDeHoy(_: EstadoForm, _form: FormData): Promise<EstadoForm> {
+  const sesion = await requerir("pedidos.aprobar");
+  let aprobados = 0;
+  try {
+    await db.$transaction(async (tx) => {
+      const pedidos = await tx.pedido.findMany({ where: { estado: "POR_APROBAR", fechaEntrega: diaUTC(hoyISO()) }, select: { id: true } });
+      const ids = pedidos.map((p) => p.id);
+      if (ids.length === 0) throw new ErrorUsuario("No hay pedidos de hoy por aprobar.");
+      aprobados = (await tx.pedido.updateMany({ where: { id: { in: ids }, estado: "POR_APROBAR" }, data: { estado: "PENDIENTE" } })).count;
+      await auditar(tx, sesion.usuario.id, "Pedido", null, "aprobar_todos", { ids });
+    });
+  } catch (e) {
+    return { error: mensajeError(e) };
+  }
+  revalidatePath("/pedidos");
+  return { ok: aprobados === 1 ? "1 pedido aprobado." : `${aprobados} pedidos aprobados.` };
+}
+
+/** El pedido recurrente deja de repetirse. Lo ya cargado a Pedidos sigue igual. */
+export async function terminarRecurrente(id: number, _: EstadoForm, _form: FormData): Promise<EstadoForm> {
+  const sesion = await requerir("pedidos.crear");
+  try {
+    await db.$transaction(async (tx) => {
+      const r = await tx.pedidoRecurrente.updateMany({ where: { id, activo: true }, data: { activo: false } });
+      if (r.count === 0) throw new ErrorUsuario("Este pedido ya no se estaba repitiendo.");
+      await auditar(tx, sesion.usuario.id, "PedidoRecurrente", id, "terminar");
+    });
+  } catch (e) {
+    return { error: mensajeError(e) };
+  }
+  revalidatePath("/pedidos/recurrentes");
+  return { ok: "Listo. Este pedido ya no se repetirá." };
 }
 
 /**

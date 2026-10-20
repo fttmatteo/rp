@@ -114,6 +114,7 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                 {productos.map((p) => (
                   <Campo key={p.id} etiqueta={p.nombre}>
+                    <input type="hidden" name={`antes_minimo_${p.id}`} defaultValue={p.minimo ?? ""} />
                     <input
                       name={`minimo_${p.id}`}
                       inputMode="numeric"

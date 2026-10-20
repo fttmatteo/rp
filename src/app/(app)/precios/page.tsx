@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { formatoFechaHora, formatoPesos, nombreProducto, UNIDADES_GALLINAZA } from "@/lib/formato";
 import { requerir } from "@/lib/sesion";
 import { PestanasContabilidad } from "@/components/secciones";
+import { textoRangoGramos } from "@/modules/pesos";
 import { guardarPreciosGenerales } from "./acciones";
 
 export default async function PreciosPage({ searchParams }: { searchParams: Promise<{ pagina?: string }> }) {
@@ -38,6 +39,11 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
               {productos.map((p) => (
                 <tr key={p.id}>
                   <td className="font-medium">
+                    {/* Valores con que se abrió la página: si otra persona guarda mientras tanto, no se pisan sus cambios. */}
+                    <input type="hidden" name={`antes_general_${p.id}`} defaultValue={p.precioGeneral || ""} />
+                    <input type="hidden" name={`antes_sugerido_${p.id}`} defaultValue={p.precioClienteSugerido ?? ""} />
+                    <input type="hidden" name={`antes_activo_${p.id}`} defaultValue={p.activo ? "on" : ""} />
+                    {p.tipo === "GALLINAZA" && <input type="hidden" name={`antes_unidad_${p.id}`} defaultValue={p.unidad ?? "bulto"} />}
                     {p.tipo === "GALLINAZA" ? (
                       <label className="font-medium">
                         Gallinaza por
@@ -71,7 +77,40 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
             que no está en venta no aparece en pedidos ni en la clasificación. La gallinaza se vende, se clasifica y se cuenta en la unidad
             elegida; si cambias la unidad, ajusta su inventario. El mínimo en bodega de cada producto se pone en Inventario.
           </p>
-          <Boton type="submit">Guardar precios</Boton>
+          <h2 className="pt-2 text-lg font-semibold">Peso de cada tipo de huevo</h2>
+          <Tabla>
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Desde (gramos)</th>
+                <th>Hasta (gramos)</th>
+                <th>Queda</th>
+              </tr>
+            </thead>
+            <tbody>
+              {productos
+                .filter((p) => p.tipo === "CUBETA")
+                .map((p) => (
+                  <tr key={p.id}>
+                    <td className="font-medium">{p.nombre}</td>
+                    <td>
+                      <input type="hidden" name={`antes_gramosMin_${p.id}`} defaultValue={p.gramosMin ?? ""} />
+                      <input type="hidden" name={`antes_gramosMax_${p.id}`} defaultValue={p.gramosMax ?? ""} />
+                      <input name={`gramosMin_${p.id}`} inputMode="numeric" defaultValue={p.gramosMin ?? ""} aria-label={`${p.nombre} desde (gramos)`} />
+                    </td>
+                    <td>
+                      <input name={`gramosMax_${p.id}`} inputMode="numeric" defaultValue={p.gramosMax ?? ""} aria-label={`${p.nombre} hasta (gramos)`} />
+                    </td>
+                    <td className="text-stone-600">{textoRangoGramos(p) ?? "Sin peso"}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </Tabla>
+          <p className="text-stone-600">
+            El peso de un huevo, en gramos, decide su tipo. Se muestra en la clasificación como guía. Deja «Desde» vacío para «hasta tantos
+            gramos» y «Hasta» vacío para «tantos gramos o más».
+          </p>
+          <Boton type="submit">Guardar precios y pesos</Boton>
         </Formulario>
 
         <Tarjeta id="cambios" titulo="Cambios de precio">

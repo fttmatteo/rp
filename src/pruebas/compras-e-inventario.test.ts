@@ -3,7 +3,7 @@ import { anularClasificacion, registrarClasificacion } from "@/app/(app)/clasifi
 import { registrarPagoProveedor } from "@/app/(app)/egresos/acciones";
 import { anularCompra, registrarCompra } from "@/app/(app)/egresos/compras";
 import { guardarMinimos, registrarAjuste } from "@/app/(app)/inventario/acciones";
-import { anularPagoProveedor, registrarAbonoProveedor } from "@/app/(app)/por-pagar/acciones";
+import { anularPagoProveedor, registrarAbonoProveedor, registrarSaldoInicialProveedor } from "@/app/(app)/por-pagar/acciones";
 import { db } from "@/lib/db";
 import { existencias as existenciasPorProducto } from "@/lib/existencias";
 import { sumarDias } from "@/lib/formato";
@@ -130,6 +130,36 @@ describe("compras de huevo a proveedores", () => {
     fallo(await anularPagoProveedor(999, undefined, form()), /no encontrado/);
   });
 
+  it("saldo inicial: lo que se le debía al proveedor, sin huevo ni caja", async () => {
+    const u = await comoOperacion("ADMIN");
+    await baseEnCaja(100_000, u.id);
+    const p = await proveedor({ nombre: "Avícola", diasCredito: 10 });
+    const fecha = iso(sumarDias(hoy(), -5));
+    ok(await registrarSaldoInicialProveedor(p.id, undefined, form({ valor: 80_000, fecha, nota: "Cuaderno" })));
+    const c = await db.compra.findFirstOrThrow();
+    expect(c).toMatchObject({ tipo: "SALDO_INICIAL", huevos: 0, total: 80_000, saldo: 80_000, formaPago: "CREDITO", nota: "Cuaderno" });
+    expect(c.vence).toEqual(sumarDias(sumarDias(hoy(), -5), 10));
+    expect(await db.movimientoInventario.count()).toBe(0);
+    expect(await db.movimientoCaja.count()).toBe(0);
+    expect(await saldosProveedores()).toEqual(new Map([[p.id, 80_000]]));
+    fallo(await registrarSaldoInicialProveedor(p.id, undefined, form({ valor: 0, fecha })), /mayor que cero/);
+    fallo(await registrarSaldoInicialProveedor(p.id, undefined, form({ valor: 1, fecha: "2999-01-01" })), /Fecha/);
+    fallo(await registrarSaldoInicialProveedor(p.id, undefined, form({ valor: "", fecha })), /mayor que cero/);
+    fallo(await registrarSaldoInicialProveedor(999, undefined, form({ valor: 1, fecha })), /no encontrado/);
+
+    // Se paga como cualquier cuenta por pagar y, sin abonos, se anula.
+    ok(await registrarAbonoProveedor(p.id, undefined, form({ valor: 30_000, medio: "EFECTIVO" })));
+    expect((await comprasPorPagar(p.id)).map((d) => d.saldo)).toEqual([50_000]);
+    fallo(await anularCompra(c.id, undefined, form()), /tiene abonos/);
+    ok(await registrarSaldoInicialProveedor(p.id, undefined, form({ valor: 5_000, fecha })));
+    const otro = await db.compra.findFirstOrThrow({ where: { saldo: 5_000 } });
+    ok(await anularCompra(otro.id, undefined, form()));
+    expect(await saldosProveedores()).toEqual(new Map([[p.id, 50_000]]));
+
+    await comoOperacion("VENTAS");
+    await expect(registrarSaldoInicialProveedor(p.id, undefined, form())).rejects.toEqual(new Redireccion("/sin-acceso"));
+  });
+
   it("el repartidor no registra compras", async () => {
     await comoOperacion("REPARTIDOR");
     await expect(registrarCompra(undefined, form())).rejects.toEqual(new Redireccion("/sin-acceso"));
@@ -213,6 +243,11 @@ describe("ajustes de inventario", () => {
     expect((await producto("JUMBO")).minimo).toBeNull();
     fallo(await guardarMinimos(undefined, form({ [`minimo_${aa.id}`]: "diez" })), /Mínimo de AA/);
     expect(await producto("AA")).toMatchObject({ minimo: 10 });
+    // Con la página vieja: lo que no se tocó no pisa lo de otra persona; cambiar lo mismo a otro valor se avisa.
+    ok(await guardarMinimos(undefined, form({ [`minimo_${aa.id}`]: "", [`antes_minimo_${aa.id}`]: "", [`minimo_${jumbo.id}`]: 3, [`antes_minimo_${jumbo.id}`]: "" })));
+    expect(await producto("AA")).toMatchObject({ minimo: 10 });
+    expect(await producto("JUMBO")).toMatchObject({ minimo: 3 });
+    fallo(await guardarMinimos(undefined, form({ [`minimo_${aa.id}`]: 20, [`antes_minimo_${aa.id}`]: "" })), /Otra persona cambió el mínimo de AA/);
     await comoOperacion("VENTAS");
     await expect(guardarMinimos(undefined, form())).rejects.toEqual(new Redireccion("/sin-acceso"));
   });

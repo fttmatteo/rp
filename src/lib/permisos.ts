@@ -20,6 +20,7 @@ export type Permiso =
   | "clasificacion"
   | "pedidos.ver"
   | "pedidos.crear"
+  | "pedidos.aprobar" // aprobar los pedidos que generan los recurrentes (solo administrador)
   | "pedidos.entregar"
   | "pagos.registrar"
   | "cartera.ver"

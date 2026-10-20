@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { auditar } from "@/lib/auditoria";
 import { exigirCajaAbierta } from "@/lib/caja-db";
 import { db } from "@/lib/db";
-import { entero, ErrorUsuario, mensajeError, textoOpcional, type EstadoForm } from "@/lib/form";
+import { entero, ErrorUsuario, mensajeError, texto, textoOpcional, type EstadoForm } from "@/lib/form";
+import { diaUTC, hoyISO, sumarDias } from "@/lib/formato";
 import { leerMedio } from "@/lib/pagos";
 import { abonarProveedor, bloquearProveedor } from "@/lib/proveedores-db";
 import { requerir } from "@/lib/sesion";
@@ -61,4 +62,42 @@ export async function anularPagoProveedor(pagoId: number, _: EstadoForm, _form: 
   }
   revalidatePath(`/por-pagar/${proveedorId}`);
   return { ok: "Pago anulado." };
+}
+
+/** Solo el administrador: carga lo que se le debía al proveedor antes de usar la app (no mueve huevo ni caja). */
+export async function registrarSaldoInicialProveedor(proveedorId: number, _: EstadoForm, form: FormData): Promise<EstadoForm> {
+  const sesion = await requerir("anular");
+  try {
+    const valor = entero(form, "valor", "Valor") ?? 0;
+    if (valor <= 0) throw new ErrorUsuario("El valor debe ser mayor que cero.");
+    const fechaISO = texto(form, "fecha");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaISO) || fechaISO > hoyISO()) throw new ErrorUsuario("Fecha no válida.");
+    const proveedor = await db.proveedor.findUnique({ where: { id: proveedorId } });
+    if (!proveedor) throw new ErrorUsuario("Proveedor no encontrado.");
+    await db.$transaction(async (tx) => {
+      await bloquearProveedor(tx, proveedorId);
+      const dia = diaUTC(fechaISO);
+      const compra = await tx.compra.create({
+        data: {
+          tipo: "SALDO_INICIAL",
+          proveedorId,
+          fecha: new Date(`${fechaISO}T12:00:00-05:00`),
+          dia,
+          usuarioId: sesion.usuario.id,
+          clasificada: false,
+          huevos: 0,
+          total: valor,
+          saldo: valor,
+          formaPago: "CREDITO",
+          vence: sumarDias(dia, proveedor.diasCredito),
+          nota: textoOpcional(form, "nota"),
+        },
+      });
+      await auditar(tx, sesion.usuario.id, "Compra", compra.id, "saldo_inicial", { valor, fecha: fechaISO });
+    });
+  } catch (e) {
+    return { error: mensajeError(e) };
+  }
+  revalidatePath(`/por-pagar/${proveedorId}`);
+  return { ok: "Saldo inicial cargado." };
 }

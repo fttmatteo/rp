@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { formatoCantidad, formatoDia, formatoHuevos, hoyISO } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
+import { textoRangoGramos } from "@/modules/pesos";
 import { PestanasInventario } from "../inventario/pestanas";
 import { anularClasificacion, registrarClasificacion } from "./acciones";
 
@@ -76,7 +77,10 @@ export default async function ClasificacionPage({ searchParams }: { searchParams
               <tbody>
                 {huevos.map((p) => (
                   <tr key={p.id}>
-                    <td className="font-medium">{p.nombre}</td>
+                    <td className="font-medium">
+                      {p.nombre}
+                      {textoRangoGramos(p) && <span className="block font-normal text-stone-600">{textoRangoGramos(p)}</span>}
+                    </td>
                     <td>
                       <input name={`cubetas_${p.id}`} inputMode="numeric" placeholder="0" />
                     </td>

@@ -40,6 +40,7 @@ model Usuario {
   pagosProveedor  PagoProveedor[]
   novedades       NovedadAves[]
   pedidos         Pedido[]
+  recurrentes     PedidoRecurrente[]
   ventas          Venta[]
   pagos           Pago[]
   rutas           Ruta[]                  @relation("RepartidorRuta")
@@ -94,17 +95,21 @@ model Producto {
   unidad                String?
   // Alerta de existencias bajas: cubetas, gallinas o unidades de gallinaza. Null = sin alerta.
   minimo                Int?
+  // Solo huevo: rango de peso por huevo en gramos que define el tipo. Lo escribe el administrador; null = sin límite.
+  gramosMin             Int?
+  gramosMax             Int?
   activo                Boolean      @default(true)
   // Suma de sus movimientos de inventario, actualizada en la misma transacción
   // que cada movimiento para no tener que sumar todo el historial.
   existencias           Int          @default(0)
 
-  preciosCliente   PrecioCliente[]
-  historialPrecios HistorialPrecio[]
-  movimientos      MovimientoInventario[]
-  detallesClasif   DetalleClasificacion[]
-  detallesPedido   DetallePedido[]
-  detallesCompra   DetalleCompra[]
+  preciosCliente      PrecioCliente[]
+  historialPrecios    HistorialPrecio[]
+  movimientos         MovimientoInventario[]
+  detallesClasif      DetalleClasificacion[]
+  detallesPedido      DetallePedido[]
+  detallesRecurrentes DetalleRecurrente[]
+  detallesCompra      DetalleCompra[]
 }
 
 model PrecioCliente {
@@ -152,11 +157,12 @@ model Cliente {
   consumidorFinal Boolean  @default(false)
   creadoEn        DateTime @default(now())
 
-  precios   PrecioCliente[]
-  historial HistorialPrecio[]
-  pedidos   Pedido[]
-  ventas    Venta[]
-  pagos     Pago[]
+  precios     PrecioCliente[]
+  historial   HistorialPrecio[]
+  pedidos     Pedido[]
+  recurrentes PedidoRecurrente[]
+  ventas      Venta[]
+  pagos       Pago[]
 
   @@index([activo, nombre])
 }
@@ -229,6 +235,7 @@ model DetalleClasificacion {
 // ---------- Pedidos, ventas y cartera ----------
 
 enum EstadoPedido {
+  POR_APROBAR // creado solo por un pedido recurrente; el administrador lo aprueba y pasa a pendiente
   PENDIENTE
   ENTREGADO
   NO_ENTREGADO // el repartidor no lo pudo entregar; se puede reprogramar como pedido nuevo
@@ -246,13 +253,17 @@ model Pedido {
   rutaId          Int?
   ordenEnRuta     Int?
   motivoNoEntrega String?
+  recurrenteId    Int? // pedido recurrente que lo generó
 
-  cliente   Cliente         @relation(fields: [clienteId], references: [id])
-  creadoPor Usuario         @relation(fields: [creadoPorId], references: [id])
-  ruta      Ruta?           @relation(fields: [rutaId], references: [id])
-  detalles  DetallePedido[]
-  venta     Venta?
+  cliente    Cliente           @relation(fields: [clienteId], references: [id])
+  creadoPor  Usuario           @relation(fields: [creadoPorId], references: [id])
+  ruta       Ruta?             @relation(fields: [rutaId], references: [id])
+  recurrente PedidoRecurrente? @relation(fields: [recurrenteId], references: [id])
+  detalles   DetallePedido[]
+  venta      Venta?
 
+  // Un pedido recurrente genera a lo sumo un pedido por día.
+  @@unique([recurrenteId, fechaEntrega])
   @@index([estado, fechaEntrega])
   @@index([fechaEntrega])
   @@index([rutaId])
@@ -269,6 +280,36 @@ model DetallePedido {
 
   pedido   Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
   producto Producto @relation(fields: [productoId], references: [id])
+}
+
+// Pedido que se repite cada semana en los días elegidos. Cada uno de esos días se carga solo a Pedidos
+// como "por aprobar", con el precio del cliente de ese día, y el administrador lo aprueba.
+model PedidoRecurrente {
+  id          Int      @id @default(autoincrement())
+  clienteId   Int
+  diasSemana  Int[] // 0 domingo, 1 lunes ... 6 sábado
+  desde       DateTime @db.Date
+  nota        String?
+  activo      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+  creadoPorId Int
+
+  cliente   Cliente             @relation(fields: [clienteId], references: [id])
+  creadoPor Usuario             @relation(fields: [creadoPorId], references: [id])
+  detalles  DetalleRecurrente[]
+  pedidos   Pedido[]
+
+  @@index([activo])
+}
+
+model DetalleRecurrente {
+  id           Int @id @default(autoincrement())
+  recurrenteId Int
+  productoId   Int
+  cantidad     Int
+
+  recurrente PedidoRecurrente @relation(fields: [recurrenteId], references: [id], onDelete: Cascade)
+  producto   Producto         @relation(fields: [productoId], references: [id])
 }
 
 enum TipoVenta {
@@ -321,6 +362,8 @@ model Pago {
   verificadoEn DateTime?
   // Cobrado por el repartidor en esa ruta; entra en su liquidación.
   rutaId       Int?
+  // Lo que el cliente quedó debiendo justo después de este pago (para el recibo); null en pagos anteriores a este dato.
+  saldoDespues Int?
 
   cliente      Cliente          @relation(fields: [clienteId], references: [id])
   usuario      Usuario          @relation(fields: [usuarioId], references: [id])
@@ -458,8 +501,14 @@ enum FormaPagoCompra {
   CREDITO // queda como cuenta por pagar
 }
 
+enum TipoCompra {
+  COMPRA
+  SALDO_INICIAL // lo que se le debía al proveedor antes de usar la app
+}
+
 model Compra {
   id            Int             @id @default(autoincrement())
+  tipo          TipoCompra      @default(COMPRA)
   proveedorId   Int
   fecha         DateTime        @default(now())
   dia           DateTime        @db.Date

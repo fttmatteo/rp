@@ -161,6 +161,99 @@ describe("clientes, precios y proveedores", () => {
     expect(await db.historialPrecio.count()).toBe(2);
   });
 
+  it("rango de peso en gramos de cada tipo de huevo", async () => {
+    await comoOperacion("ADMIN");
+    const productos = await db.producto.findMany();
+    const actuales = Object.fromEntries(
+      productos.flatMap((p) => [
+        [`general_${p.id}`, p.precioGeneral],
+        [`activo_${p.id}`, p.activo],
+        [`sugerido_${p.id}`, p.precioClienteSugerido ?? ""],
+        [`unidad_${p.id}`, p.unidad ?? ""],
+      ]),
+    );
+    const jumbo = await producto("JUMBO");
+    const aa = await producto("AA");
+    const gallinaza = await producto("GALLINAZA");
+    fallo(await guardarPreciosGenerales(undefined, form({ ...actuales, [`gramosMin_${aa.id}`]: 66, [`gramosMax_${aa.id}`]: 60 })), /«desde» no puede ser mayor/);
+    fallo(await guardarPreciosGenerales(undefined, form({ ...actuales, [`gramosMin_${aa.id}`]: 0 })), /mayor que 0 gramos/);
+    fallo(await guardarPreciosGenerales(undefined, form({ ...actuales, [`gramosMax_${aa.id}`]: "60,5" })), /solo números enteros/);
+    expect(await producto("AA")).toMatchObject({ gramosMin: null, gramosMax: null });
+
+    // Los rangos pueden cruzarse; la gallinaza no tiene peso aunque llegue en el formulario.
+    ok(
+      await guardarPreciosGenerales(
+        undefined,
+        form({ ...actuales, [`gramosMin_${jumbo.id}`]: 64, [`gramosMin_${aa.id}`]: 60, [`gramosMax_${aa.id}`]: 66, [`gramosMin_${gallinaza.id}`]: 5 }),
+      ),
+    );
+    expect(await producto("JUMBO")).toMatchObject({ gramosMin: 64, gramosMax: null });
+    expect(await producto("AA")).toMatchObject({ gramosMin: 60, gramosMax: 66 });
+    expect(await producto("GALLINAZA")).toMatchObject({ gramosMin: null, gramosMax: null });
+    expect(await db.historialPrecio.count()).toBe(0);
+    expect(await db.auditoria.count({ where: { entidad: "Producto", accion: "precios" } })).toBe(2);
+
+    // Vaciar los campos quita el rango.
+    ok(await guardarPreciosGenerales(undefined, form(actuales)));
+    expect(await producto("AA")).toMatchObject({ gramosMin: null, gramosMax: null });
+  });
+
+  it("precios generales con la página abierta en dos equipos: no se pisan los cambios de otra persona", async () => {
+    await comoOperacion("ADMIN");
+    const productos = await db.producto.findMany();
+    // Lo que muestra la página al abrirla, con los valores de antes al lado.
+    const pagina = Object.fromEntries(
+      productos.flatMap((p) =>
+        (
+          [
+            ["general", p.precioGeneral],
+            ["sugerido", p.precioClienteSugerido ?? ""],
+            ["activo", p.activo ? "on" : null],
+            ["unidad", p.tipo === "GALLINAZA" ? (p.unidad ?? "bulto") : null],
+          ] as const
+        ).flatMap(([c, v]) => [
+          [`${c}_${p.id}`, v],
+          [`antes_${c}_${p.id}`, v],
+        ]),
+      ),
+    );
+    const aa = await producto("AA");
+    const a = await producto("A");
+    // Un equipo cambia AA; el otro, con la página vieja, cambia solo A.
+    ok(await guardarPreciosGenerales(undefined, form({ ...pagina, [`general_${aa.id}`]: 19_000 })));
+    ok(await guardarPreciosGenerales(undefined, form({ ...pagina, [`general_${a.id}`]: 16_000 })));
+    expect((await producto("AA")).precioGeneral).toBe(19_000);
+    expect((await producto("A")).precioGeneral).toBe(16_000);
+    // Si la página vieja cambia el mismo precio a otro valor, se avisa y no se guarda nada.
+    fallo(
+      await guardarPreciosGenerales(undefined, form({ ...pagina, [`general_${aa.id}`]: 21_000, [`sugerido_${a.id}`]: 5 })),
+      /Otra persona cambió el precio general de AA/,
+    );
+    expect(await producto("AA")).toMatchObject({ precioGeneral: 19_000 });
+    expect((await producto("A")).precioClienteSugerido).toBe(a.precioClienteSugerido);
+    expect(await db.historialPrecio.count()).toBe(2);
+    // Borrar el precio general de un producto en venta no se deja; el sugerido sí se guarda.
+    const jumbo = await producto("JUMBO");
+    fallo(await guardarPreciosGenerales(undefined, form({ ...pagina, [`general_${jumbo.id}`]: "" })), /Escribe el precio general de Jumbo/);
+    ok(await guardarPreciosGenerales(undefined, form({ ...pagina, [`sugerido_${a.id}`]: 14_000 })));
+    expect(await producto("A")).toMatchObject({ precioGeneral: 16_000, precioClienteSugerido: 14_000 });
+  });
+
+  it("precios especiales con la página abierta en dos equipos", async () => {
+    await comoOperacion("ADMIN");
+    const c = await db.cliente.create({ data: { nombre: "Tienda" } });
+    const aa = await producto("AA");
+    const a = await producto("A");
+    const pagina = { [`antes_precio_${aa.id}`]: "", [`antes_precio_${a.id}`]: "" };
+    ok(await guardarPreciosCliente(c.id, undefined, form({ ...pagina, [`precio_${aa.id}`]: 17_000 })));
+    // La página vieja solo cambia A: el precio de AA que guardó otra persona se queda.
+    ok(await guardarPreciosCliente(c.id, undefined, form({ ...pagina, [`precio_${a.id}`]: 12_000 })));
+    const precios = await db.precioCliente.findMany({ orderBy: { productoId: "asc" } });
+    expect(new Map(precios.map((p) => [p.productoId, p.precio]))).toEqual(new Map([[aa.id, 17_000], [a.id, 12_000]]));
+    fallo(await guardarPreciosCliente(c.id, undefined, form({ ...pagina, [`precio_${aa.id}`]: 16_000 })), /Otra persona cambió el precio de AA/);
+    expect((await db.precioCliente.findFirstOrThrow({ where: { productoId: aa.id } })).precio).toBe(17_000);
+  });
+
   it("proveedores", async () => {
     await comoOperacion("VENTAS");
     const url = await redireccion(crearProveedor(undefined, form({ nombre: "Granja", diasCredito: 30, telefono: "300" })));

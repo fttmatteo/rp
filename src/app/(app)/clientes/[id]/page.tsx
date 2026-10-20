@@ -110,6 +110,8 @@ export default async function ClientePage({
                       <td>{p.nombre}</td>
                       <td className="whitespace-nowrap tabular-nums">{formatoPesos(p.precioGeneral)}</td>
                       <td>
+                        {/* Precio con que se abrió la página: si otra persona guarda mientras tanto, no se pisa su cambio. */}
+                        <input type="hidden" name={`antes_precio_${p.id}`} defaultValue={especiales.get(p.id) ?? ""} />
                         <input
                           name={`precio_${p.id}`}
                           inputMode="numeric"
