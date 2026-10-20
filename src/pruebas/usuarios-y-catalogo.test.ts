@@ -195,6 +195,11 @@ describe("clientes, precios y proveedores", () => {
     expect(await producto("AA")).toMatchObject({ precioGeneral: 19_000 });
     expect((await producto("A")).minimo).toBeNull();
     expect(await db.historialPrecio.count()).toBe(2);
+    // Borrar el precio general de un producto en venta no se deja; el sugerido sí se guarda.
+    const jumbo = await producto("JUMBO");
+    fallo(await guardarPreciosGenerales(undefined, form({ ...pagina, [`general_${jumbo.id}`]: "" })), /Escribe el precio general de Jumbo/);
+    ok(await guardarPreciosGenerales(undefined, form({ ...pagina, [`sugerido_${a.id}`]: 14_000 })));
+    expect(await producto("A")).toMatchObject({ precioGeneral: 16_000, precioClienteSugerido: 14_000 });
   });
 
   it("precios especiales con la página abierta en dos equipos", async () => {
