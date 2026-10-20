@@ -32,7 +32,10 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     total: pago.valor,
     resumen: [
       ["Medio", pago.medio === "EFECTIVO" ? "Efectivo" : `Transferencia${pago.referencia ? ` (${pago.referencia})` : ""}`],
-      ["Saldo actual del cliente", formatoPesos(await saldoCliente(pago.clienteId))],
+      // Los pagos anteriores a guardar el saldo muestran el de hoy.
+      pago.saldoDespues === null
+        ? ["Saldo actual del cliente", formatoPesos(await saldoCliente(pago.clienteId))]
+        : ["Saldo después de este pago", formatoPesos(pago.saldoDespues)],
     ],
     anulado: pago.anulado,
     atendidoPor: pago.usuario.nombre,

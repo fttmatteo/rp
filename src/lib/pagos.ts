@@ -1,6 +1,6 @@
 import "server-only";
 import { exigirCajaAbierta } from "@/lib/caja-db";
-import { deudasPendientes } from "@/lib/cartera-db";
+import { deudasPendientes, saldoCliente } from "@/lib/cartera-db";
 import { siguienteConsecutivo } from "@/lib/consecutivo";
 import type { Tx } from "@/lib/db";
 import { bloquearCliente } from "@/lib/existencias";
@@ -33,6 +33,9 @@ export async function crearPago(
   // El dinero entra a la caja de hoy, que debe estar abierta.
   const dia = diaUTC(hoyISO());
   await exigirCajaAbierta(tx, dia);
+  // El recibo muestra lo que quedó debiendo con este pago, aunque después abone o compre más.
+  const aplicado = datos.aplicaciones.reduce((s, a) => s + a.valor, 0);
+  const saldoDespues = (await saldoCliente(datos.clienteId, tx)) - aplicado;
   const pago = await tx.pago.create({
     data: {
       dia,
@@ -43,6 +46,7 @@ export async function crearPago(
       referencia: datos.referencia,
       usuarioId: datos.usuarioId,
       rutaId: datos.rutaId ?? null,
+      saldoDespues,
       aplicaciones: { create: datos.aplicaciones },
     },
   });

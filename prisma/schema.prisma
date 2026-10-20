@@ -321,6 +321,8 @@ model Pago {
   verificadoEn DateTime?
   // Cobrado por el repartidor en esa ruta; entra en su liquidación.
   rutaId       Int?
+  // Lo que el cliente quedó debiendo justo después de este pago (para el recibo); null en pagos anteriores a este dato.
+  saldoDespues Int?
 
   cliente      Cliente          @relation(fields: [clienteId], references: [id])
   usuario      Usuario          @relation(fields: [usuarioId], references: [id])

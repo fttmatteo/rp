@@ -145,6 +145,9 @@ describe("recibos en PDF", () => {
     expect((await reciboVenta(peticion(""), params("abc"))).status).toBe(404);
     expect((await reciboPago(peticion(""), params(pago.id))).headers.get("Content-Disposition")).toBe('inline; filename="AB-000001.pdf"');
     expect((await reciboPago(peticion(""), params(999))).status).toBe(404);
+    // Un pago de antes de guardar el saldo muestra el saldo de hoy.
+    await db.pago.update({ where: { id: pago.id }, data: { saldoDespues: null } });
+    expect((await reciboPago(peticion(""), params(pago.id))).status).toBe(200);
 
     // El repartidor solo ve los recibos de su ruta, y no los de pagos.
     const repartidor = await usuario(["REPARTIDOR"]);
