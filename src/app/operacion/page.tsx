@@ -1,6 +1,6 @@
 import { Formulario } from "@/components/formulario";
 import { Boton } from "@/components/ui";
-import { ETIQUETA_OPERACION, OPERACIONES } from "@/lib/permisos";
+import { ETIQUETA_OPERACION, OPERACIONES, tieneAcceso } from "@/lib/permisos";
 import { requerirSesion } from "@/lib/sesion";
 import { salir } from "../login/acciones";
 import { seleccionarOperacion } from "./acciones";
@@ -18,7 +18,8 @@ export default async function OperacionPage() {
       <h1 className="text-xl font-semibold">Hola, {sesion.usuario.nombre}</h1>
       <p className="mb-6 text-stone-600">¿Qué operación vas a hacer?</p>
       <Formulario accion={seleccionarOperacion} className="space-y-3">
-        {OPERACIONES.map((op) => (
+        {/* Solo las que el administrador le asignó: así nadie toca una que le niega el acceso. */}
+        {OPERACIONES.filter((op) => tieneAcceso(sesion.usuario.accesos, op)).map((op) => (
           <button
             key={op}
             name="operacion"

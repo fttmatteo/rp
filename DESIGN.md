@@ -203,10 +203,10 @@ Papel y tinta cálidos (la familia `stone` de Tailwind), el ámbar como única v
 - **Title** (600, 18px, 1.55): título de cada tarjeta (`Tarjeta`), nombre del cliente en cada parada de Mi ruta, títulos de diálogo, nombre del producto en la pantalla Acerca de.
 - **Body** (400, 16px, 1.5): todo texto de lectura, valores en campos, filas de listas de Mi ruta, alertas.
 - **Label** (500, 16px, 1.5): rótulos de campos, texto de botones, pestañas, menú.
-- **Dato** (400, 14px, 1.43): solo para datos secundarios dentro de tablas densas de oficina (columnas de reportes, fecha y usuario de un movimiento) y para etiquetas de estado. Nunca para el texto principal de una fila ni para nada en Mi ruta.
+- **Dato** (400, 14px, 1.43): solo para etiquetas de estado. Nunca para el texto principal de una fila ni para nada en Mi ruta.
 
 ### Named Rules
-**La Regla de los 16.** Lo que se lee o se toca va en 16px o más. 14px solo para el dato secundario de una tabla de oficina. 12px no se usa. Los componentes de `ui.tsx` (botones, rótulos, ayudas, alertas, pestañas, etiquetas, estado vacío) ya cumplen. Mi ruta, el inicio, Pedidos, Contabilidad, Inventario, el menú principal y el selector de día también. *Pendiente en el código:* las demás páginas todavía tienen muchos `text-sm` y `text-xs` propios (totales, tablas, encabezado); se suben al tocar cada pantalla.
+**La Regla de los 16.** Lo que se lee o se toca va en 16px o más. 14px solo para las etiquetas de estado; las tablas también van en 16px. 12px no se usa. Los componentes de `ui.tsx` (botones, rótulos, ayudas, alertas, pestañas, etiquetas, estado vacío) ya cumplen. Mi ruta, el inicio, Pedidos, Contabilidad, Inventario, el menú principal y el selector de día también. *Pendiente en el código:* las demás páginas todavía tienen muchos `text-sm` y `text-xs` propios (totales, tablas, encabezado); se suben al tocar cada pantalla.
 
 **La Regla de una Cifra Grande.** En una tarjeta del inicio hay una sola cifra en Display. Lo demás es Body o Dato. Si la cifra pide atención, se marca con la etiqueta azul "Para revisar" debajo, no pintando la cifra. Las cifras van en números tabulares (`tabular-nums`). El enlace de cada tarjeta va abajo (44px), alineado entre las tarjetas de una misma fila.
 
@@ -272,7 +272,7 @@ Pequeñas píldoras rectangulares (esquina de 4px, 2px por 8px) en Dato con peso
 Caja con borde de 1px y fondo de estado, esquina de 4px, 8px por 12px: error (rojo de deuda), ok (verde al día) y aviso (azul). El bloque "Para revisar" del inicio es un aviso azul con título en peso 600 y una lista apretada de enlaces subrayados en azul aviso que llevan a cada pendiente, en dos columnas desde 640px. Con mouse las filas van juntas; en pantallas táctiles (`pointer-coarse`) cada enlace mide 44px de alto.
 
 ### Tablas
-Dentro de una hoja con borde y desplazamiento lateral propio. Cabecera en renglón suave con texto en tinta media y peso 500; filas separadas por una línea muy tenue; celdas de 8px por 12px. Columnas secundarias se esconden en el celular y aparecen desde 640px; lo que no puede perderse baja como segunda línea en tinta media dentro de la columna principal (en Pedidos, el número y la fecha debajo del cliente), para que la tabla quepa sin desplazar de lado. El nombre de la fila es el enlace a su detalle. Las cifras van a la derecha en números tabulares.
+Dentro de una hoja con borde y desplazamiento lateral propio, en 16px como el resto del texto (también en reportes). Cabecera en renglón suave con texto en tinta media y peso 500; filas separadas por una línea muy tenue; celdas de 8px por 12px. Columnas secundarias se esconden en el celular y aparecen desde 640px; lo que no puede perderse baja como segunda línea en tinta media dentro de la columna principal (en Pedidos, el número y la fecha debajo del cliente), para que la tabla quepa sin desplazar de lado. El nombre de la fila es el enlace a su detalle. Las cifras van a la derecha en números tabulares.
 
 ### Franja de totales (signature)
 Arriba de cada lista de dinero (`FranjaTotales` en `src/components/dinero.tsx`): una franja en renglón suave con tres datos (Efectivo, Transferencia, Total), rótulo en tinta media encima de cada valor, cifras tabulares y el Total en peso 600. En el celular el Total baja a su propia fila; desde 640px van los tres en una. Es la forma de "cuadrar" de un vistazo y se repite en Ingresos, Egresos, Caja y Reparto.
@@ -290,7 +290,7 @@ Texto centrado en tinta tenue dentro de un borde punteado de 1px, 24px de rellen
 - **Do** poner texto en tinta (`stone-900`) sobre ámbar, en peso 500 o más.
 - **Do** usar ámbar hondo (`amber-600`) o más oscuro cuando el ámbar es una línea sobre blanco, y ámbar de foco (`amber-700`) para el contorno de foco.
 - **Do** marcar los avisos en azul (`blue-800` sobre `blue-50`).
-- **Do** escribir 16px o más todo lo que se lee o se toca; 14px solo para el dato secundario de una tabla de oficina.
+- **Do** escribir 16px o más todo lo que se lee o se toca, tablas incluidas; 14px solo para las etiquetas de estado.
 - **Do** dar al menos 44px de alto a todo lo que se toca en el celular, y a todo el ancho a las acciones principales de Mi ruta.
 - **Do** acompañar cada color de estado con una palabra: "Debe", "Vencida", "Bajo el mínimo", "No debe nada", "Sin verificar".
 - **Do** poner los totales arriba de la lista, en la franja de totales.

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { anularClasificacion, registrarClasificacion } from "@/app/(app)/clasificacion/acciones";
 import { registrarPagoProveedor } from "@/app/(app)/egresos/acciones";
 import { anularCompra, registrarCompra } from "@/app/(app)/egresos/compras";
-import { registrarAjuste } from "@/app/(app)/inventario/acciones";
+import { guardarMinimos, registrarAjuste } from "@/app/(app)/inventario/acciones";
 import { anularPagoProveedor, registrarAbonoProveedor } from "@/app/(app)/por-pagar/acciones";
 import { db } from "@/lib/db";
 import { existencias as existenciasPorProducto } from "@/lib/existencias";
@@ -202,5 +202,18 @@ describe("ajustes de inventario", () => {
     fallo(await registrarAjuste(undefined, form({ productoId: aa.id, tipo: "AJUSTE", nota: "x" })), /mayor que cero/);
     await comoOperacion("VENTAS");
     await expect(registrarAjuste(undefined, form())).rejects.toEqual(new Redireccion("/sin-acceso"));
+  });
+
+  it("mínimo en bodega: lo guarda el administrador, vacío es no avisar", async () => {
+    await comoOperacion("ADMIN");
+    const aa = await producto("AA");
+    const jumbo = await producto("JUMBO");
+    ok(await guardarMinimos(undefined, form({ [`minimo_${aa.id}`]: 10, [`minimo_${jumbo.id}`]: "" })));
+    expect(await producto("AA")).toMatchObject({ minimo: 10 });
+    expect((await producto("JUMBO")).minimo).toBeNull();
+    fallo(await guardarMinimos(undefined, form({ [`minimo_${aa.id}`]: "diez" })), /Mínimo de AA/);
+    expect(await producto("AA")).toMatchObject({ minimo: 10 });
+    await comoOperacion("VENTAS");
+    await expect(guardarMinimos(undefined, form())).rejects.toEqual(new Redireccion("/sin-acceso"));
   });
 });

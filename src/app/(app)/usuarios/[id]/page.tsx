@@ -1,14 +1,15 @@
 import { notFound } from "next/navigation";
 import { Formulario } from "@/components/formulario";
-import { Boton, BotonLink, Campo, Tarjeta, Titulo } from "@/components/ui";
+import { Alerta, Boton, BotonLink, Campo, Tarjeta, Titulo } from "@/components/ui";
 import { db } from "@/lib/db";
 import { requerir } from "@/lib/sesion";
 import { actualizarUsuario } from "../acciones";
 import { CampoNombre, CamposAccesos } from "../campos";
 
-export default async function UsuarioPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function UsuarioPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ creado?: string }> }) {
   await requerir("usuarios");
   const id = Number((await params).id);
+  const { creado } = await searchParams;
   const usuario = Number.isInteger(id) ? await db.usuario.findUnique({ where: { id } }) : null;
   if (!usuario) notFound();
   return (
@@ -16,6 +17,11 @@ export default async function UsuarioPage({ params }: { params: Promise<{ id: st
       <Titulo accion={<BotonLink href="/usuarios" variante="secundario">Volver</BotonLink>}>
         {usuario.nombre} <span className="font-normal text-stone-500">({usuario.usuario})</span>
       </Titulo>
+      {creado && (
+        <div className="mb-4 max-w-md">
+          <Alerta tipo="ok">Empleado creado. Ya puede entrar con su usuario y su clave.</Alerta>
+        </div>
+      )}
       <Tarjeta className="max-w-md">
         <Formulario accion={actualizarUsuario.bind(null, usuario.id)}>
           <CampoNombre valor={usuario.nombre} />

@@ -82,7 +82,7 @@ export function Alerta({ tipo = "error", children }: { tipo?: "error" | "ok" | "
 export function Tabla({ children }: { children: ReactNode }) {
   return (
     <div className="overflow-x-auto rounded border border-stone-200 bg-white">
-      <table className="w-full text-left text-sm [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-medium [&_th]:text-stone-600 [&_thead]:bg-stone-100 [&_tr]:border-b [&_tr]:border-stone-100">
+      <table className="w-full text-left [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2 [&_th]:font-medium [&_th]:text-stone-600 [&_thead]:bg-stone-100 [&_tr]:border-b [&_tr]:border-stone-100">
         {children}
       </table>
     </div>

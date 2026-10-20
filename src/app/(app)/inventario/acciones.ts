@@ -39,3 +39,25 @@ export async function registrarAjuste(_: EstadoForm, form: FormData): Promise<Es
   revalidatePath("/inventario");
   return { ok: "Ajuste registrado." };
 }
+
+/** Mínimo en bodega de cada producto: si las existencias bajan de ahí, Inicio muestra una alerta. Vacío = no avisar. */
+export async function guardarMinimos(_: EstadoForm, form: FormData): Promise<EstadoForm> {
+  const sesion = await requerir("inventario.ajustar");
+  try {
+    const productos = await db.producto.findMany();
+    await db.$transaction(async (tx) => {
+      for (const p of productos) {
+        // Solo los que vienen en el formulario: los productos que no están en venta no se muestran ahí.
+        if (!form.has(`minimo_${p.id}`)) continue;
+        const minimo = entero(form, `minimo_${p.id}`, `Mínimo de ${p.nombre}`);
+        if (minimo === p.minimo) continue;
+        await tx.producto.update({ where: { id: p.id }, data: { minimo } });
+        await auditar(tx, sesion.usuario.id, "Producto", p.id, "minimo", { anterior: p.minimo, minimo });
+      }
+    });
+  } catch (e) {
+    return { error: mensajeError(e) };
+  }
+  revalidatePath("/inventario");
+  return { ok: "Mínimos guardados." };
+}

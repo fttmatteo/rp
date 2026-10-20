@@ -6,7 +6,7 @@ import { existencias } from "@/lib/existencias";
 import { formatoCantidad, formatoFechaHora, formatoHuevos } from "@/lib/formato";
 import { puede } from "@/lib/permisos";
 import { requerir } from "@/lib/sesion";
-import { registrarAjuste } from "./acciones";
+import { guardarMinimos, registrarAjuste } from "./acciones";
 import { PestanasInventario } from "./pestanas";
 
 const TIPO = { PRODUCCION: "Clasificación", VENTA: "Venta", AJUSTE: "Ajuste", ROTURA: "Rotura", ANULACION: "Anulación", COMPRA: "Compra" } as const;
@@ -100,6 +100,32 @@ export default async function InventarioPage({ searchParams }: { searchParams: P
                 </div>
                 <Boton type="submit">Registrar ajuste</Boton>
               </div>
+            </Formulario>
+          </details>
+        </Tarjeta>
+      )}
+
+      {ajustar && (
+        <Tarjeta id="minimos" className="mb-6">
+          <details>
+            <summary className="block cursor-pointer py-2.5 text-lg font-semibold underline">Mínimo en bodega</summary>
+            <Formulario accion={guardarMinimos} className="mt-2 space-y-3">
+              <p className="text-stone-600">Si las existencias bajan del mínimo, Inicio muestra una alerta. Déjalo vacío para no avisar.</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                {productos.map((p) => (
+                  <Campo key={p.id} etiqueta={p.nombre}>
+                    <input
+                      name={`minimo_${p.id}`}
+                      inputMode="numeric"
+                      defaultValue={p.minimo ?? ""}
+                      placeholder={p.tipo === "CUBETA" ? "cubetas" : p.tipo === "GALLINA" ? "gallinas" : (p.unidad ?? "bulto") + "s"}
+                    />
+                  </Campo>
+                ))}
+              </div>
+              <Boton type="submit" variante="secundario">
+                Guardar mínimos
+              </Boton>
             </Formulario>
           </details>
         </Tarjeta>

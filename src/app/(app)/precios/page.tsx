@@ -31,7 +31,6 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
                 <th>Producto</th>
                 <th>Precio general</th>
                 <th>Precio cliente sugerido</th>
-                <th>Mínimo en bodega</th>
                 <th>En venta</th>
               </tr>
             </thead>
@@ -61,14 +60,6 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
                     <input name={`sugerido_${p.id}`} inputMode="numeric" defaultValue={p.precioClienteSugerido ?? ""} />
                   </td>
                   <td>
-                    <input
-                      name={`minimo_${p.id}`}
-                      inputMode="numeric"
-                      defaultValue={p.minimo ?? ""}
-                      placeholder={p.tipo === "CUBETA" ? "cubetas" : p.tipo === "GALLINA" ? "gallinas" : (p.unidad ?? "bulto") + "s"}
-                    />
-                  </td>
-                  <td>
                     <input type="checkbox" name={`activo_${p.id}`} defaultChecked={p.activo} aria-label={`${p.nombre} en venta`} />
                   </td>
                 </tr>
@@ -78,8 +69,7 @@ export default async function PreciosPage({ searchParams }: { searchParams: Prom
           <p className="text-stone-600">
             El precio sugerido se propone al configurar los precios especiales de un cliente. Cada cliente puede tener el suyo. Un producto
             que no está en venta no aparece en pedidos ni en la clasificación. La gallinaza se vende, se clasifica y se cuenta en la unidad
-            elegida; si cambias la unidad, ajusta su inventario. Si las existencias bajan del mínimo, Inicio muestra una alerta (déjalo vacío
-            para no avisar).
+            elegida; si cambias la unidad, ajusta su inventario. El mínimo en bodega de cada producto se pone en Inventario.
           </p>
           <Boton type="submit">Guardar precios</Boton>
         </Formulario>
